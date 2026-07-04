@@ -5,6 +5,8 @@ import type { WebSocket } from 'ws';
 export interface AuthedSocket extends WebSocket {
   userId: string;
   username: string;
+  /** Token opaco de sesión (no el hash) — el heartbeat lo revalida periódicamente. */
+  sessionToken: string;
   isAlive: boolean;
   /** matchId al que está suscrito ahora mismo (join/watch/resume), para poder limpiar en O(1) al cerrar. */
   currentMatchId: string | null;

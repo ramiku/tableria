@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import websocket from '@fastify/websocket';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import { createDb, sql, type Db } from '@tableria/db';
 import type { Env } from './config.js';
@@ -11,6 +12,7 @@ import { registerAuthRoutes } from './auth/routes.js';
 import { appRouter } from './trpc/router.js';
 import { createContext } from './trpc/context.js';
 import { createMatchService, type MatchService } from './match/service.js';
+import { registerWsGateway } from './ws/gateway.js';
 
 export async function buildApp(
   env: Env,
@@ -30,6 +32,7 @@ export async function buildApp(
     credentials: true,
   });
   await app.register(rateLimit, { max: 200, timeWindow: '1 minute' });
+  await app.register(websocket);
 
   registerCsrf(app, env.NODE_ENV === 'production');
 
@@ -53,6 +56,8 @@ export async function buildApp(
     prefix: '/api/trpc',
     trpcOptions: { router: appRouter, createContext: createContext(db, env, matchService) },
   });
+
+  registerWsGateway(app, db, env, matchService);
 
   return app;
 }
