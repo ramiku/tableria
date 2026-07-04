@@ -230,3 +230,19 @@ export const matchSpectators = pgTable(
   },
   (t) => [primaryKey({ columns: [t.matchId, t.userId] })],
 );
+
+export const matchChatMessages = pgTable(
+  'match_chat_messages',
+  {
+    id: uuid('id').primaryKey().$defaultFn(uuidv7),
+    matchId: uuid('match_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('match_chat_messages_match_idx').on(t.matchId, t.createdAt)],
+);
