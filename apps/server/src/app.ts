@@ -1,8 +1,12 @@
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import { createDb, sql, type Db } from '@tableria/db';
 import type { Env } from './config.js';
+import { registerCsrf } from './auth/csrf.js';
+import { createMailer } from './auth/mailer.js';
+import { registerAuthRoutes } from './auth/routes.js';
 
 export async function buildApp(env: Env, db: Db = createDb(env.DATABASE_URL)) {
   const app = Fastify({
@@ -17,6 +21,9 @@ export async function buildApp(env: Env, db: Db = createDb(env.DATABASE_URL)) {
     origin: env.WEB_ORIGIN,
     credentials: true,
   });
+  await app.register(rateLimit, { max: 200, timeWindow: '1 minute' });
+
+  registerCsrf(app, env.NODE_ENV === 'production');
 
   app.decorate('db', db);
 
@@ -29,6 +36,9 @@ export async function buildApp(env: Env, db: Db = createDb(env.DATABASE_URL)) {
     }
     return { ok: dbStatus === 'up', db: dbStatus, uptime: process.uptime() };
   });
+
+  const mailer = createMailer(env);
+  await registerAuthRoutes(app, { db, env, mailer });
 
   return app;
 }

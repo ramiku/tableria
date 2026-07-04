@@ -3,11 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tableria — juegos de mesa online</title>
+    <meta name="theme-color" content="#f5f8fc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0e15" media="(prefers-color-scheme: dark)" />
+    <title>Tableria</title>
+    <link rel="icon" type="image/png" href="/logo-tableria-st.png" />
+    <script>
+      // Aplica el tema guardado ANTES de pintar, para evitar el parpadeo
+      // claro→oscuro en la primera pintura. Por defecto: claro.
+      try {
+        var saved = JSON.parse(localStorage.getItem('tableria-theme'));
+        document.documentElement.dataset.theme = (saved && saved.state && saved.state.theme) || 'light';
+      } catch {
+        document.documentElement.dataset.theme = 'light';
+      }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400..800&family=Manrope:wght@400..800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400..800&family=Manrope:wght@400..800&display=swap"
       rel="stylesheet"
     />
   </head>

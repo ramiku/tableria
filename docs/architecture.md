@@ -22,6 +22,38 @@ Tableria es una plataforma de juegos de mesa online (objetivo: funcionalidad tip
 2. **PostgreSQL 17 vía Docker Desktop** (no MariaDB).
 3. Juegos (además de portar tres-en-raya), en este orden: **Conecta 4** y **juego de cartas con info oculta** (validan el motor), luego **Reversi/Othello** y un **party game simultáneo 3-8 jugadores**.
 
+### Identidad visual (logo oficial, añadido 2026-07-04; revisado a 2 temas el mismo día)
+
+El usuario aportó el logo definitivo: icono isométrico (hexágono con meeple, bandera, pila de fichas y dado) en azules, wordmark "Tableria" en gradiente azul→cian, tagline "TU PLATAFORMA DE JUEGOS DE MESA". El archivo real vive en `apps/web/public/logo-tableria.png`.
+
+Tras una primera iteración solo-oscura ("neon", con halo/glow), el usuario pidió explícitamente **un diseño claro y limpio, con tema claro por defecto y tema oscuro como opción**, ambos con la misma identidad azul. Sistema final en [apps/web/src/styles/app.css](../apps/web/src/styles/app.css): variables CSS en `:root` (claro) y `:root[data-theme='dark']` (oscuro), leídas por los tokens de Tailwind `@theme`. El azul de marca (`--tb-accent` / `--tb-accent-strong` / `--tb-accent-fg`) es **invariante entre temas** — solo cambian fondo, superficie, borde, texto y el gradiente del wordmark (más oscuro en claro para legibilidad, más brillante en oscuro).
+
+| Token | Claro | Oscuro | Uso |
+|---|---|---|---|
+| `--tb-bg` | `#f7f9fc` | `#0b0f17` | fondo |
+| `--tb-surface` / `-2` | `#ffffff` / `#f1f5fb` | `#121826` / `#1a2233` | paneles, tarjetas |
+| `--tb-border` | `#e3e9f3` | `#29334a` | bordes |
+| `--tb-text` / `-muted` | `#101828` / `#5d6b82` | `#e8eef9` / `#8b9ab3` | texto |
+| `--tb-accent-tint` | `#e7f0fe` | `#16283d` | fondo de estado activo/badges |
+| `--tb-accent` / `-strong` (invariante) | `#2f6fe0` / `#1e4fb0` | `#4c93f2` / `#7cb4ff` | botones, focos, marca |
+| `--tb-success` / `-warn` / `-danger` | `#16a34a` / `#b45309` / `#dc2626` | `#34c973` / `#e2a93d` / `#f0645c` | presencia/estado en vivo, avisos, errores |
+
+**Toggle de tema**: [stores/theme.ts](../apps/web/src/stores/theme.ts) (Zustand + `persist`, clave `tableria-theme`, por defecto `light`) + [components/ThemeToggle.tsx](../apps/web/src/components/ThemeToggle.tsx). Un script inline en `index.html` aplica el tema guardado antes del primer render para evitar parpadeo. `@custom-variant dark` en `app.css` ata el prefijo `dark:` de Tailwind a `[data-theme='dark']` (no a `prefers-color-scheme`).
+
+**Segunda iteración (mismo día)**: el usuario valoró la primera pasada como "bastante fea" y aportó una captura de la v1 (PHP) como referencia de densidad de información — banner "continúa donde lo dejaste", catálogo con badges de estado y contador en vivo, entrada de código de sala, lista de amigos con presencia, panel de invitación. Se usó la skill `ui-ux-pro-max` para validar dirección (estilo Flat Design + tarjetas tipo Bento: sombras casi nulas, radios generosos, icono-heavy) y se añadió el token semántico `--tb-success` (ausente hasta entonces). Componentes nuevos en `apps/web/src/components/`: `icons.tsx` (SVG propios, sin emoji), `Avatar.tsx` (círculo — el hexágono de marca se reserva para elementos de tablero/juego, no para personas), `GameCard.tsx`, `ContinueBanner.tsx`, `FriendRow.tsx`, `InviteCard.tsx` (con copia al portapapeles funcional). Foco visible global y `cursor-pointer` en botones añadidos por accesibilidad.
+
+**Firma visual**: recorte hexagonal (`.tb-hex`, clip-path) — reutiliza la forma exacta del icono del logo (y es también la ficha por excelencia del género: tableros hexagonales tipo Catan). Aplicado con moderación en dos sitios: el punto de navegación activo (`__root.tsx`) y la insignia de nº de jugadores en las tarjetas de juego (`routes/index.tsx`). Es el único elemento decorativo recurrente — el resto de la interfaz se mantiene sobrio (bordes finos, sin sombras/glow, espaciado generoso).
+
+**Tercera iteración (mismo día): layout full-bleed + sidebar de marca fija.** El usuario consideró la segunda pasada aún genérica (tarjetas centradas flotando con `max-w` + padding, como una plantilla de admin) y pidió: (1) layout full-width con sidebars a sangre (sin margen exterior ni bordes redondeados en los contenedores exteriores), (2) el logo grande arriba del sidebar tal como en la captura de referencia — icono grande apilado sobre el wordmark, no un icono pequeño en línea, (3) un color con más carácter.
+
+**Decisión de arquitectura visual**: el sidebar izquierdo pasa a ser una **franja de marca fija en azul oscuro** (patrón Slack/Notion/Linear: la navegación primaria mantiene su color de marca sea cual sea el tema del contenido). Esto es intencionadamente **independiente** del toggle claro/oscuro — ese toggle sigue existiendo pero ahora solo afecta al contenido central y al rail derecho, se movió del sidebar a una barra superior persistente en la columna central (visible en todas las páginas, no solo Explorar). La franja fija también resuelve el problema de la primera iteración: el halo/glow del icono nunca se veía bien sobre fondo claro; ahora vive garantizado sobre oscuro.
+
+Tokens nuevos (fijos, no cambian con el tema, en `apps/web/src/styles/app.css`): `--tb-sidebar-bg` (`#0a0f1a`), `--tb-sidebar-bg-2` (`#131c2e`), `--tb-sidebar-border`, `--tb-sidebar-text`, `--tb-sidebar-muted`, `--tb-sidebar-accent` (`#4c93f2`), `--tb-sidebar-success`, `--tb-gradient-sidebar` (`#2f6fe0→#7ecbff`, para el wordmark grande y el botón "Crear sala" del sidebar). El contenido usa un nuevo `--tb-gradient-cta` (en vez de azul plano) para botones primarios (Crear sala, Reanudar, tarjeta de invitación) — más carácter que un fill sólido, coherente con el gradiente real del logo.
+
+`Logo.tsx` ahora tiene variante `stacked` (icono 72px + wordmark + tagline, centrado, con `.tb-logo-glow`) para el sidebar, y `inline` (compacta) para otros contextos futuros. `Avatar.tsx` recibió un prop `tone` (`content` | `sidebar`) para que el anillo de presencia use el token correcto según dónde viva.
+
+Tipografía sin cambios: Manrope (display) + Inter (body/UI), con `.tb-nums` (tabular-nums) para ratings, timers y contadores de mesa.
+
 ---
 
 ## Stack elegido
@@ -168,3 +200,28 @@ Tamaño relativo: M2 ≈ M4 > M5 ≈ M6 ≈ M7 > M1 ≈ M3 > M0.
 1. **M2 es el corazón**: si el contrato `GameDefinition` sale mal, los juegos posteriores lo pagan → diseñar el juego de cartas sobre papel antes de congelar la interfaz.
 2. **Torneos suizos** (byes, desempates) fáciles de subestimar → single-elim primero.
 3. **Docker Desktop en Windows**: paso de setup nuevo → documentar en README de M0.
+
+## M1 — Auth (implementado 2026-07-04)
+
+Primer recorte real de M1: registro/login/logout/recuperación de contraseña, sin 2FA/OAuth/magic-links/email de verificación (deferidos a M6 tal cual decía el roadmap). Registro pedido explícitamente "simple": solo nick, correo, contraseña.
+
+**Backend** (`apps/server/src/auth/`):
+- `crypto.ts` — `@node-rs/argon2` (argon2id) para contraseñas; tokens de sesión y de reseteo son aleatorios de 256 bits, guardados en BD como **HMAC-SHA256 con `SESSION_PEPPER`** (no SHA-256 plano) — así una fuga de la BD sin el `.env` no permite reconstruir tokens válidos.
+- `session.ts` — cookie `tb_sid` (httpOnly, sameSite lax, secure en producción), TTL 30 días, revocación individual y masiva (`revokeAllSessions`, usada al resetear contraseña).
+- `csrf.ts` — cookie doble-submit `tb_csrf` (legible por JS) + cabecera `x-csrf-token`; verificado en todas las rutas mutantes.
+- `mailer.ts` — nodemailer a MailHog en dev.
+- `routes.ts` — `POST /api/auth/{register,login,logout,forgot-password,reset-password}` + `GET /api/auth/me`. Rate-limit por ruta vía `@fastify/rate-limit`. Anti-enumeración: `forgot-password` siempre responde igual exista o no la cuenta, y solo envía email si existe.
+- Tabla nueva `password_resets` (migración `0001_even_jackpot.sql`): token de un solo uso, caduca en 1h, `consumedAt` lo invalida tras usarse.
+- Ruta de auth como **REST plano, no tRPC** — decisión deliberada: el login vive fuera de la capa RPC en muchos stacks (cookies, redirects); tRPC entra con el catálogo/social en el resto de M1/M3.
+
+**Frontend**: reestructura de rutas para separar público de privado —
+- `routes/__root.tsx` ahora es un `<Outlet/>` desnudo (antes tenía el shell completo).
+- `routes/_app.tsx` es un **pathless layout route** (patrón de TanStack Router: prefijo `_`) que contiene el shell (sidebar + topbar) y hace de guardia: `beforeLoad` llama a `fetchMe()` y redirige a `/login` si no hay sesión. Todas las páginas privadas pasaron de `foo.tsx` a `_app.foo.tsx` (`_app.index.tsx`, `_app.salas.tsx`, etc.).
+- `routes/{login,registro,recuperar,restablecer}.tsx` — públicas, con `AuthLayout` (logo grande centrado sobre el fondo fijo del sidebar) y `FormField` compartido. `login`/`registro` redirigen a `/` si ya hay sesión.
+- `lib/api.ts` (fetch con cookies + cabecera CSRF automática) y `lib/auth.ts` (funciones tipadas: fetchMe/login/register/logout/forgotPassword/resetPassword).
+- El sidebar (`_app.tsx`) ya no tiene la caja "entra con un código" (se quitó por no aportar valor); el usuario real llega vía `Route.useRouteContext().me` y hay un botón de logout real (icono nuevo `LogoutIcon`).
+- Token nuevo `--tb-sidebar-danger` para mensajes de error en las páginas de auth (viven sobre el fondo fijo del sidebar, no sobre el tema claro/oscuro del contenido).
+
+**Verificado end-to-end vía curl** contra el servidor real: registro → `/me` → logout → `/me` 401 → login → contraseña incorrecta rechazada (mensaje genérico) → forgot-password (email real recibido en MailHog, email inexistente no genera envío) → reset-password con token real → reutilizar el mismo token falla (ya consumido) → login con contraseña vieja falla → login con la nueva funciona → peticiones sin cabecera CSRF o con cabecera incorrecta devuelven 403. Frontend: `typecheck`/`lint`/`build` limpios, árbol de rutas generado correctamente (confirma que los paths `_app/...` están bien formados).
+
+**Pendiente para pulir en una pasada posterior** (no bloqueante): toggle de mostrar/ocultar contraseña, verificación de email, lockout por intentos fallidos (el rate-limit por IP ya cubre fuerza bruta básica).

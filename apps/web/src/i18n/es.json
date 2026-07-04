@@ -1,28 +1,257 @@
 {
   "app": {
     "name": "Tableria",
-    "tagline": "Juegos de mesa online con amigos"
+    "tagline": "Tu plataforma de juegos de mesa",
+    "language": "Idioma",
+    "documentTitle": "Tableria — juegos de mesa online"
   },
   "nav": {
     "explore": "Explorar",
-    "rooms": "Salas",
+    "rooms": "Salas públicas",
     "friends": "Amigos",
     "rankings": "Rankings",
     "tournaments": "Torneos"
   },
+  "auth": {
+    "login": {
+      "title": "Entra en tu cuenta",
+      "subtitle": "Vuelve a la mesa con tus amigos",
+      "identifier": "Nick o correo",
+      "password": "Contraseña",
+      "submit": "Entrar",
+      "submitting": "Entrando…",
+      "genericError": "No se pudo iniciar sesión",
+      "forgot": "¿Olvidaste tu contraseña?",
+      "noAccount": "¿No tienes cuenta?",
+      "register": "Regístrate"
+    },
+    "register": {
+      "title": "Crea tu cuenta",
+      "subtitle": "Nick, correo y contraseña — así de simple",
+      "username": "Nick",
+      "usernamePattern": "Solo letras, números y guion bajo",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "passwordHint": "Mínimo 10 caracteres.",
+      "submit": "Crear cuenta",
+      "submitting": "Creando cuenta…",
+      "genericError": "No se pudo crear la cuenta",
+      "hasAccount": "¿Ya tienes cuenta?",
+      "signIn": "Entra"
+    },
+    "forgot": {
+      "title": "Recupera tu contraseña",
+      "subtitle": "Te enviaremos un enlace para restablecerla",
+      "email": "Correo electrónico",
+      "submit": "Enviar enlace",
+      "submitting": "Enviando…",
+      "sentTitle": "Revisa tu correo",
+      "sentBody": "Si esa cuenta existe, te hemos enviado un enlace para restablecer la contraseña. Caduca en 1 hora.",
+      "backToSignIn": "Volver a entrar"
+    },
+    "reset": {
+      "title": "Elige una contraseña nueva",
+      "subtitle": "Mínimo 10 caracteres",
+      "password": "Contraseña nueva",
+      "confirm": "Repite la contraseña",
+      "submit": "Guardar contraseña",
+      "submitting": "Guardando…",
+      "mismatch": "Las contraseñas no coinciden",
+      "invalidTitle": "Enlace no válido",
+      "invalidBody": "Solicita un nuevo enlace de recuperación.",
+      "invalidCta": "Solicitar enlace",
+      "genericError": "No se pudo restablecer la contraseña"
+    }
+  },
   "rail": {
     "activity": "Actividad",
-    "friendsOnline": "Amigos en línea",
-    "empty": "Nada por aquí todavía"
+    "friendsRooms": "Salas de amigos",
+    "friendsOnline": "Amigos",
+    "empty": "Nada por aquí todavía",
+    "createRoom": "Crear sala nueva"
   },
   "explore": {
-    "title": "Explorar juegos",
-    "subtitle": "Elige un juego y abre una mesa"
+    "greetingMorning": "Buenos días, {{name}}",
+    "greetingAfternoon": "Buenas tardes, {{name}}",
+    "greetingEvening": "Buenas noches, {{name}}",
+    "headline": "¿A qué jugamos hoy?",
+    "searchPlaceholder": "Buscar juego...",
+    "createRoom": "Crear sala",
+    "catalog": "Catálogo",
+    "soon": "Próximamente",
+    "filterAll": "Todos",
+    "filterBoard": "Tablero",
+    "filterCards": "Cartas",
+    "emptySearch": "Ningún juego coincide con esa búsqueda."
   },
-  "rooms": { "title": "Salas públicas" },
-  "friends": { "title": "Amigos" },
-  "rankings": { "title": "Rankings" },
-  "tournaments": { "title": "Torneos" },
-  "game": { "notFound": "Juego no encontrado" },
-  "common": { "soon": "Próximamente" }
+  "rooms": {
+    "title": "Salas públicas",
+    "comingIn": "— llega en {{milestone}}."
+  },
+  "friends": {
+    "title": "Amigos",
+    "comingIn": "— llega en {{milestone}}."
+  },
+  "rankings": {
+    "title": "Rankings",
+    "comingIn": "— llega en {{milestone}}."
+  },
+  "tournaments": {
+    "title": "Torneos",
+    "comingIn": "— llega en {{milestone}}."
+  },
+  "game": {
+    "notFound": "Juego no encontrado",
+    "badge": {
+      "new": "Nuevo",
+      "soon": "Pronto"
+    },
+    "status": {
+      "playing": "{{count}} jugando",
+      "coming": "Próximamente"
+    },
+    "category": {
+      "board": "Tablero",
+      "cards": "Cartas"
+    },
+    "detailEmpty": "Ficha del juego — lobby de mesas en {{milestone}}.",
+    "milestoneM2": "M2",
+    "milestoneM3": "M3",
+    "milestoneM5": "M5"
+  },
+  "common": { "soon": "Próximamente" },
+  "sidebar": {
+    "status": {
+      "online": "Conectado"
+    },
+    "aria": {
+      "profile": "Ajustes de perfil",
+      "logout": "Cerrar sesión",
+      "mainNav": "Navegación principal"
+    }
+  },
+  "presence": {
+    "online": "Disponible",
+    "away": "Ausente",
+    "offline": "Desconectado"
+  },
+  "friendRow": {
+    "chatWith": "Chatear con {{name}}"
+  },
+  "invite": {
+    "title": "Invita a tus amigos",
+    "body": "Comparte tu enlace y jugad en la misma sala en segundos.",
+    "copy": "Copiar enlace",
+    "copied": "¡Copiado!"
+  },
+  "theme": {
+    "toggle": {
+      "toLight": "Cambiar a tema claro",
+      "toDark": "Cambiar a tema oscuro"
+    }
+  },
+  "continueBanner": {
+    "title": "Continúa donde lo dejaste",
+    "with": "con",
+    "yourTurn": "te toca a ti",
+    "resume": "Reanudar"
+  },
+  "demo": {
+    "games": {
+      "ticTacToe": "3 en raya",
+      "connect4": "Conecta 4",
+      "reversi": "Reversi",
+      "rummy": "Rummy",
+      "oca": "Oca",
+      "mus": "Mus",
+      "settlers": "Colonos"
+    },
+    "banner": {
+      "game": "Colonos",
+      "with": "Marta y 2 más",
+      "turn": "Turno 14"
+    },
+    "matches": {
+      "timeAgo": {
+        "twoHoursAgo": "hace 2 h",
+        "yesterday": "ayer",
+        "threeDaysAgo": "hace 3 d",
+        "fiveDaysAgo": "hace 5 d"
+      }
+    },
+    "achievements": {
+      "firstGame": { "name": "Primera partida", "desc": "Juega tu primera partida" },
+      "winStreak3": { "name": "Racha de 3", "desc": "Gana tres partidas seguidas" },
+      "ticTacToeMaster": { "name": "Maestro del 3 en raya", "desc": "10 victorias en 3 en raya" },
+      "social": { "name": "Social", "desc": "Añade a tu primer amigo" },
+      "invincible": { "name": "Invencible", "desc": "Gana 5 partidas seguidas" },
+      "collector": { "name": "Coleccionista", "desc": "Juega a 3 juegos distintos" },
+      "tournament": { "name": "Torneo", "desc": "Apúntate a un torneo" },
+      "legend": { "name": "Leyenda", "desc": "Llega al top 10 del ranking" }
+    }
+  },
+  "profile": {
+    "title": "Tu perfil",
+    "tabsAria": "Secciones del perfil",
+    "memberSince": "Miembro desde {{date}}",
+    "statusOnline": "En línea",
+    "tabs": {
+      "account": "Cuenta",
+      "friends": "Amigos",
+      "matches": "Partidas",
+      "achievements": "Logros"
+    },
+    "account": {
+      "identity": "Identidad",
+      "security": "Seguridad",
+      "fields": {
+        "username": "Nick",
+        "displayName": "Nombre visible",
+        "email": "Correo",
+        "joinedAt": "Alta"
+      },
+      "changePassword": "Cambiar contraseña",
+      "currentPassword": "Contraseña actual",
+      "newPassword": "Nueva contraseña",
+      "confirmPassword": "Repite la nueva contraseña",
+      "savePassword": "Guardar contraseña",
+      "comingSoon": "La edición del perfil llega en M1."
+    },
+    "friends": {
+      "summary": "Tienes {{count}} amigos en línea",
+      "requests": "Solicitudes pendientes",
+      "manage": "Gestionar amigos",
+      "wantsToBe": "quiere ser tu amigo",
+      "accept": "Aceptar",
+      "reject": "Rechazar"
+    },
+    "matches": {
+      "stats": "Estadísticas",
+      "statsPlayed": "Jugadas",
+      "statsWins": "Victorias",
+      "statsLosses": "Derrotas",
+      "statsDraws": "Empates",
+      "recent": "Últimas partidas",
+      "resultWin": "Victoria",
+      "resultLoss": "Derrota",
+      "resultDraw": "Empate",
+      "vs": "vs {{name}}",
+      "empty": "Aún no has jugado partidas."
+    },
+    "achievements": {
+      "unlocked": "Conseguido",
+      "locked": "Bloqueado",
+      "empty": "Los logros se desbloquean al jugar."
+    },
+    "language": {
+      "section": "Idioma",
+      "helper": "Elige el idioma de la plataforma. Se aplica al instante.",
+      "validation": {
+        "required": "Rellena los tres campos.",
+        "minLength": "La nueva contraseña debe tener al menos 8 caracteres.",
+        "mismatch": "La nueva contraseña no coincide.",
+        "updated": "Contraseña actualizada (demo)."
+      }
+    }
+  }
 }

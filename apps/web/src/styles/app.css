@@ -1,24 +1,173 @@
 @import 'tailwindcss';
 
-/* Design tokens Tableria (portados del sistema tb- de la v1) */
+/*
+ * Sistema de diseño Tableria.
+ *
+ * Estructura: sidebar izquierdo = franja de marca FIJA en azul oscuro
+ * (como Slack/Notion/Linear) — vive el logo grande y navega la app.
+ * Es intencionadamente independiente del toggle claro/oscuro de abajo,
+ * que solo afecta al contenido central y al rail de actividad. Esto es
+ * lo que permite que el glow del icono funcione de verdad (siempre sobre
+ * fondo oscuro garantizado) sin sacrificar el tema claro por defecto que
+ * pidió el usuario para el contenido.
+ *
+ * Estilo de contenido: Flat Design disciplinado + tarjetas tipo Bento
+ * (radios generosos, elevación casi nula). El azul de acción es
+ * prácticamente invariante entre temas de contenido.
+ */
+:root {
+  --tb-bg: #f7f9fc;
+  --tb-surface: #ffffff;
+  --tb-surface-2: #f1f5fb;
+  --tb-border: #e3e9f3;
+  --tb-text: #101828;
+  --tb-muted: #5d6b82;
+
+  --tb-accent: #2f6fe0;
+  --tb-accent-strong: #1e4fb0;
+  --tb-accent-tint: #e7f0fe;
+  --tb-accent-fg: #ffffff;
+
+  --tb-success: #16a34a;
+  --tb-warn: #b45309;
+  --tb-danger: #dc2626;
+
+  --tb-gradient-cta: linear-gradient(135deg, #2f6fe0 0%, #1a4fc4 100%);
+  --tb-shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+
+  /* Sidebar: fijo, no cambia con el toggle de tema */
+  --tb-sidebar-bg: #0a0f1a;
+  --tb-sidebar-bg-2: #131c2e;
+  --tb-sidebar-border: #1e2a40;
+  --tb-sidebar-text: #eef3fb;
+  --tb-sidebar-muted: #7d92b3;
+  --tb-sidebar-accent: #4c93f2;
+  --tb-sidebar-accent-tint: #16283d;
+  --tb-sidebar-success: #34c973;
+  --tb-sidebar-danger: #f0645c;
+  --tb-gradient-sidebar: linear-gradient(135deg, #2f6fe0 0%, #7ecbff 100%);
+}
+
+:root[data-theme='dark'] {
+  --tb-bg: #0b0f17;
+  --tb-surface: #121826;
+  --tb-surface-2: #1a2233;
+  --tb-border: #29334a;
+  --tb-text: #e8eef9;
+  --tb-muted: #8b9ab3;
+
+  --tb-accent: #4c93f2;
+  --tb-accent-strong: #7cb4ff;
+  --tb-accent-tint: #16283d;
+  --tb-accent-fg: #ffffff;
+
+  --tb-success: #34c973;
+  --tb-warn: #e2a93d;
+  --tb-danger: #f0645c;
+
+  --tb-gradient-cta: linear-gradient(135deg, #3d8bff 0%, #2f6fe0 100%);
+  --tb-shadow-card: none;
+}
+
+/* Habilita el prefijo dark: de Tailwind en base a data-theme (no prefers-color-scheme) */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @theme {
   --font-display: 'Manrope', system-ui, sans-serif;
   --font-sans: 'Inter', system-ui, sans-serif;
+  /* Solo para el wordmark "Tableria": redondeada y rotunda, evoca fichas/tablero */
+  --font-wordmark: 'Baloo 2', system-ui, sans-serif;
 
-  /* Superficie oscura cálida + acento verde mesa de juego */
-  --color-tb-bg: #14161b;
-  --color-tb-surface: #1c1f26;
-  --color-tb-surface-2: #23272f;
-  --color-tb-border: #2e333d;
-  --color-tb-text: #e8eaee;
-  --color-tb-muted: #9aa1ad;
-  --color-tb-accent: #3fa46a;
-  --color-tb-accent-strong: #2f8253;
-  --color-tb-accent-fg: #eaf6ef;
-  --color-tb-warn: #d9a03f;
-  --color-tb-danger: #d94f4f;
+  --color-tb-bg: var(--tb-bg);
+  --color-tb-surface: var(--tb-surface);
+  --color-tb-surface-2: var(--tb-surface-2);
+  --color-tb-border: var(--tb-border);
+  --color-tb-text: var(--tb-text);
+  --color-tb-muted: var(--tb-muted);
+  --color-tb-accent: var(--tb-accent);
+  --color-tb-accent-strong: var(--tb-accent-strong);
+  --color-tb-accent-tint: var(--tb-accent-tint);
+  --color-tb-accent-fg: var(--tb-accent-fg);
+  --color-tb-success: var(--tb-success);
+  --color-tb-warn: var(--tb-warn);
+  --color-tb-danger: var(--tb-danger);
+
+  --color-tb-sidebar-bg: var(--tb-sidebar-bg);
+  --color-tb-sidebar-bg-2: var(--tb-sidebar-bg-2);
+  --color-tb-sidebar-border: var(--tb-sidebar-border);
+  --color-tb-sidebar-text: var(--tb-sidebar-text);
+  --color-tb-sidebar-muted: var(--tb-sidebar-muted);
+  --color-tb-sidebar-accent: var(--tb-sidebar-accent);
+  --color-tb-sidebar-accent-tint: var(--tb-sidebar-accent-tint);
+  --color-tb-sidebar-success: var(--tb-sidebar-success);
+  --color-tb-sidebar-danger: var(--tb-sidebar-danger);
 }
 
 body {
-  @apply bg-tb-bg font-sans text-tb-text antialiased;
+  @apply bg-tb-bg font-sans text-tb-text antialiased transition-colors duration-150;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Foco visible consistente (accesibilidad) */
+:focus-visible {
+  outline: 2px solid var(--color-tb-accent);
+  outline-offset: 2px;
+}
+
+/* Tarjetas: elevación casi nula, solo perceptible en tema claro */
+.tb-card {
+  box-shadow: var(--tb-shadow-card);
+}
+
+/* Números tabulares para ratings, timers y contadores de mesa */
+.tb-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Botón/tarjeta destacada del contenido (Crear sala, Reanudar…) */
+.tb-gradient-cta {
+  background: var(--tb-gradient-cta);
+}
+
+/* Wordmark del contenido: gradiente de marca, se adapta al tema */
+.tb-brand-wordmark {
+  background: var(--tb-gradient-cta);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Wordmark y CTA del sidebar: siempre el gradiente brillante (fondo fijo oscuro) */
+.tb-sidebar-wordmark {
+  background: var(--tb-gradient-sidebar);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.tb-gradient-sidebar-cta {
+  background: var(--tb-gradient-sidebar);
+}
+
+
+/*
+ * Firma visual: recorte hexagonal — la forma exacta del icono del logo, y
+ * también la ficha por excelencia de los tableros de juego (tipo Catan).
+ * Uso restringido a: indicador de navegación activa, insignias de nº de
+ * jugadores — nunca en avatares de personas (un círculo se lee como
+ * "persona" más rápido que un hexágono).
+ */
+.tb-hex {
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+}
+
+/* Indicador de navegación activa (vive en el sidebar, siempre oscuro) */
+a.tb-nav-active {
+  color: var(--color-tb-sidebar-text);
+  background: var(--color-tb-sidebar-accent-tint);
+}
+a.tb-nav-active .tb-nav-dot {
+  background: var(--color-tb-sidebar-accent);
 }

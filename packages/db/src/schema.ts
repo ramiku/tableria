@@ -74,6 +74,22 @@ export const sessions = pgTable(
   (t) => [index('sessions_user_idx').on(t.userId)],
 );
 
+export const passwordResets = pgTable(
+  'password_resets',
+  {
+    id: uuid('id').primaryKey().$defaultFn(uuidv7),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    // HMAC-SHA256(token, SESSION_PEPPER); el token en claro solo vive en el enlace del email
+    tokenHash: char('token_hash', { length: 64 }).notNull().unique(),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
+    expiresAt: timestamptz('expires_at').notNull(),
+    consumedAt: timestamptz('consumed_at'),
+  },
+  (t) => [index('password_resets_user_idx').on(t.userId)],
+);
+
 // ---------------------------------------------------------------------------
 // Catálogo de juegos
 // ---------------------------------------------------------------------------

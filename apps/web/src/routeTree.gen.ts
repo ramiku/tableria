@@ -9,148 +9,288 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TorneosRouteImport } from './routes/torneos'
-import { Route as SalasRouteImport } from './routes/salas'
-import { Route as RankingsRouteImport } from './routes/rankings'
-import { Route as AmigosRouteImport } from './routes/amigos'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as JuegosSlugRouteImport } from './routes/juegos.$slug'
+import { Route as RestablecerRouteImport } from './routes/restablecer'
+import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as RecuperarRouteImport } from './routes/recuperar'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppTorneosRouteImport } from './routes/_app.torneos'
+import { Route as AppSalasRouteImport } from './routes/_app.salas'
+import { Route as AppRankingsRouteImport } from './routes/_app.rankings'
+import { Route as AppPerfilRouteImport } from './routes/_app.perfil'
+import { Route as AppAmigosRouteImport } from './routes/_app.amigos'
+import { Route as AppJuegosSlugRouteImport } from './routes/_app.juegos.$slug'
 
-const TorneosRoute = TorneosRouteImport.update({
-  id: '/torneos',
-  path: '/torneos',
+const RestablecerRoute = RestablecerRouteImport.update({
+  id: '/restablecer',
+  path: '/restablecer',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SalasRoute = SalasRouteImport.update({
-  id: '/salas',
-  path: '/salas',
+const RegistroRoute = RegistroRouteImport.update({
+  id: '/registro',
+  path: '/registro',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RankingsRoute = RankingsRouteImport.update({
-  id: '/rankings',
-  path: '/rankings',
+const RecuperarRoute = RecuperarRouteImport.update({
+  id: '/recuperar',
+  path: '/recuperar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AmigosRoute = AmigosRouteImport.update({
-  id: '/amigos',
-  path: '/amigos',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const JuegosSlugRoute = JuegosSlugRouteImport.update({
+const AppTorneosRoute = AppTorneosRouteImport.update({
+  id: '/torneos',
+  path: '/torneos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSalasRoute = AppSalasRouteImport.update({
+  id: '/salas',
+  path: '/salas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRankingsRoute = AppRankingsRouteImport.update({
+  id: '/rankings',
+  path: '/rankings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPerfilRoute = AppPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAmigosRoute = AppAmigosRouteImport.update({
+  id: '/amigos',
+  path: '/amigos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppJuegosSlugRoute = AppJuegosSlugRouteImport.update({
   id: '/juegos/$slug',
   path: '/juegos/$slug',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/amigos': typeof AmigosRoute
-  '/rankings': typeof RankingsRoute
-  '/salas': typeof SalasRoute
-  '/torneos': typeof TorneosRoute
-  '/juegos/$slug': typeof JuegosSlugRoute
+  '/': typeof AppIndexRoute
+  '/login': typeof LoginRoute
+  '/recuperar': typeof RecuperarRoute
+  '/registro': typeof RegistroRoute
+  '/restablecer': typeof RestablecerRoute
+  '/amigos': typeof AppAmigosRoute
+  '/perfil': typeof AppPerfilRoute
+  '/rankings': typeof AppRankingsRoute
+  '/salas': typeof AppSalasRoute
+  '/torneos': typeof AppTorneosRoute
+  '/juegos/$slug': typeof AppJuegosSlugRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/amigos': typeof AmigosRoute
-  '/rankings': typeof RankingsRoute
-  '/salas': typeof SalasRoute
-  '/torneos': typeof TorneosRoute
-  '/juegos/$slug': typeof JuegosSlugRoute
+  '/login': typeof LoginRoute
+  '/recuperar': typeof RecuperarRoute
+  '/registro': typeof RegistroRoute
+  '/restablecer': typeof RestablecerRoute
+  '/amigos': typeof AppAmigosRoute
+  '/perfil': typeof AppPerfilRoute
+  '/rankings': typeof AppRankingsRoute
+  '/salas': typeof AppSalasRoute
+  '/torneos': typeof AppTorneosRoute
+  '/': typeof AppIndexRoute
+  '/juegos/$slug': typeof AppJuegosSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/amigos': typeof AmigosRoute
-  '/rankings': typeof RankingsRoute
-  '/salas': typeof SalasRoute
-  '/torneos': typeof TorneosRoute
-  '/juegos/$slug': typeof JuegosSlugRoute
+  '/_app': typeof AppRouteWithChildren
+  '/login': typeof LoginRoute
+  '/recuperar': typeof RecuperarRoute
+  '/registro': typeof RegistroRoute
+  '/restablecer': typeof RestablecerRoute
+  '/_app/amigos': typeof AppAmigosRoute
+  '/_app/perfil': typeof AppPerfilRoute
+  '/_app/rankings': typeof AppRankingsRoute
+  '/_app/salas': typeof AppSalasRoute
+  '/_app/torneos': typeof AppTorneosRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/juegos/$slug': typeof AppJuegosSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/amigos' | '/rankings' | '/salas' | '/torneos' | '/juegos/$slug'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/amigos' | '/rankings' | '/salas' | '/torneos' | '/juegos/$slug'
-  id:
-    | '__root__'
     | '/'
+    | '/login'
+    | '/recuperar'
+    | '/registro'
+    | '/restablecer'
     | '/amigos'
+    | '/perfil'
     | '/rankings'
     | '/salas'
     | '/torneos'
     | '/juegos/$slug'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/login'
+    | '/recuperar'
+    | '/registro'
+    | '/restablecer'
+    | '/amigos'
+    | '/perfil'
+    | '/rankings'
+    | '/salas'
+    | '/torneos'
+    | '/'
+    | '/juegos/$slug'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/login'
+    | '/recuperar'
+    | '/registro'
+    | '/restablecer'
+    | '/_app/amigos'
+    | '/_app/perfil'
+    | '/_app/rankings'
+    | '/_app/salas'
+    | '/_app/torneos'
+    | '/_app/'
+    | '/_app/juegos/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AmigosRoute: typeof AmigosRoute
-  RankingsRoute: typeof RankingsRoute
-  SalasRoute: typeof SalasRoute
-  TorneosRoute: typeof TorneosRoute
-  JuegosSlugRoute: typeof JuegosSlugRoute
+  AppRoute: typeof AppRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  RecuperarRoute: typeof RecuperarRoute
+  RegistroRoute: typeof RegistroRoute
+  RestablecerRoute: typeof RestablecerRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/torneos': {
-      id: '/torneos'
-      path: '/torneos'
-      fullPath: '/torneos'
-      preLoaderRoute: typeof TorneosRouteImport
+    '/restablecer': {
+      id: '/restablecer'
+      path: '/restablecer'
+      fullPath: '/restablecer'
+      preLoaderRoute: typeof RestablecerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/salas': {
-      id: '/salas'
-      path: '/salas'
-      fullPath: '/salas'
-      preLoaderRoute: typeof SalasRouteImport
+    '/registro': {
+      id: '/registro'
+      path: '/registro'
+      fullPath: '/registro'
+      preLoaderRoute: typeof RegistroRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/rankings': {
-      id: '/rankings'
-      path: '/rankings'
-      fullPath: '/rankings'
-      preLoaderRoute: typeof RankingsRouteImport
+    '/recuperar': {
+      id: '/recuperar'
+      path: '/recuperar'
+      fullPath: '/recuperar'
+      preLoaderRoute: typeof RecuperarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/amigos': {
-      id: '/amigos'
-      path: '/amigos'
-      fullPath: '/amigos'
-      preLoaderRoute: typeof AmigosRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/juegos/$slug': {
-      id: '/juegos/$slug'
+    '/_app/torneos': {
+      id: '/_app/torneos'
+      path: '/torneos'
+      fullPath: '/torneos'
+      preLoaderRoute: typeof AppTorneosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/salas': {
+      id: '/_app/salas'
+      path: '/salas'
+      fullPath: '/salas'
+      preLoaderRoute: typeof AppSalasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/rankings': {
+      id: '/_app/rankings'
+      path: '/rankings'
+      fullPath: '/rankings'
+      preLoaderRoute: typeof AppRankingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/perfil': {
+      id: '/_app/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof AppPerfilRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/amigos': {
+      id: '/_app/amigos'
+      path: '/amigos'
+      fullPath: '/amigos'
+      preLoaderRoute: typeof AppAmigosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/juegos/$slug': {
+      id: '/_app/juegos/$slug'
       path: '/juegos/$slug'
       fullPath: '/juegos/$slug'
-      preLoaderRoute: typeof JuegosSlugRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppJuegosSlugRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
+interface AppRouteChildren {
+  AppAmigosRoute: typeof AppAmigosRoute
+  AppPerfilRoute: typeof AppPerfilRoute
+  AppRankingsRoute: typeof AppRankingsRoute
+  AppSalasRoute: typeof AppSalasRoute
+  AppTorneosRoute: typeof AppTorneosRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppJuegosSlugRoute: typeof AppJuegosSlugRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAmigosRoute: AppAmigosRoute,
+  AppPerfilRoute: AppPerfilRoute,
+  AppRankingsRoute: AppRankingsRoute,
+  AppSalasRoute: AppSalasRoute,
+  AppTorneosRoute: AppTorneosRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppJuegosSlugRoute: AppJuegosSlugRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AmigosRoute: AmigosRoute,
-  RankingsRoute: RankingsRoute,
-  SalasRoute: SalasRoute,
-  TorneosRoute: TorneosRoute,
-  JuegosSlugRoute: JuegosSlugRoute,
+  AppRoute: AppRouteWithChildren,
+  LoginRoute: LoginRoute,
+  RecuperarRoute: RecuperarRoute,
+  RegistroRoute: RegistroRoute,
+  RestablecerRoute: RestablecerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -8,6 +8,13 @@
       "when": 1783176530735,
       "tag": "0000_foamy_clint_barton",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783179425896,
+      "tag": "0001_even_jackpot",
+      "breakpoints": true
     }
   ]
 }

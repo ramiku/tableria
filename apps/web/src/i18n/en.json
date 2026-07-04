@@ -1,28 +1,257 @@
 {
   "app": {
     "name": "Tableria",
-    "tagline": "Online board games with friends"
+    "tagline": "Your board game platform",
+    "language": "Language",
+    "documentTitle": "Tableria — online board games"
   },
   "nav": {
     "explore": "Explore",
-    "rooms": "Rooms",
+    "rooms": "Public rooms",
     "friends": "Friends",
     "rankings": "Rankings",
     "tournaments": "Tournaments"
   },
+  "auth": {
+    "login": {
+      "title": "Sign in to your account",
+      "subtitle": "Get back to the table with your friends",
+      "identifier": "Username or email",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "genericError": "Could not sign you in",
+      "forgot": "Forgot your password?",
+      "noAccount": "Don't have an account?",
+      "register": "Sign up"
+    },
+    "register": {
+      "title": "Create your account",
+      "subtitle": "Pick a username, email and password — that's it",
+      "username": "Username",
+      "usernamePattern": "Only letters, numbers and underscore",
+      "email": "Email",
+      "password": "Password",
+      "passwordHint": "At least 10 characters.",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "genericError": "Could not create the account",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in"
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "subtitle": "We'll email you a link to reset it",
+      "email": "Email",
+      "submit": "Send link",
+      "submitting": "Sending…",
+      "sentTitle": "Check your email",
+      "sentBody": "If that account exists, we've sent a link to reset the password. It expires in 1 hour.",
+      "backToSignIn": "Back to sign in"
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "subtitle": "At least 10 characters",
+      "password": "New password",
+      "confirm": "Repeat the password",
+      "submit": "Save password",
+      "submitting": "Saving…",
+      "mismatch": "The passwords don't match",
+      "invalidTitle": "Invalid link",
+      "invalidBody": "Request a new recovery link.",
+      "invalidCta": "Request link",
+      "genericError": "Could not reset the password"
+    }
+  },
   "rail": {
     "activity": "Activity",
-    "friendsOnline": "Friends online",
-    "empty": "Nothing here yet"
+    "friendsRooms": "Friends' rooms",
+    "friendsOnline": "Friends",
+    "empty": "Nothing here yet",
+    "createRoom": "Create new room"
   },
   "explore": {
-    "title": "Explore games",
-    "subtitle": "Pick a game and open a table"
+    "greetingMorning": "Good morning, {{name}}",
+    "greetingAfternoon": "Good afternoon, {{name}}",
+    "greetingEvening": "Good evening, {{name}}",
+    "headline": "What shall we play today?",
+    "searchPlaceholder": "Search a game...",
+    "createRoom": "Create room",
+    "catalog": "Catalog",
+    "soon": "Coming soon",
+    "filterAll": "All",
+    "filterBoard": "Board",
+    "filterCards": "Cards",
+    "emptySearch": "No games match that search."
   },
-  "rooms": { "title": "Public rooms" },
-  "friends": { "title": "Friends" },
-  "rankings": { "title": "Rankings" },
-  "tournaments": { "title": "Tournaments" },
-  "game": { "notFound": "Game not found" },
-  "common": { "soon": "Coming soon" }
+  "rooms": {
+    "title": "Public rooms",
+    "comingIn": "— coming in {{milestone}}."
+  },
+  "friends": {
+    "title": "Friends",
+    "comingIn": "— coming in {{milestone}}."
+  },
+  "rankings": {
+    "title": "Rankings",
+    "comingIn": "— coming in {{milestone}}."
+  },
+  "tournaments": {
+    "title": "Tournaments",
+    "comingIn": "— coming in {{milestone}}."
+  },
+  "game": {
+    "notFound": "Game not found",
+    "badge": {
+      "new": "New",
+      "soon": "Soon"
+    },
+    "status": {
+      "playing": "{{count}} playing",
+      "coming": "Coming soon"
+    },
+    "category": {
+      "board": "Board",
+      "cards": "Cards"
+    },
+    "detailEmpty": "Game details — lobby of tables in {{milestone}}.",
+    "milestoneM2": "M2",
+    "milestoneM3": "M3",
+    "milestoneM5": "M5"
+  },
+  "common": { "soon": "Coming soon" },
+  "sidebar": {
+    "status": {
+      "online": "Online"
+    },
+    "aria": {
+      "profile": "Profile settings",
+      "logout": "Sign out",
+      "mainNav": "Main navigation"
+    }
+  },
+  "presence": {
+    "online": "Online",
+    "away": "Away",
+    "offline": "Offline"
+  },
+  "friendRow": {
+    "chatWith": "Chat with {{name}}"
+  },
+  "invite": {
+    "title": "Invite your friends",
+    "body": "Share your link and play together in seconds.",
+    "copy": "Copy link",
+    "copied": "Copied!"
+  },
+  "theme": {
+    "toggle": {
+      "toLight": "Switch to light theme",
+      "toDark": "Switch to dark theme"
+    }
+  },
+  "continueBanner": {
+    "title": "Continue where you left off",
+    "with": "with",
+    "yourTurn": "your turn",
+    "resume": "Resume"
+  },
+  "demo": {
+    "games": {
+      "ticTacToe": "Tic-tac-toe",
+      "connect4": "Connect 4",
+      "reversi": "Reversi",
+      "rummy": "Rummy",
+      "oca": "Goose game",
+      "mus": "Mus",
+      "settlers": "Settlers"
+    },
+    "banner": {
+      "game": "Settlers",
+      "with": "Marta and 2 more",
+      "turn": "Turn 14"
+    },
+    "matches": {
+      "timeAgo": {
+        "twoHoursAgo": "2 hours ago",
+        "yesterday": "yesterday",
+        "threeDaysAgo": "3 days ago",
+        "fiveDaysAgo": "5 days ago"
+      }
+    },
+    "achievements": {
+      "firstGame": { "name": "First game", "desc": "Play your first game" },
+      "winStreak3": { "name": "3-win streak", "desc": "Win three games in a row" },
+      "ticTacToeMaster": { "name": "Tic-tac-toe master", "desc": "10 wins at tic-tac-toe" },
+      "social": { "name": "Social", "desc": "Add your first friend" },
+      "invincible": { "name": "Undefeated", "desc": "Win 5 games in a row" },
+      "collector": { "name": "Collector", "desc": "Play 3 different games" },
+      "tournament": { "name": "Tournament", "desc": "Join a tournament" },
+      "legend": { "name": "Legend", "desc": "Reach the top 10 of the ranking" }
+    }
+  },
+  "profile": {
+    "title": "Your profile",
+    "tabsAria": "Profile sections",
+    "memberSince": "Member since {{date}}",
+    "statusOnline": "Online",
+    "tabs": {
+      "account": "Account",
+      "friends": "Friends",
+      "matches": "Matches",
+      "achievements": "Achievements"
+    },
+    "account": {
+      "identity": "Identity",
+      "security": "Security",
+      "fields": {
+        "username": "Username",
+        "displayName": "Display name",
+        "email": "Email",
+        "joinedAt": "Joined"
+      },
+      "changePassword": "Change password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Repeat the new password",
+      "savePassword": "Save password",
+      "comingSoon": "Profile editing ships in M1."
+    },
+    "friends": {
+      "summary": "You have {{count}} friends online",
+      "requests": "Pending requests",
+      "manage": "Manage friends",
+      "wantsToBe": "wants to be your friend",
+      "accept": "Accept",
+      "reject": "Decline"
+    },
+    "matches": {
+      "stats": "Stats",
+      "statsPlayed": "Played",
+      "statsWins": "Wins",
+      "statsLosses": "Losses",
+      "statsDraws": "Draws",
+      "recent": "Recent matches",
+      "resultWin": "Win",
+      "resultLoss": "Loss",
+      "resultDraw": "Draw",
+      "vs": "vs {{name}}",
+      "empty": "You haven't played any matches yet."
+    },
+    "achievements": {
+      "unlocked": "Unlocked",
+      "locked": "Locked",
+      "empty": "Achievements unlock as you play."
+    },
+    "language": {
+      "section": "Language",
+      "helper": "Pick the platform language. It applies instantly.",
+      "validation": {
+        "required": "Fill in all three fields.",
+        "minLength": "The new password must be at least 8 characters.",
+        "mismatch": "The new password doesn't match.",
+        "updated": "Password updated (demo)."
+      }
+    }
+  }
 }
