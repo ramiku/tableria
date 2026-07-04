@@ -10,8 +10,13 @@ import { createMailer } from './auth/mailer.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { appRouter } from './trpc/router.js';
 import { createContext } from './trpc/context.js';
+import { createMatchService, type MatchService } from './match/service.js';
 
-export async function buildApp(env: Env, db: Db = createDb(env.DATABASE_URL)) {
+export async function buildApp(
+  env: Env,
+  db: Db = createDb(env.DATABASE_URL),
+  matchService: MatchService = createMatchService(db),
+) {
   const app = Fastify({
     logger:
       env.NODE_ENV === 'development'
@@ -29,6 +34,7 @@ export async function buildApp(env: Env, db: Db = createDb(env.DATABASE_URL)) {
   registerCsrf(app, env.NODE_ENV === 'production');
 
   app.decorate('db', db);
+  app.decorate('matchService', matchService);
 
   app.get('/health', async () => {
     let dbStatus: 'up' | 'down' = 'up';
@@ -45,7 +51,7 @@ export async function buildApp(env: Env, db: Db = createDb(env.DATABASE_URL)) {
 
   await app.register(fastifyTRPCPlugin, {
     prefix: '/api/trpc',
-    trpcOptions: { router: appRouter, createContext: createContext(db) },
+    trpcOptions: { router: appRouter, createContext: createContext(db, env, matchService) },
   });
 
   return app;
@@ -54,5 +60,6 @@ export async function buildApp(env: Env, db: Db = createDb(env.DATABASE_URL)) {
 declare module 'fastify' {
   interface FastifyInstance {
     db: Db;
+    matchService: MatchService;
   }
 }
