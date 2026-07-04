@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"/c/xampp/mysql/bin/mysql.exe\" -u root tableria -e \"SHOW TABLES LIKE 'game_moves';\")",
+      "Bash(\"/c/xampp/mysql/bin/mysql.exe\" -u root tableria -e \"SHOW TABLES LIKE 'room_moves';\")",
+      "Bash(\"/c/xampp/mysql/bin/mysql.exe\" -u root tableria -e \"SELECT COUNT\\(*\\) FROM room_moves;\")",
+      "Bash(head -n 676 includes/db/queries.php)",
+      "Read(//tmp/**)",
+      "Bash(mv /tmp/queries_new.php includes/db/queries.php)",
+      "PowerShell(& \"C:\\\\xampp\\\\php\\\\php.exe\" tools\\\\cli\\\\_tmp_test_new_backend.php)",
+      "Bash(\"/c/xampp/php/php.exe\" -l includes/lobby.php)",
+      "Bash(\"/c/xampp/php/php.exe\" -l public/api/lobby.php)",
+      "Bash(\"/c/xampp/php/php.exe\" -l public/games/tres-en-raya/tres-en-raya.php)",
+      "Bash(\"/c/xampp/php/php.exe\" -l tools/cli/test_tic_backend.php)",
+      "Bash(\"/c/xampp/php/php.exe\" tools/cli/test_tic_backend.php)",
+      "Bash(\"/c/xampp/mysql/bin/mysql.exe\" -u root tableria -e \"DELETE FROM rooms WHERE id='e0dc708fcf1eda5730e6fdc2fa68db35bc06';\")",
+      "Bash(node --check \"c:\\\\xampp\\\\htdocs\\\\tableria\\\\server\\\\game-server.js\")",
+      "Bash(taskkill //F //PID 37468)",
+      "Bash(node tools/cli/_tmp_test_game_server.mjs)",
+      "Bash(\"/c/xampp/mysql/bin/mysql.exe\" -u root tableria -e \"DELETE FROM rooms WHERE id='399a3ad85976861bf6845f99cdc6fc5654d9';\")",
+      "Bash(node --check public/assets/js/gamePage.js)",
+      "Bash(node --check tools/cli/test_ws_e2e4.js)",
+      "Bash(node tools/cli/test_ws_e2e4.js)",
+      "Bash(\"/c/xampp/mysql/bin/mysql.exe\" -u root tableria -e \"SELECT id,code,state,created_at FROM rooms WHERE game_id='tres-en-raya' ORDER BY created_at DESC LIMIT 4;\")",
+      "Bash(\"/c/xampp/mysql/bin/mysql.exe\" -u root tableria -e \"DELETE FROM rooms WHERE id IN \\('72c12c6be84695b91dd165fa7b3a6c7eac4e','1774175251d2be00438038ea896dd1711bdc'\\);\")",
+      "Bash(/c/xampp/php/php.exe -r ' *)",
+      "Bash(\"/c/xampp/mysql/bin/mysql.exe\" -u root tableria -e \"SELECT id,code,state,created_at FROM rooms WHERE game_id='tres-en-raya' ORDER BY created_at DESC LIMIT 5;\")",
+      "Bash(\"/c/xampp/mysql/bin/mysql.exe\" -u root tableria -e \"DELETE FROM rooms WHERE game_id='tres-en-raya' AND created_at >= '2026-07-04 05:00:00';\")",
+      "Bash(\"/c/xampp/mysql/bin/mysql.exe\" -u root tableria -e \"SELECT id,code,state,created_at FROM rooms WHERE game_id='tres-en-raya' ORDER BY created_at DESC;\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{content_type}\\\\n\" \"http://localhost/tableria/public/games/tres-en-raya/assets/tres-en-raya.js\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{content_type}\\\\n\" \"http://localhost/tableria/public/games/tres-en-raya/assets/tres-en-raya.css\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost/tableria/public/api/tic.php\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X POST \"http://localhost/tableria/public/api/lobby.php?action=list\" -d '{}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X POST \"http://localhost/tableria/public/games/tres-en-raya/tres-en-raya.php?action=play\" -d '{}')",
+      "Bash(curl -s -X POST http://localhost/tableria/public/api/lobby.php?action=list -H 'Content-Type: application/json' -H 'Cookie: tb_sid=__TRACKED_VAR__' -d '{\"gameId\":\"tres-en-raya\"}')",
+      "Bash(node tools/cli/_tmp_test_claim_timeout.mjs)"
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+# Dependencias
+node_modules/
+.pnpm-store/
+vendor/
+
+# Builds
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+
+# Entorno y secretos — nunca commitear
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Test / coverage
+coverage/
+playwright-report/
+test-results/
+
+# SO / editor
+.DS_Store
+Thumbs.db
+
+# Artefactos temporales
+*.tmp
+*.bak
+*.out
+sid-*
+*.sql.gz
+
+# Legacy (PHP/XAMPP) — queda en disco como referencia hasta M7 pero
+# FUERA de git: contiene credenciales de BD hardcodeadas que no deben
+# entrar en el historial. Los esquemas SQL de referencia están en
+# docs/legacy-schema/.
+legacy/

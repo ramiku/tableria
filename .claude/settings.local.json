@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php tools/cli/migrate_add_room_players_ready.php)",
+      "PowerShell(& \"C:\\\\xampp\\\\php\\\\php.exe\" tools\\\\cli\\\\migrate_add_room_players_ready.php)",
+      "PowerShell(& \"C:\\\\xampp\\\\php\\\\php.exe\" -l \"c:\\\\xampp\\\\htdocs\\\\tableria\\\\includes\\\\db\\\\queries.php\")",
+      "PowerShell(& \"C:\\\\xampp\\\\php\\\\php.exe\" -l \"c:\\\\xampp\\\\htdocs\\\\tableria\\\\public\\\\api\\\\tic.php\")",
+      "PowerShell(& \"C:\\\\xampp\\\\php\\\\php.exe\" -l \"c:\\\\xampp\\\\htdocs\\\\tableria\\\\tools\\\\cli\\\\migrate_add_room_players_ready.php\")",
+      "PowerShell(node --check \"c:\\\\xampp\\\\htdocs\\\\tableria\\\\server\\\\chat-server.js\")",
+      "PowerShell(node --check \"c:\\\\xampp\\\\htdocs\\\\tableria\\\\public\\\\assets\\\\js\\\\actions.js\")",
+      "PowerShell(node --check \"c:\\\\xampp\\\\htdocs\\\\tableria\\\\public\\\\assets\\\\js\\\\gamePage.js\")",
+      "Bash(tasklist //FI \"IMAGENAME eq httpd.exe\" //FI \"IMAGENAME eq mysqld.exe\")",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")"
+    ]
+  }
+}
