@@ -61,9 +61,9 @@ pnpm dev
 
 | Fase | Contenido | Estado |
 |------|-----------|--------|
-| M0 | Esqueleto monorepo, BD, CI, shell SPA | 🔨 |
-| M1 | Auth (registro/login/verificación) + catálogo | ⬜ |
-| M2 | Motor de juego genérico + tres-en-raya + lobby N jugadores | ⬜ |
+| M0 | Esqueleto monorepo, BD, CI, shell SPA | ✅ |
+| M1 | Auth (registro/login/recuperación) + catálogo real vía tRPC | ✅ |
+| M2 | Motor de juego genérico + tres-en-raya + lobby N jugadores en tiempo real | ✅ |
 | M3 | Social: amigos, presencia, chat persistente, notificaciones | ⬜ |
 | M4 | Ratings Glicko-2, leaderboards + Conecta 4 + juego de cartas | ⬜ |
 | M5 | Torneos (single-elim, suizo) | ⬜ |

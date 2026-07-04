@@ -145,13 +145,13 @@ Regla de dependencias: `games → engine → protocol`; `server → db + games`;
 
 ## Roadmap por fases (cada una termina demostrable)
 
-**M0 — Esqueleto (S).** git init + limpieza + `legacy/`; monorepo pnpm+turbo; docker-compose Postgres 17 + MailHog; `@tableria/db` con esquema núcleo y primera migración; Fastify `/health`; config Zod por entorno; shell Vite con router y layout 3 paneles (tokens `tb-`, Manrope+Inter); i18n inicializado; CI GitHub Actions (lint+typecheck+vitest).
+**M0 — Esqueleto (S). ✅ Implementado 2026-07-04.** git init + limpieza + `legacy/`; monorepo pnpm+turbo; docker-compose Postgres 17 + MailHog; `@tableria/db` con esquema núcleo y primera migración; Fastify `/health`; config Zod por entorno; shell Vite con router y layout 3 paneles (tokens `tb-`, Manrope+Inter); i18n inicializado; CI GitHub Actions (lint+typecheck+vitest).
 *Demo: la app arranca y navega entre rutas con URLs reales.*
 
-**M1 — Auth + catálogo (M).** Registro/login argon2id, sesiones opacas + cookie `tb_sid`, CSRF, verificación email (MailHog), lockout, anti-enumeración, rate-limit; página de cuenta; catálogo con ficha de juego (tabs Jugar/Reglas). Tests unitarios del flujo auth. (2FA/OAuth/magic links se difieren a M6; el esquema ya los soporta.)
+**M1 — Auth + catálogo (M). ✅ Implementado 2026-07-04.** Registro/login argon2id, sesiones opacas + cookie `tb_sid`, CSRF, verificación email (MailHog), lockout, anti-enumeración, rate-limit; página de cuenta; catálogo con ficha de juego (tabs Jugar/Reglas). Tests unitarios del flujo auth. (2FA/OAuth/magic links se difieren a M6; el esquema ya los soporta.) Detalle en [«M1 — Auth + catálogo (implementado)»](#m1--auth--catálogo-implementado-2026-07-04) más abajo.
 *Demo: registrarse, verificar email, entrar, ver catálogo.*
 
-**M2 — Motor + tres-en-raya + lobby N jugadores (L — fase crítica).** `@tableria/engine` completo con tests; tres-en-raya como primer `GameDefinition`; gateway WS con sesión revalidada; lobby N asientos (pública/privada, código); ready-check 20s; movimientos transaccionales, snapshots, timer persistente, reconexión con resume, espectadores; chat de mesa persistente. **Antes de congelar la interfaz `GameDefinition`, diseñar sobre papel el juego de cartas (info oculta, 2-4 j.) para validar el contrato.**
+**M2 — Motor + tres-en-raya + lobby N jugadores (L — fase crítica). ✅ Implementado 2026-07-04.** `@tableria/engine` completo con tests; tres-en-raya como primer `GameDefinition`; gateway WS con sesión revalidada; lobby N asientos (pública/privada, código); ready-check 20s; movimientos transaccionales, snapshots, timer persistente, reconexión con resume, espectadores; chat de mesa persistente. Detalle en [«M2 — Motor de juego + tres en raya + lobby (implementado)»](#m2--motor-de-juego--tres-en-raya--lobby-implementado-2026-07-04) más abajo.
 *Demo: 2+ pestañas juegan una partida completa; se reinicia el servidor a mitad y la partida sobrevive.*
 
 **M3 — Social (M).** Amigos (solicitudes/bloqueo), presencia real, DMs y grupos **persistidos en `messages`**, unread/reply, invitaciones a mesa por chat, activity feed, notificaciones in-app.
@@ -201,7 +201,7 @@ Tamaño relativo: M2 ≈ M4 > M5 ≈ M6 ≈ M7 > M1 ≈ M3 > M0.
 2. **Torneos suizos** (byes, desempates) fáciles de subestimar → single-elim primero.
 3. **Docker Desktop en Windows**: paso de setup nuevo → documentar en README de M0.
 
-## M1 — Auth (implementado 2026-07-04)
+## M1 — Auth + catálogo (implementado 2026-07-04)
 
 Primer recorte real de M1: registro/login/logout/recuperación de contraseña, sin 2FA/OAuth/magic-links/email de verificación (deferidos a M6 tal cual decía el roadmap). Registro pedido explícitamente "simple": solo nick, correo, contraseña.
 
@@ -225,3 +225,56 @@ Primer recorte real de M1: registro/login/logout/recuperación de contraseña, s
 **Verificado end-to-end vía curl** contra el servidor real: registro → `/me` → logout → `/me` 401 → login → contraseña incorrecta rechazada (mensaje genérico) → forgot-password (email real recibido en MailHog, email inexistente no genera envío) → reset-password con token real → reutilizar el mismo token falla (ya consumido) → login con contraseña vieja falla → login con la nueva funciona → peticiones sin cabecera CSRF o con cabecera incorrecta devuelven 403. Frontend: `typecheck`/`lint`/`build` limpios, árbol de rutas generado correctamente (confirma que los paths `_app/...` están bien formados).
 
 **Pendiente para pulir en una pasada posterior** (no bloqueante): toggle de mostrar/ocultar contraseña, verificación de email, lockout por intentos fallidos (el rate-limit por IP ya cubre fuerza bruta básica).
+
+### Catálogo real vía tRPC (mismo día, tras el auth)
+
+Segundo recorte de M1: el catálogo pasa de datos estáticos en el frontend a servirse desde Postgres, y es la primera pieza que usa tRPC (tal y como preveía la tabla de stack: REST solo para auth, tRPC para el resto).
+
+- **Backend**: primer router tRPC (`apps/server/src/trpc/{context,trpc,router}.ts` + `routers/games.ts`) — `games.list`/`games.bySlug` (join con `game_categories` y `game_content`), montado en `/api/trpc` vía `fastifyTRPCPlugin`.
+- El tipo `AppRouter` se expone al resto del workspace a través del campo `types` del `package.json` de `@tableria/server` (build con `declaration: true`), consumido como `devDependency` de solo-tipos desde `apps/web` — mismo patrón end-to-end typesafe que usan la mayoría de monorepos con tRPC, sin duplicar contratos a mano.
+- **Frontend**: `lib/trpc.ts` (cliente `httpBatchLink`, `credentials: 'include'`), catálogo (`_app.index.tsx`) con estados de carga/error/vacío y filtros por categoría derivados de los datos reales (ya no hardcodeados `board`/`cards`).
+- **Ficha de juego** (`_app.juegos.$slug.tsx`): hero con gradiente generado por `color-mix()` a partir de un único color de marca por juego (sin necesitar un segundo color en BD), tabs **Jugar** (pasos del flujo + estado según `game.isActive`, sin fingir funcionalidad que no existía aún) y **Reglas** (contenido real de `game_content`, con placeholder si todavía no hay texto).
+- `GameCard` rediseñada con el mismo lenguaje visual (motivo de icono de categoría de fondo, insignia hexagonal de nº de jugadores, badge, elevación al hover).
+
+## M2 — Motor de juego + tres en raya + lobby (implementado 2026-07-04)
+
+La fase que el propio roadmap marcaba como crítica: el contrato `GameDefinition` queda congelado con un juego real implementado y probado, no solo bosquejado. Implementado y verificado en 4 pasadas, cada una commiteada y validada antes de la siguiente.
+
+### 1. Paquetes puros — `@tableria/protocol`, `@tableria/engine`, `@tableria/games`
+
+Tres paquetes workspace nuevos, mismo patrón que `@tableria/db` (`type:module`, `main`/`types`/`exports` a `dist/`, `declaration:true`). **Decisión de estructura**: `@tableria/games` es un único paquete con una subcarpeta por juego (`src/tres-en-raya/`, futuro `src/conecta-cuatro/`, …) en vez de un paquete por juego — evita tener que tocar el glob `packages/*` de `pnpm-workspace.yaml` cada vez que se añade un juego.
+
+- **`@tableria/protocol`**: esquemas Zod de los mensajes WS. Envelope simplificado respecto al bosquejo original: **sin `ping`/`pong` a nivel de aplicación** (el heartbeat usa frames de control nativos de `ws`) y **sin `seq` genérico en el envelope** (cada payload lleva su propio contador donde importa, p. ej. `match.state.seq`). Resync de **estado completo** en cada `match.state` en vez de diffs incrementales — simplificación deliberada, válida mientras los estados de los juegos sean pequeños.
+- **`@tableria/engine`**: la interfaz `GameDefinition<S,M>` tal cual quedó bosquejada (`setup`/`activePlayers`/`validateMove`/`applyMove`/`checkEnd`/`playerView`/`onTurnTimeout`), asientos 0-indexados. `Rng` determinista (`xmur3` + `mulberry32`, serializable por `seed`+`calls` para reanudar tras un reinicio).
+- **`@tableria/games`**: tres en raya como primer `GameDefinition` real — 8 líneas de victoria, empate, información perfecta (`playerView` idéntica para ambos asientos y espectadores). 18 tests cubren el contrato completo, incluidas las 8 líneas parametrizadas y una secuencia de empate completa.
+
+**Verificación**: 40 tests nuevos (13 protocolo + 9 rng + 18 tres-en-raya), `pnpm turbo lint typecheck test build` en verde. Commit `61c7cb0`.
+
+### 2. Servidor — migración, lobby por tRPC, match runtime, gateway WS
+
+- **Migración** (`packages/db`, commit `50b85c5`): tabla `match_chat_messages` (matchId, userId, body, createdAt + índice `(matchId, createdAt)`) — chat de mesa deliberadamente separado de la futura mensajería de amigos (`messages`, M3). `inArray` añadido al re-export de drizzle-orm.
+- **`protectedProcedure`** nuevo en `trpc.ts` (exige `ctx.user`, resuelto en `context.ts` leyendo la cookie `tb_sid` con el mismo `getUserFromToken` que ya usaba el auth REST). Router **`matches`** (`create`/`join`/`listPublic`/`getByCode`/`setReady`/`leave`) — el CRUD del lobby va por tRPC; movimientos y chat van solo por WS, tal y como preveía la tabla de stack.
+- **Match runtime** en memoria (`apps/server/src/match/`): `registry.ts` (tipos + `Map<matchId, MatchRuntime>`), `persistence.ts` (snapshot + replay de `match_moves` para reconstruir el estado autoritativo), `lifecycle.ts` (arranque de partida, pipeline transaccional de movimientos, forfeit por timeout), `timers.ts`, `broadcast.ts`, `service.ts` (composición + `recoverOnBoot`).
+- **Pipeline de movimiento**: `SELECT ... FOR UPDATE` sobre `matches` serializa cualquier movimiento concurrente; `INSERT match_moves` con `UNIQUE(match_id, seq)` como red de seguridad final; snapshot cada 20 movimientos o al terminar; la caché en memoria solo se muta **después** de que el INSERT confirma éxito.
+- **Recovery al arrancar** (`recoverOnBoot`, llamado desde `index.ts` antes de `listen`): revisa **todas** las partidas `in_game` (no solo las de deadline ya vencido, corrección sobre el primer borrador) — si el turno ya venció, forfeit inmediato; si no, reprograma el timer con el tiempo restante y precarga el runtime.
+- **Gateway WS** (`apps/server/src/ws/`) en `/api/ws` vía `@fastify/websocket`: autentica en el handshake con la misma cookie `tb_sid` (con fallback a parsear la cabecera `cookie` a mano si `@fastify/cookie` no la expone en la petición de upgrade), heartbeat ping/pong cada 30s que también revalida que la sesión no haya sido revocada. El WS gestiona **también la sala de espera** (no solo la partida en curso): el cliente se suscribe con `match.join` en cuanto entra a `/sala/$code`, y el servidor difunde `match.lobby` en cada cambio — sin esto, el ready-check con cuenta atrás no tendría forma de reflejarse en vivo (tRPC aquí no tiene subscripciones).
+- **Nota técnica reutilizable**: generar el `.d.ts` de `AppRouter` con `protectedProcedure` en el contexto dio `TS2742` ("cannot be named without a reference to .../dist/schema.js") porque `@tableria/db` solo exponía `.` en su `package.json#exports`. Se resolvió añadiendo un subpath comodín `"./*": {"types": "./dist/*.d.ts", "default": "./dist/*.js"}` — cualquier paquete workspace que exponga tipos consumidos indirectamente por otro paquete (no solo el que lo importa directamente) puede necesitar este mismo ajuste.
+
+**Verificación**: máquina de estados `create→join→setReady×2→waiting→starting→in_game` comprobada primero por curl/SQL antes de tocar WS (commit `4c5ec2f`); gateway WS probado después con **dos WebSockets reales** (cookies de sesión auténticas, sin mocks): countdown de lobby en vivo, movimientos alternados con broadcast correcto, rechazo `NOT_YOUR_TURN`/`INVALID_MOVE`, chat de mesa difundido (commit `75ecc2a`). De forma orgánica, al reiniciar el servidor a mitad de las pruebas, `recoverOnBoot` forfeiteó automáticamente una partida cuyo `turnDeadlineAt` había vencido mientras el proceso estaba caído — exactamente el escenario que pide la prueba de fuego del roadmap.
+
+### 3. Frontend — lobby, tablero y chat en tiempo real
+
+- **`lib/ws.ts`**: wrapper sobre `WebSocket` nativo con reconexión (backoff exponencial + jitter) y reenvío automático de la última suscripción (`match.join`/`watch`/`resume`) tras cada reconexión.
+- **`stores/match.ts`**: puente Zustand entre los mensajes del WS y las páginas, mismo patrón side-effect que `stores/theme.ts`/`stores/i18n.ts` (importado por efecto en `main.tsx`, no vía provider).
+- **`/sala/$code`** (nueva): sala de espera con asientos/ready desde `match.lobby`, cuenta atrás calculada en cliente desde `startsAt`, navegación automática a `/partida/$id` en cuanto llega el primer `match.state`.
+- **`/partida/$id`** (nueva): tablero de tres en raya (tipado con `TicTacToeView` importado solo como tipo desde `@tableria/games`, consumido igual que `@tableria/server` — el tablero se renderiza en `apps/web`, no como componente React exportado desde `packages/games`, que se mantiene 100% puro/sin IO), temporizador, chat de mesa, banner de fin con el resultado. Misma vista para jugadores y espectadores (controles de movimiento ocultos para estos últimos).
+- **`/salas`**: deja de ser un placeholder — lista de salas públicas (`listPublic`, refresco cada 5s) + unirse por código.
+- **Ficha de juego**: el botón "Crear sala" (antes deshabilitado con copy "disponible en M2") ya funciona para juegos con `isActive`.
+- **`vite.config.ts`**: proxy `/api` pasado de forma corta (string) a forma objeto con `ws: true` — necesario para que el upgrade de WebSocket atraviese el proxy de Vite en dev.
+
+**Verificación**: `pnpm turbo lint typecheck test build` en verde (23/23) tras cada fase. Commit `0a56b2e`.
+
+### Deuda explícita (documentada, no bloqueante)
+
+- Abandono por desconexión con grace period 60s: hoy solo se marca `disconnectedAt`, sin transición automática a `abandoned`. El firetest de M2 no lo exige; se retoma en M3+.
+- El riesgo #1 del roadmap ("M2 es el corazón") se mitigó verificando el contrato exhaustivamente con tres en raya (18 tests + firetest real) en vez de diseñar el juego de cartas sobre papel primero — juicio pragmático dado que tres en raya ya ejercita turnos, fin de partida con ranking N-jugador y `playerView`; queda pendiente confirmar el contrato contra un juego de información oculta real en M4.
