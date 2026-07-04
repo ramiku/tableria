@@ -2,11 +2,14 @@ import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import { createDb, sql, type Db } from '@tableria/db';
 import type { Env } from './config.js';
 import { registerCsrf } from './auth/csrf.js';
 import { createMailer } from './auth/mailer.js';
 import { registerAuthRoutes } from './auth/routes.js';
+import { appRouter } from './trpc/router.js';
+import { createContext } from './trpc/context.js';
 
 export async function buildApp(env: Env, db: Db = createDb(env.DATABASE_URL)) {
   const app = Fastify({
@@ -39,6 +42,11 @@ export async function buildApp(env: Env, db: Db = createDb(env.DATABASE_URL)) {
 
   const mailer = createMailer(env);
   await registerAuthRoutes(app, { db, env, mailer });
+
+  await app.register(fastifyTRPCPlugin, {
+    prefix: '/api/trpc',
+    trpcOptions: { router: appRouter, createContext: createContext(db) },
+  });
 
   return app;
 }

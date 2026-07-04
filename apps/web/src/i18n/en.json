@@ -80,9 +80,12 @@
     "catalog": "Catalog",
     "soon": "Coming soon",
     "filterAll": "All",
-    "filterBoard": "Board",
-    "filterCards": "Cards",
-    "emptySearch": "No games match that search."
+    "emptySearch": "No games match that search.",
+    "loadError": "Could not load the catalog. Try again in a few seconds.",
+    "moreComing": {
+      "title": "Hidden-info cards and a party game on the way",
+      "body": "Joining the catalog in M4 and M7."
+    }
   },
   "rooms": {
     "title": "Public rooms",
@@ -102,19 +105,35 @@
   },
   "game": {
     "notFound": "Game not found",
-    "badge": {
-      "new": "New",
-      "soon": "Soon"
-    },
+    "notFoundBody": "This game doesn't exist or isn't in the catalog yet.",
+    "backToCatalog": "Back to catalog",
+    "durationMin": "{{count}} min",
     "status": {
-      "playing": "{{count}} playing",
-      "coming": "Coming soon"
+      "available": "Available",
+      "comingSoon": "Coming soon"
     },
     "category": {
-      "board": "Board",
-      "cards": "Cards"
+      "other": "Board game"
     },
-    "detailEmpty": "Game details — lobby of tables in {{milestone}}.",
+    "meta": {
+      "players": "players"
+    },
+    "tabs": {
+      "play": "Play",
+      "rules": "Rules"
+    },
+    "play": {
+      "availability": "The match engine for this game arrives in {{milestone}}.",
+      "cta": "Create room",
+      "steps": {
+        "createRoom": { "title": "Create a room", "body": "Public or private, with a code to invite." },
+        "invite": { "title": "Invite your rivals", "body": "Share the link or wait in the public room." },
+        "play": { "title": "Play in real time", "body": "Turns, timer and automatic reconnection." }
+      }
+    },
+    "rules": {
+      "empty": "The rules for this game are being written. Check back soon."
+    },
     "milestoneM2": "M2",
     "milestoneM3": "M3",
     "milestoneM5": "M5"

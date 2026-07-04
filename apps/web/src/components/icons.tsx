@@ -196,3 +196,59 @@ export function GlobeIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function ClockIcon(props: IconProps) {
+  return (
+    <svg {...base} width={16} height={16} {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </svg>
+  );
+}
+
+export function DiceIcon(props: IconProps) {
+  return (
+    <svg {...base} width={20} height={20} {...props}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" />
+      <circle cx="8.3" cy="8.3" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="15.7" cy="8.3" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="8.3" cy="15.7" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="15.7" cy="15.7" r="1.15" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function CardsIcon(props: IconProps) {
+  return (
+    <svg {...base} width={20} height={20} {...props}>
+      <rect x="3" y="6.5" width="12" height="15" rx="1.8" transform="rotate(-8 9 14)" />
+      <rect x="8.5" y="3.5" width="12" height="15" rx="1.8" />
+    </svg>
+  );
+}
+
+export function PlayIcon(props: IconProps) {
+  return (
+    <svg {...base} width={18} height={18} fill="currentColor" stroke="none" {...props}>
+      <path d="M7 4.5v15l13-7.5-13-7.5Z" />
+    </svg>
+  );
+}
+
+export function BookIcon(props: IconProps) {
+  return (
+    <svg {...base} width={18} height={18} {...props}>
+      <path d="M4 5.5c2.2-1.3 5-1.3 7 0v13c-2-1.3-4.8-1.3-7 0v-13Z" />
+      <path d="M20 5.5c-2.2-1.3-5-1.3-7 0v13c2-1.3 4.8-1.3 7 0v-13Z" />
+    </svg>
+  );
+}
+
+export function ArrowLeftIcon(props: IconProps) {
+  return (
+    <svg {...base} width={16} height={16} {...props}>
+      <path d="M19 12H5M11 6l-6 6 6 6" />
+    </svg>
+  );
+}

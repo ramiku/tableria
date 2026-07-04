@@ -80,9 +80,12 @@
     "catalog": "Catálogo",
     "soon": "Próximamente",
     "filterAll": "Todos",
-    "filterBoard": "Tablero",
-    "filterCards": "Cartas",
-    "emptySearch": "Ningún juego coincide con esa búsqueda."
+    "emptySearch": "Ningún juego coincide con esa búsqueda.",
+    "loadError": "No se pudo cargar el catálogo. Inténtalo de nuevo en unos segundos.",
+    "moreComing": {
+      "title": "Cartas ocultas y party game en camino",
+      "body": "Se suman al catálogo en M4 y M7."
+    }
   },
   "rooms": {
     "title": "Salas públicas",
@@ -102,19 +105,35 @@
   },
   "game": {
     "notFound": "Juego no encontrado",
-    "badge": {
-      "new": "Nuevo",
-      "soon": "Pronto"
-    },
+    "notFoundBody": "El juego que buscas no existe o todavía no está en el catálogo.",
+    "backToCatalog": "Volver al catálogo",
+    "durationMin": "{{count}} min",
     "status": {
-      "playing": "{{count}} jugando",
-      "coming": "Próximamente"
+      "available": "Disponible",
+      "comingSoon": "Próximamente"
     },
     "category": {
-      "board": "Tablero",
-      "cards": "Cartas"
+      "other": "Juego de mesa"
     },
-    "detailEmpty": "Ficha del juego — lobby de mesas en {{milestone}}.",
+    "meta": {
+      "players": "jugadores"
+    },
+    "tabs": {
+      "play": "Jugar",
+      "rules": "Reglas"
+    },
+    "play": {
+      "availability": "El motor de partidas para este juego llega en {{milestone}}.",
+      "cta": "Crear sala",
+      "steps": {
+        "createRoom": { "title": "Crea una sala", "body": "Pública o privada, con código para invitar." },
+        "invite": { "title": "Invita a tus rivales", "body": "Comparte el enlace o espera en la sala pública." },
+        "play": { "title": "Juega en tiempo real", "body": "Turnos, temporizador y reconexión automática." }
+      }
+    },
+    "rules": {
+      "empty": "Las reglas de este juego se están escribiendo. Vuelve pronto."
+    },
     "milestoneM2": "M2",
     "milestoneM3": "M3",
     "milestoneM5": "M5"
