@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@tableria/protocol": "workspace:*",
     "@tanstack/react-query": "^5.66.0",
     "@tanstack/react-router": "^1.97.0",
     "@trpc/client": "^11.18.0",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@tableria/config": "workspace:*",
+    "@tableria/games": "workspace:*",
     "@tableria/server": "workspace:*",
     "@tailwindcss/vite": "^4.1.0",
     "@tanstack/router-plugin": "^1.97.0",

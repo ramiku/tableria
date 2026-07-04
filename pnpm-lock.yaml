@@ -96,6 +96,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@tableria/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
       '@tanstack/react-query':
         specifier: ^5.66.0
         version: 5.101.2(react@19.2.7)
@@ -130,6 +133,9 @@ importers:
       '@tableria/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@tableria/games':
+        specifier: workspace:*
+        version: link:../../packages/games
       '@tableria/server':
         specifier: workspace:*
         version: link:../server

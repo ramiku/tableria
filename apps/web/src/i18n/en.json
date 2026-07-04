@@ -89,7 +89,44 @@
   },
   "rooms": {
     "title": "Public rooms",
-    "comingIn": "— coming in {{milestone}}."
+    "comingIn": "— coming in {{milestone}}.",
+    "codePlaceholder": "Room code",
+    "join": "Join",
+    "joinError": "That code isn't valid or the room isn't accepting players anymore.",
+    "empty": "No public rooms open right now. Create one from a game's page!",
+    "playersCount": "{{count}}/{{max}} players",
+    "enter": "Enter"
+  },
+  "sala": {
+    "title": "Room code",
+    "notFound": "That room doesn't exist",
+    "notActive": "This room isn't active anymore",
+    "backToRooms": "Back to public rooms",
+    "emptySeat": "Waiting for player…",
+    "ready": "Ready",
+    "notReady": "Waiting",
+    "startingIn": "Starting in {{count}}s",
+    "markReady": "I'm ready",
+    "cancelReady": "Cancel ready",
+    "connection": {
+      "connecting": "Connecting…",
+      "reconnecting": "Reconnecting…",
+      "closed": "Disconnected"
+    }
+  },
+  "partida": {
+    "yourTurn": "Your turn",
+    "opponentTurn": "Opponent's turn",
+    "spectating": "You're watching this match as a spectator",
+    "endedCompleted": "Match finished",
+    "endedForfeit": "Match ended by timeout",
+    "resultWin": "You won!",
+    "resultLoss": "You lost",
+    "resultDraw": "Draw",
+    "resultSpectator": "The match has ended",
+    "chat": "Table chat",
+    "chatEmpty": "No messages yet",
+    "chatPlaceholder": "Write a message…"
   },
   "friends": {
     "title": "Friends",
@@ -125,6 +162,8 @@
     "play": {
       "availability": "The match engine for this game arrives in {{milestone}}.",
       "cta": "Create room",
+      "creating": "Creating room…",
+      "readyToPlay": "Create a public room and start playing right away.",
       "steps": {
         "createRoom": { "title": "Create a room", "body": "Public or private, with a code to invite." },
         "invite": { "title": "Invite your rivals", "body": "Share the link or wait in the public room." },

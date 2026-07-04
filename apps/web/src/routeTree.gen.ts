@@ -20,6 +20,8 @@ import { Route as AppSalasRouteImport } from './routes/_app.salas'
 import { Route as AppRankingsRouteImport } from './routes/_app.rankings'
 import { Route as AppPerfilRouteImport } from './routes/_app.perfil'
 import { Route as AppAmigosRouteImport } from './routes/_app.amigos'
+import { Route as AppSalaCodeRouteImport } from './routes/_app.sala.$code'
+import { Route as AppPartidaIdRouteImport } from './routes/_app.partida.$id'
 import { Route as AppJuegosSlugRouteImport } from './routes/_app.juegos.$slug'
 
 const RestablecerRoute = RestablecerRouteImport.update({
@@ -76,6 +78,16 @@ const AppAmigosRoute = AppAmigosRouteImport.update({
   path: '/amigos',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSalaCodeRoute = AppSalaCodeRouteImport.update({
+  id: '/sala/$code',
+  path: '/sala/$code',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPartidaIdRoute = AppPartidaIdRouteImport.update({
+  id: '/partida/$id',
+  path: '/partida/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppJuegosSlugRoute = AppJuegosSlugRouteImport.update({
   id: '/juegos/$slug',
   path: '/juegos/$slug',
@@ -94,6 +106,8 @@ export interface FileRoutesByFullPath {
   '/salas': typeof AppSalasRoute
   '/torneos': typeof AppTorneosRoute
   '/juegos/$slug': typeof AppJuegosSlugRoute
+  '/partida/$id': typeof AppPartidaIdRoute
+  '/sala/$code': typeof AppSalaCodeRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -107,6 +121,8 @@ export interface FileRoutesByTo {
   '/torneos': typeof AppTorneosRoute
   '/': typeof AppIndexRoute
   '/juegos/$slug': typeof AppJuegosSlugRoute
+  '/partida/$id': typeof AppPartidaIdRoute
+  '/sala/$code': typeof AppSalaCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +138,8 @@ export interface FileRoutesById {
   '/_app/torneos': typeof AppTorneosRoute
   '/_app/': typeof AppIndexRoute
   '/_app/juegos/$slug': typeof AppJuegosSlugRoute
+  '/_app/partida/$id': typeof AppPartidaIdRoute
+  '/_app/sala/$code': typeof AppSalaCodeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +155,8 @@ export interface FileRouteTypes {
     | '/salas'
     | '/torneos'
     | '/juegos/$slug'
+    | '/partida/$id'
+    | '/sala/$code'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -150,6 +170,8 @@ export interface FileRouteTypes {
     | '/torneos'
     | '/'
     | '/juegos/$slug'
+    | '/partida/$id'
+    | '/sala/$code'
   id:
     | '__root__'
     | '/_app'
@@ -164,6 +186,8 @@ export interface FileRouteTypes {
     | '/_app/torneos'
     | '/_app/'
     | '/_app/juegos/$slug'
+    | '/_app/partida/$id'
+    | '/_app/sala/$code'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -253,6 +277,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAmigosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/sala/$code': {
+      id: '/_app/sala/$code'
+      path: '/sala/$code'
+      fullPath: '/sala/$code'
+      preLoaderRoute: typeof AppSalaCodeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/partida/$id': {
+      id: '/_app/partida/$id'
+      path: '/partida/$id'
+      fullPath: '/partida/$id'
+      preLoaderRoute: typeof AppPartidaIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/juegos/$slug': {
       id: '/_app/juegos/$slug'
       path: '/juegos/$slug'
@@ -271,6 +309,8 @@ interface AppRouteChildren {
   AppTorneosRoute: typeof AppTorneosRoute
   AppIndexRoute: typeof AppIndexRoute
   AppJuegosSlugRoute: typeof AppJuegosSlugRoute
+  AppPartidaIdRoute: typeof AppPartidaIdRoute
+  AppSalaCodeRoute: typeof AppSalaCodeRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -281,6 +321,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppTorneosRoute: AppTorneosRoute,
   AppIndexRoute: AppIndexRoute,
   AppJuegosSlugRoute: AppJuegosSlugRoute,
+  AppPartidaIdRoute: AppPartidaIdRoute,
+  AppSalaCodeRoute: AppSalaCodeRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

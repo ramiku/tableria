@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, createFileRoute } from '@tanstack/react-router';
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { CardsIcon, ClockIcon, DiceIcon, DoorIcon, PlayIcon, BookIcon, ArrowLeftIcon, UsersIcon } from '../components/icons';
 import { trpc } from '../lib/trpc';
@@ -15,6 +15,26 @@ function CategoryIcon({ categorySlug, className }: { categorySlug: string | null
 
 function playerRange(min: number, max: number): string {
   return min === max ? String(min) : `${min}-${max}`;
+}
+
+function CreateRoomButton({ gameId }: { gameId: string }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const createMatch = trpc.matches.create.useMutation({
+    onSuccess: ({ code }) => navigate({ to: '/sala/$code', params: { code } }),
+  });
+
+  return (
+    <button
+      type="button"
+      disabled={createMatch.isPending}
+      onClick={() => createMatch.mutate({ gameId, isPrivate: false })}
+      className="tb-gradient-cta flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+    >
+      <PlayIcon className="h-4 w-4" />
+      {createMatch.isPending ? t('game.play.creating') : t('game.play.cta')}
+    </button>
+  );
 }
 
 function GamePage() {
@@ -159,15 +179,26 @@ function GamePage() {
             ))}
           </div>
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-tb-border pt-5">
-            <p className="text-sm text-tb-muted">{t('game.play.availability', { milestone: t('game.milestoneM2') })}</p>
-            <button
-              type="button"
-              disabled
-              className="tb-gradient-cta flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white opacity-50"
-            >
-              <PlayIcon className="h-4 w-4" />
-              {t('game.play.cta')}
-            </button>
+            {game.isActive ? (
+              <>
+                <p className="text-sm text-tb-muted">{t('game.play.readyToPlay')}</p>
+                <CreateRoomButton gameId={game.slug} />
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-tb-muted">
+                  {t('game.play.availability', { milestone: t('game.milestoneM2') })}
+                </p>
+                <button
+                  type="button"
+                  disabled
+                  className="tb-gradient-cta flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white opacity-50"
+                >
+                  <PlayIcon className="h-4 w-4" />
+                  {t('game.play.cta')}
+                </button>
+              </>
+            )}
           </div>
         </div>
       ) : (

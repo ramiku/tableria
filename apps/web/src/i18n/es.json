@@ -89,7 +89,44 @@
   },
   "rooms": {
     "title": "Salas públicas",
-    "comingIn": "— llega en {{milestone}}."
+    "comingIn": "— llega en {{milestone}}.",
+    "codePlaceholder": "Código de sala",
+    "join": "Unirse",
+    "joinError": "Ese código no es válido o la sala ya no admite jugadores.",
+    "empty": "No hay salas públicas abiertas ahora mismo. ¡Crea una desde la ficha de un juego!",
+    "playersCount": "{{count}}/{{max}} jugadores",
+    "enter": "Entrar"
+  },
+  "sala": {
+    "title": "Código de la sala",
+    "notFound": "Esa sala no existe",
+    "notActive": "Esta sala ya no está activa",
+    "backToRooms": "Volver a salas públicas",
+    "emptySeat": "Esperando jugador…",
+    "ready": "Listo",
+    "notReady": "Esperando",
+    "startingIn": "Empieza en {{count}}s",
+    "markReady": "Estoy listo",
+    "cancelReady": "Cancelar listo",
+    "connection": {
+      "connecting": "Conectando…",
+      "reconnecting": "Reconectando…",
+      "closed": "Sin conexión"
+    }
+  },
+  "partida": {
+    "yourTurn": "Te toca a ti",
+    "opponentTurn": "Turno del rival",
+    "spectating": "Estás viendo esta partida como espectador",
+    "endedCompleted": "Partida terminada",
+    "endedForfeit": "Partida terminada por tiempo",
+    "resultWin": "¡Has ganado!",
+    "resultLoss": "Has perdido",
+    "resultDraw": "Empate",
+    "resultSpectator": "La partida ha terminado",
+    "chat": "Chat de la mesa",
+    "chatEmpty": "Sin mensajes todavía",
+    "chatPlaceholder": "Escribe un mensaje…"
   },
   "friends": {
     "title": "Amigos",
@@ -125,6 +162,8 @@
     "play": {
       "availability": "El motor de partidas para este juego llega en {{milestone}}.",
       "cta": "Crear sala",
+      "creating": "Creando sala…",
+      "readyToPlay": "Crea una sala pública y empieza a jugar ahora mismo.",
       "steps": {
         "createRoom": { "title": "Crea una sala", "body": "Pública o privada, con código para invitar." },
         "invite": { "title": "Invita a tus rivales", "body": "Comparte el enlace o espera en la sala pública." },

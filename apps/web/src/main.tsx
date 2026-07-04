@@ -7,6 +7,7 @@ import { trpc, trpcClient } from './lib/trpc';
 import './i18n';
 import './stores/theme';
 import './stores/i18n';
+import './stores/match';
 import './styles/app.css';
 
 const queryClient = new QueryClient();
