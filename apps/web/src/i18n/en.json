@@ -1,0 +1,28 @@
+{
+  "app": {
+    "name": "Tableria",
+    "tagline": "Online board games with friends"
+  },
+  "nav": {
+    "explore": "Explore",
+    "rooms": "Rooms",
+    "friends": "Friends",
+    "rankings": "Rankings",
+    "tournaments": "Tournaments"
+  },
+  "rail": {
+    "activity": "Activity",
+    "friendsOnline": "Friends online",
+    "empty": "Nothing here yet"
+  },
+  "explore": {
+    "title": "Explore games",
+    "subtitle": "Pick a game and open a table"
+  },
+  "rooms": { "title": "Public rooms" },
+  "friends": { "title": "Friends" },
+  "rankings": { "title": "Rankings" },
+  "tournaments": { "title": "Tournaments" },
+  "game": { "notFound": "Game not found" },
+  "common": { "soon": "Coming soon" }
+}

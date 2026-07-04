@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+
+/* Design tokens Tableria (portados del sistema tb- de la v1) */
+@theme {
+  --font-display: 'Manrope', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* Superficie oscura cálida + acento verde mesa de juego */
+  --color-tb-bg: #14161b;
+  --color-tb-surface: #1c1f26;
+  --color-tb-surface-2: #23272f;
+  --color-tb-border: #2e333d;
+  --color-tb-text: #e8eaee;
+  --color-tb-muted: #9aa1ad;
+  --color-tb-accent: #3fa46a;
+  --color-tb-accent-strong: #2f8253;
+  --color-tb-accent-fg: #eaf6ef;
+  --color-tb-warn: #d9a03f;
+  --color-tb-danger: #d94f4f;
+}
+
+body {
+  @apply bg-tb-bg font-sans text-tb-text antialiased;
+}

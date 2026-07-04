@@ -1,0 +1,28 @@
+{
+  "app": {
+    "name": "Tableria",
+    "tagline": "Juegos de mesa online con amigos"
+  },
+  "nav": {
+    "explore": "Explorar",
+    "rooms": "Salas",
+    "friends": "Amigos",
+    "rankings": "Rankings",
+    "tournaments": "Torneos"
+  },
+  "rail": {
+    "activity": "Actividad",
+    "friendsOnline": "Amigos en línea",
+    "empty": "Nada por aquí todavía"
+  },
+  "explore": {
+    "title": "Explorar juegos",
+    "subtitle": "Elige un juego y abre una mesa"
+  },
+  "rooms": { "title": "Salas públicas" },
+  "friends": { "title": "Amigos" },
+  "rankings": { "title": "Rankings" },
+  "tournaments": { "title": "Torneos" },
+  "game": { "notFound": "Juego no encontrado" },
+  "common": { "soon": "Próximamente" }
+}
