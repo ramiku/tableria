@@ -166,7 +166,7 @@ Regla de dependencias: `games → engine → protocol`; `server → db + games`;
 **M6 — Endurecimiento + producción (M).** ✅ **Parte 1 (endurecimiento) implementada 2026-07-05**: 2FA TOTP + backup codes + trusted devices, magic links, auditoría a11y de tableros, E2E Playwright de flujos críticos. **Parte 2 (diferida, necesita credenciales del usuario)**: OAuth ×4 (arctic), despliegue en tableria.app, backups, monitorización. Detalle en [«M6 (parte 1) — Endurecimiento (implementado)»](#m6-parte-1--endurecimiento-implementado-2026-07-05) más abajo.
 *Demo: activar 2FA, entrar con backup code o enlace mágico, navegar un tablero solo con teclado.*
 
-**M7 — Más juegos (M).** ✅ **Implementado 2026-07-05**: Reversi/Othello (1v1 información perfecta) y **Pista Única**, party game cooperativo de 3-8 jugadores con pistas simultáneas (primer juego que ejercita `activePlayers` con varios asientos a la vez, y primer aforo de mesa variable elegible en el lobby). Solo queda pendiente eliminar `legacy/`. Detalle en [«M7 — Reversi/Othello (implementado)»](#m7--reversiothello-implementado-2026-07-05) y [«M7 — Pista Única (implementado)»](#m7--pista-única-party-game-cooperativo-3-8-jugadores-implementado-2026-07-05) más abajo.
+**M7 — Más juegos (M). ✅ Implementado 2026-07-05.** Reversi/Othello (1v1 información perfecta) y **Pista Única**, party game cooperativo de 3-8 jugadores con pistas simultáneas (primer juego que ejercita `activePlayers` con varios asientos a la vez, y primer aforo de mesa variable elegible en el lobby). `legacy/` eliminada. Detalle en [«M7 — Reversi/Othello (implementado)»](#m7--reversiothello-implementado-2026-07-05) y [«M7 — Pista Única (implementado)»](#m7--pista-única-party-game-cooperativo-3-8-jugadores-implementado-2026-07-05) más abajo.
 *Demo: 5 juegos jugables en producción.*
 
 Tamaño relativo: M2 ≈ M4 > M5 ≈ M6 ≈ M7 > M1 ≈ M3 > M0.
@@ -484,6 +484,8 @@ Hasta ahora todo juego tenía `minPlayers === maxPlayers` en el catálogo y `mat
 
 **Hallazgo operativo (no de producto)**: con 7 specs E2E y todas registrando usuarios nuevos, la suite completa ya no cabe en una sola pasada bajo el rate-limit de producción de `/api/auth/register` (8/15 min) — hoy suma 11 registros si se cuentan todos los specs juntos. Se verificó corriendo en dos tandas con reinicio del servidor entre medias (que limpia el limitador en memoria al instante) en vez de tocar el límite de producción por conveniencia de testing, mismo criterio que ya se documentó en M6.
 
-### Pendiente de M7
+### `legacy/` eliminada (2026-07-05)
 
-- Eliminar `legacy/` (solo tiene sentido una vez no quede nada más que portar/consultar de la v1 PHP).
+Cerraba M7 y el roadmap completo. `legacy/` nunca estuvo trackeada por git (vivía fuera del repo desde M0, listada en `.gitignore` por contener credenciales de BD hardcodeadas de la v1), así que borrarla del disco no toca el historial — solo se quitó la entrada ya inerte de `.gitignore`. Los esquemas SQL de referencia de la v1 (`docs/legacy-schema/`) sí siguen en el repo, son la única parte que merecía conservarse.
+
+**Roadmap M0-M7 completo.** Próximos pasos posibles, todos fuera del roadmap original y a decidir por el usuario: M6 parte 2 (OAuth + despliegue a producción, diferida por falta de credenciales), torneos suizos (diferidos en M5), más juegos, o pulir deuda técnica acumulada (p.ej. Brisca fijo a 2 jugadores pese a soportar 2-4 en el motor).

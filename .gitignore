@@ -38,8 +38,3 @@ Thumbs.db
 sid-*
 *.sql.gz
 
-# Legacy (PHP/XAMPP) — queda en disco como referencia hasta M7 pero
-# FUERA de git: contiene credenciales de BD hardcodeadas que no deben
-# entrar en el historial. Los esquemas SQL de referencia están en
-# docs/legacy-schema/.
-legacy/
