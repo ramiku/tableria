@@ -86,6 +86,7 @@ function MatchPage() {
   const { id: matchId } = Route.useParams();
   const { me } = Route.useRouteContext();
   const [chatInput, setChatInput] = useState('');
+  const utils = trpc.useUtils();
 
   const matchState = useMatchStore((s) => s.matchState);
   const ended = useMatchStore((s) => s.ended);
@@ -97,6 +98,13 @@ function MatchPage() {
     matchSocket.subscribe({ type: 'match.resume', payload: { matchId } });
     return () => useMatchStore.getState().reset();
   }, [matchId]);
+
+  // Sin esto, "mi mesa activa" se queda apuntando a esta partida ya acabada en la caché de
+  // React Query hasta que algo más la invalide — si sales sin pulsar "volver al catálogo" y
+  // entras de nuevo en la ficha del juego, verías el "Reanudar" de una partida ya terminada.
+  useEffect(() => {
+    if (ended) void utils.matches.myActive.invalidate();
+  }, [ended, utils]);
 
   const deadline = useCountdownSeconds(matchState?.turnDeadlineAt ?? null);
 
@@ -183,70 +191,75 @@ function MatchPage() {
           </p>
         )}
 
-        {ended ? (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-tb-border bg-tb-surface p-8 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-tb-accent-tint text-tb-accent">
-              <MedalIcon className="h-6 w-6" />
-            </span>
-            <h1 className="font-display text-xl font-bold">
-              {t(ended.reason === 'forfeit' ? 'partida.endedForfeit' : 'partida.endedCompleted')}
-            </h1>
-            <p className="text-sm text-tb-muted">
-              {isSpectator
-                ? t('partida.resultSpectator')
-                : t(
-                    ended.ranking.find((r) => r.seat === mySeat)?.result === 'win'
-                      ? 'partida.resultWin'
-                      : ended.ranking.find((r) => r.seat === mySeat)?.result === 'draw'
-                        ? 'partida.resultDraw'
-                        : 'partida.resultLoss',
-                  )}
+        {/* El tablero se queda montado incluso tras el fin de partida (controles ya inertes
+            porque activePlayers queda vacío) — así el resultado puede mostrarse como una capa
+            semitransparente por encima, sin ocultar la posición final por detrás. */}
+        <div className="relative">
+          {isSpectator && !ended && <p className="mb-3 text-center text-xs text-tb-muted">{t('partida.spectating')}</p>}
+          {/* Pista Única es cooperativo entre 3-8 jugadores y su propio tablero ya explica de
+              quién es el turno con más matiz ("eres quien adivina" / pistas pendientes, etc.) —
+              el genérico "turno del rival" no encaja y sobra aquí. */}
+          {!isSpectator && !ended && matchInfo?.gameId !== 'pista-unica' && (
+            <p className="mb-1 text-center text-sm font-medium text-tb-text">
+              {myTurn ? t('partida.yourTurn') : t('partida.opponentTurn')}
             </p>
-            {!isSpectator &&
-              (() => {
-                const delta = ended.ratingDeltas?.find((d) => d.seat === mySeat);
-                if (!delta) return null;
-                const change = Math.round(delta.ratingAfter - delta.ratingBefore);
-                return (
-                  <p className="tb-nums text-sm font-semibold">
-                    {Math.round(delta.ratingBefore)} → {Math.round(delta.ratingAfter)}{' '}
-                    <span className={change >= 0 ? 'text-tb-success' : 'text-tb-danger'}>
-                      ({change >= 0 ? '+' : ''}
-                      {change})
-                    </span>
-                  </p>
-                );
-              })()}
-            <Link
-              to="/"
-              className="mt-2 flex items-center gap-1.5 rounded-lg border border-tb-border px-3.5 py-2 text-sm font-medium text-tb-text hover:bg-tb-surface-2"
-            >
-              <ArrowLeftIcon />
-              {t('game.backToCatalog')}
-            </Link>
-          </div>
-        ) : (
-          <>
-            {isSpectator && <p className="mb-3 text-center text-xs text-tb-muted">{t('partida.spectating')}</p>}
-            {/* Pista Única es cooperativo entre 3-8 jugadores y su propio tablero ya explica de
-                quién es el turno con más matiz ("eres quien adivina" / pistas pendientes, etc.) —
-                el genérico "turno del rival" no encaja y sobra aquí. */}
-            {!isSpectator && matchInfo?.gameId !== 'pista-unica' && (
-              <p className="mb-1 text-center text-sm font-medium text-tb-text">
-                {myTurn ? t('partida.yourTurn') : t('partida.opponentTurn')}
-              </p>
-            )}
-            {BoardComponent && matchState && (
-              <BoardComponent
-                matchId={matchId}
-                seq={matchState.seq}
-                mySeat={mySeat}
-                myTurn={myTurn}
-                view={matchState.view}
-              />
-            )}
-          </>
-        )}
+          )}
+          {BoardComponent && matchState && (
+            <BoardComponent
+              matchId={matchId}
+              seq={matchState.seq}
+              mySeat={mySeat}
+              myTurn={myTurn}
+              view={matchState.view}
+            />
+          )}
+
+          {ended && (
+            <div className="tb-modal-in absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-tb-surface/25 p-4">
+              <div className="flex w-full max-w-xs flex-col items-center gap-3 rounded-2xl border border-tb-border bg-tb-surface/95 p-7 text-center shadow-2xl backdrop-blur-md">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-tb-accent-tint text-tb-accent">
+                  <MedalIcon className="h-6 w-6" />
+                </span>
+                <h1 className="font-display text-xl font-bold">
+                  {t(ended.reason === 'forfeit' ? 'partida.endedForfeit' : 'partida.endedCompleted')}
+                </h1>
+                <p className="text-sm text-tb-muted">
+                  {isSpectator
+                    ? t('partida.resultSpectator')
+                    : t(
+                        ended.ranking.find((r) => r.seat === mySeat)?.result === 'win'
+                          ? 'partida.resultWin'
+                          : ended.ranking.find((r) => r.seat === mySeat)?.result === 'draw'
+                            ? 'partida.resultDraw'
+                            : 'partida.resultLoss',
+                      )}
+                </p>
+                {!isSpectator &&
+                  (() => {
+                    const delta = ended.ratingDeltas?.find((d) => d.seat === mySeat);
+                    if (!delta) return null;
+                    const change = Math.round(delta.ratingAfter - delta.ratingBefore);
+                    return (
+                      <p className="tb-nums text-sm font-semibold">
+                        {Math.round(delta.ratingBefore)} → {Math.round(delta.ratingAfter)}{' '}
+                        <span className={change >= 0 ? 'text-tb-success' : 'text-tb-danger'}>
+                          ({change >= 0 ? '+' : ''}
+                          {change})
+                        </span>
+                      </p>
+                    );
+                  })()}
+                <Link
+                  to="/"
+                  className="mt-2 flex items-center gap-1.5 rounded-lg border border-tb-border px-3.5 py-2 text-sm font-medium text-tb-text hover:bg-tb-surface-2"
+                >
+                  <ArrowLeftIcon />
+                  {t('game.backToCatalog')}
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col rounded-2xl border border-tb-border bg-tb-surface p-4">
