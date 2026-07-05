@@ -70,7 +70,7 @@ describe('serverMessageSchema', () => {
         matchId,
         state: 'waiting',
         maxPlayers: 2,
-        seats: [{ seat: 0, userId, username: 'ramiku', ready: false, connected: true }],
+        seats: [{ seat: 0, userId, username: 'ramiku', avatarInitial: 'R', avatarColor: '#2f6fe0', ready: false, connected: true }],
         startsAt: null,
       },
     });
@@ -92,7 +92,7 @@ describe('serverMessageSchema', () => {
     expect(r.success).toBe(true);
   });
 
-  it('acepta match.ended', () => {
+  it('acepta match.ended casual (sin rating)', () => {
     const r = serverMessageSchema.safeParse({
       type: 'match.ended',
       payload: {
@@ -101,6 +101,26 @@ describe('serverMessageSchema', () => {
         ranking: [
           { seat: 0, placement: 1, result: 'win' },
           { seat: 1, placement: 2, result: 'lose' },
+        ],
+        ratingDeltas: null,
+      },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('acepta match.ended rated (con deltas de rating)', () => {
+    const r = serverMessageSchema.safeParse({
+      type: 'match.ended',
+      payload: {
+        matchId,
+        reason: 'completed',
+        ranking: [
+          { seat: 0, placement: 1, result: 'win' },
+          { seat: 1, placement: 2, result: 'lose' },
+        ],
+        ratingDeltas: [
+          { seat: 0, ratingBefore: 1500, ratingAfter: 1516 },
+          { seat: 1, ratingBefore: 1500, ratingAfter: 1484 },
         ],
       },
     });

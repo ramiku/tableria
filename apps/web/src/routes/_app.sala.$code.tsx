@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { Avatar } from '../components/Avatar';
 import { CheckIcon, LinkIcon, UsersIcon } from '../components/icons';
-import { useCountdownSeconds } from '../lib/useCountdown';
 import { trpc } from '../lib/trpc';
 import { matchSocket } from '../lib/ws';
 import { useMatchStore } from '../stores/match';
@@ -21,13 +21,32 @@ function RoomPage() {
   const matchState = useMatchStore((s) => s.matchState);
   const connectionStatus = useMatchStore((s) => s.connectionStatus);
   const setReady = trpc.matches.setReady.useMutation();
-  const countdown = useCountdownSeconds(lobby?.startsAt ?? null);
+  const [joinError, setJoinError] = useState('');
+  const [leaveError, setLeaveError] = useState('');
 
   const matchId = data?.matchId ?? null;
+  const joinMatch = trpc.matches.join.useMutation();
+  const leaveMatch = trpc.matches.leave.useMutation({
+    onSuccess: () => void navigate({ to: '/salas' }),
+    onError: (err) => setLeaveError(err.message),
+  });
 
+  // Al llegar a la sala (crearla, pulsar "Entrar" en la lista o abrir un enlace
+  // compartido) puede que todavía no tengamos asiento — nos unimos primero por
+  // tRPC y solo luego suscribimos el WS como jugador; si la sala ya no admite
+  // jugadores, nos quedamos viéndola como espectador en vez de quedar colgados.
   useEffect(() => {
     if (!matchId) return;
-    matchSocket.subscribe({ type: 'match.join', payload: { matchId } });
+    joinMatch.mutate(
+      { code },
+      {
+        onSuccess: () => matchSocket.subscribe({ type: 'match.join', payload: { matchId } }),
+        onError: (err) => {
+          setJoinError(err.message);
+          matchSocket.subscribe({ type: 'match.watch', payload: { matchId } });
+        },
+      },
+    );
     return () => useMatchStore.getState().reset();
   }, [matchId]);
 
@@ -92,6 +111,11 @@ function RoomPage() {
     setReady.mutate({ matchId, ready: !mySeat.ready });
   }
 
+  function handleLeave() {
+    if (!matchId) return;
+    leaveMatch.mutate({ matchId });
+  }
+
   return (
     <section className="mx-auto max-w-lg">
       <div className="rounded-2xl border border-tb-border bg-tb-surface p-6 text-center">
@@ -105,6 +129,22 @@ function RoomPage() {
           {copied ? <CheckIcon className="h-5 w-5 text-tb-success" /> : <LinkIcon className="h-5 w-5 text-tb-muted" />}
         </button>
 
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+          <span className="rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
+            {t(`sala.mode.${data.mode}`)}
+          </span>
+          {(() => {
+            const variant = (data.options as { variant?: string } | null)?.variant;
+            return variant ? (
+              <span className="rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
+                {t(`sala.variant.${variant}`)}
+              </span>
+            ) : null;
+          })()}
+        </div>
+
+        {joinError && <p className="mt-3 text-xs font-medium text-tb-danger">{joinError}</p>}
+
         {connectionStatus !== 'open' && (
           <p className="mt-3 text-xs font-medium text-tb-warn">{t(`sala.connection.${connectionStatus}`)}</p>
         )}
@@ -114,8 +154,16 @@ function RoomPage() {
             const s = seats.find((x) => x.seat === seat);
             return (
               <div key={seat} className="flex items-center justify-between rounded-xl bg-tb-surface-2 px-4 py-3">
-                <span className="flex items-center gap-2 text-sm font-medium text-tb-text">
-                  <UsersIcon className="h-4 w-4 text-tb-muted" />
+                <span className="flex items-center gap-2.5 text-sm font-medium text-tb-text">
+                  {s?.username ? (
+                    <Avatar
+                      initial={s.avatarInitial ?? s.username.charAt(0).toUpperCase()}
+                      color={s.avatarColor ?? '#2f6fe0'}
+                      size={32}
+                    />
+                  ) : (
+                    <UsersIcon className="h-4 w-4 text-tb-muted" />
+                  )}
                   {s?.username ?? t('sala.emptySeat')}
                 </span>
                 {s && (
@@ -132,11 +180,7 @@ function RoomPage() {
           })}
         </div>
 
-        {lobby?.state === 'starting' && countdown !== null && (
-          <p className="tb-nums mt-5 font-display text-lg font-bold text-tb-accent">
-            {t('sala.startingIn', { count: countdown })}
-          </p>
-        )}
+        {leaveError && <p className="mt-3 text-xs font-medium text-tb-danger">{leaveError}</p>}
 
         {mySeat && (
           <button
@@ -146,6 +190,17 @@ function RoomPage() {
             className="tb-gradient-cta mt-6 w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {mySeat.ready ? t('sala.cancelReady') : t('sala.markReady')}
+          </button>
+        )}
+
+        {mySeat && lobby?.state === 'waiting' && (
+          <button
+            type="button"
+            onClick={handleLeave}
+            disabled={leaveMatch.isPending}
+            className="mt-3 w-full rounded-lg border border-tb-border px-4 py-2 text-sm font-medium text-tb-muted transition-colors hover:border-tb-danger hover:text-tb-danger disabled:opacity-50"
+          >
+            {t('sala.leave')}
           </button>
         )}
       </div>

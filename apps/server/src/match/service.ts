@@ -1,7 +1,7 @@
 import { and, eq, matchChatMessages, matchPlayers, matchSpectators, matches, type Db } from '@tableria/db';
 import { broadcastChat, broadcastLobby, broadcastState, sendChatHistory, sendError } from './broadcast.js';
 import { getGameDefinition } from './games.js';
-import { applyPlayerMove, cancelReadyCheck, handleTurnTimeout, scheduleReadyCheck } from './lifecycle.js';
+import { applyPlayerMove, handleTurnTimeout, startMatch } from './lifecycle.js';
 import { loadEngineState } from './persistence.js';
 import {
   addPlayerSocket,
@@ -13,8 +13,8 @@ import {
 import { armTurnTimer } from './timers.js';
 
 export interface MatchService {
-  scheduleReadyCheck(matchId: string): Promise<void>;
-  cancelReadyCheck(matchId: string): Promise<void>;
+  /** Arranque inmediato en cuanto todos los asientos confirman — sin cuenta atrás. */
+  startNow(matchId: string): Promise<void>;
   broadcastLobby(matchId: string): Promise<void>;
   attachPlayer(socket: AuthedSocket, matchId: string): Promise<void>;
   attachSpectator(socket: AuthedSocket, matchId: string): Promise<void>;
@@ -36,7 +36,15 @@ export function createMatchService(db: Db): MatchService {
 
     const def = getGameDefinition(row.gameId);
     const turnDurationS = row.turnDurationS ?? def?.ui.defaultTurnSeconds ?? 30;
-    const runtime = createEmptyRuntime(matchId, row.gameId, row.maxPlayers, turnDurationS);
+    const runtime = createEmptyRuntime(
+      matchId,
+      row.code,
+      row.gameId,
+      row.maxPlayers,
+      turnDurationS,
+      row.mode,
+      (row.options as Record<string, unknown> | null) ?? null,
+    );
     runtimes.set(matchId, runtime);
 
     if (def && (row.state === 'in_game' || row.state === 'finished')) {
@@ -57,14 +65,9 @@ export function createMatchService(db: Db): MatchService {
   }
 
   return {
-    async scheduleReadyCheck(matchId) {
+    async startNow(matchId) {
       const runtime = await ensureRuntime(matchId);
-      if (runtime) scheduleReadyCheck(db, runtime);
-    },
-
-    async cancelReadyCheck(matchId) {
-      const runtime = await ensureRuntime(matchId);
-      if (runtime) cancelReadyCheck(db, runtime);
+      if (runtime) await startMatch(db, runtime);
     },
 
     async broadcastLobby(matchId) {

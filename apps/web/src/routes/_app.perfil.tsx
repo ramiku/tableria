@@ -11,7 +11,8 @@ import {
   StarIcon,
 } from '../components/icons';
 import { LanguageSection } from '../components/LanguageSelector';
-import type { Presence } from '../components/Avatar';
+import { useFriendsList } from '../lib/friends';
+import { trpc } from '../lib/trpc';
 import { useLocaleStore } from '../stores/i18n';
 
 export const Route = createFileRoute('/_app/perfil')({ component: ProfilePage });
@@ -19,34 +20,9 @@ export const Route = createFileRoute('/_app/perfil')({ component: ProfilePage })
 type TabKey = 'account' | 'friends' | 'matches' | 'achievements';
 const tabs: TabKey[] = ['account', 'friends', 'matches', 'achievements'];
 
-// --- Datos demo (hasta que M1/M3 sirvan datos reales desde la API) ---
-const demoFriends = [
-  { id: '1', name: 'Lucía Tester', initial: 'L', color: '#2f6fe0', presence: 'online' as Presence },
-  { id: '2', name: 'ramiku1', initial: 'R', color: '#1c5c52', presence: 'online' as Presence },
-];
-
-const demoRequests = [
-  { id: 'r1', name: 'pepe_bot', initial: 'P', color: '#6e3b2f' },
-  { id: 'r2', name: 'maria_caz', initial: 'M', color: '#4a2f6e' },
-];
+// --- Datos demo de logros (M4 solo sirve estadísticas/partidas reales; los logros quedan para más adelante) ---
 
 type MatchResult = 'win' | 'loss' | 'draw';
-const demoStats = { played: 24, wins: 14, losses: 7, draws: 3 };
-const demoMatches: {
-  id: string;
-  gameKey: 'ticTacToe';
-  opponent: string;
-  opponentColor: string;
-  opponentInitial: string;
-  result: MatchResult;
-  score: string;
-  whenKey: 'twoHoursAgo' | 'yesterday' | 'threeDaysAgo' | 'fiveDaysAgo';
-}[] = [
-  { id: '1', gameKey: 'ticTacToe', opponent: 'Lucía Tester', opponentColor: '#2f6fe0', opponentInitial: 'L', result: 'win', score: '3-1', whenKey: 'twoHoursAgo' },
-  { id: '2', gameKey: 'ticTacToe', opponent: 'ramiku1', opponentColor: '#1c5c52', opponentInitial: 'R', result: 'loss', score: '0-3', whenKey: 'yesterday' },
-  { id: '3', gameKey: 'ticTacToe', opponent: 'Lucía Tester', opponentColor: '#2f6fe0', opponentInitial: 'L', result: 'draw', score: '1-1', whenKey: 'threeDaysAgo' },
-  { id: '4', gameKey: 'ticTacToe', opponent: 'ramiku1', opponentColor: '#1c5c52', opponentInitial: 'R', result: 'win', score: '3-0', whenKey: 'fiveDaysAgo' },
-];
 
 const demoAchievements: { id: string; nameKey: string; descKey: string; unlocked: boolean }[] = [
   { id: 'a1', nameKey: 'firstGame', descKey: 'firstGame', unlocked: true },
@@ -288,19 +264,35 @@ function AccountTab(props: AccountTabProps) {
 
 function FriendsTab() {
   const { t } = useTranslation();
+  const utils = trpc.useUtils();
+  const { friends } = useFriendsList();
+  const { data: pending } = trpc.friends.listPending.useQuery();
+
+  function invalidate() {
+    void utils.friends.list.invalidate();
+    void utils.friends.listPending.invalidate();
+  }
+  const accept = trpc.friends.accept.useMutation({ onSuccess: invalidate });
+  const reject = trpc.friends.reject.useMutation({ onSuccess: invalidate });
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <article className="tb-card rounded-2xl border border-tb-border bg-tb-surface p-6">
         <h2 className="font-display text-base font-bold text-tb-text">
-          {t('profile.friends.summary', { count: demoFriends.length })}
+          {t('profile.friends.summary', { count: friends.length })}
         </h2>
         <ul className="mt-4 flex flex-col divide-y divide-tb-border">
-          {demoFriends.map((f) => (
-            <li key={f.id} className="flex items-center gap-3 py-3">
-              <Avatar initial={f.initial} color={f.color} presence={f.presence} size={36} />
+          {friends.map((f) => (
+            <li key={f.userId} className="flex items-center gap-3 py-3">
+              <Avatar
+                initial={f.avatarInitial ?? f.username.charAt(0).toUpperCase()}
+                color={f.avatarColor ?? '#2f6fe0'}
+                presence={f.presence === 'in_game' ? 'online' : f.presence}
+                size={36}
+              />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-tb-text">{f.name}</p>
-                <p className="text-xs text-tb-muted">@{f.name.toLowerCase().replace(/\s+/g, '_')}</p>
+                <p className="truncate text-sm font-semibold text-tb-text">{f.displayName}</p>
+                <p className="text-xs text-tb-muted">@{f.username}</p>
               </div>
             </li>
           ))}
@@ -318,22 +310,27 @@ function FriendsTab() {
           {t('profile.friends.requests')}
         </h2>
         <ul className="mt-4 flex flex-col divide-y divide-tb-border">
-          {demoRequests.map((r) => (
-            <li key={r.id} className="flex items-center gap-3 py-3">
-              <Avatar initial={r.initial} color={r.color} size={36} />
+          {(pending?.incoming.length ?? 0) === 0 && (
+            <p className="py-3 text-sm text-tb-muted">{t('friends.noIncoming')}</p>
+          )}
+          {pending?.incoming.map((r) => (
+            <li key={r.profile.userId} className="flex items-center gap-3 py-3">
+              <Avatar initial={r.profile.avatarInitial ?? r.profile.username.charAt(0).toUpperCase()} color={r.profile.avatarColor ?? '#2f6fe0'} size={36} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-tb-text">{r.name}</p>
+                <p className="truncate text-sm font-semibold text-tb-text">{r.profile.displayName}</p>
                 <p className="text-xs text-tb-muted">{t('profile.friends.wantsToBe')}</p>
               </div>
               <div className="flex gap-2">
                 <button
                   type="button"
+                  onClick={() => reject.mutate({ userId: r.profile.userId })}
                   className="rounded-lg border border-tb-border bg-tb-surface px-3 py-1.5 text-xs font-semibold text-tb-muted hover:border-tb-danger hover:text-tb-danger"
                 >
                   {t('profile.friends.reject')}
                 </button>
                 <button
                   type="button"
+                  onClick={() => accept.mutate({ userId: r.profile.userId })}
                   className="tb-gradient-cta rounded-lg px-3 py-1.5 text-xs font-semibold text-tb-accent-fg hover:opacity-90"
                 >
                   {t('profile.friends.accept')}
@@ -349,45 +346,92 @@ function FriendsTab() {
 
 function MatchesTab() {
   const { t } = useTranslation();
+  const locale = useLocaleStore((s) => s.locale);
+  const { data: summary } = trpc.ratings.mySummary.useQuery();
+  const { data: recent } = trpc.matches.recent.useQuery();
+
+  const totals = (summary ?? []).reduce(
+    (acc, g) => ({
+      played: acc.played + g.played,
+      wins: acc.wins + g.wins,
+      losses: acc.losses + g.losses,
+      draws: acc.draws + g.draws,
+    }),
+    { played: 0, wins: 0, losses: 0, draws: 0 },
+  );
+  const ratedGames = (summary ?? []).filter((g) => g.rating != null);
+
   return (
     <div className="flex flex-col gap-6">
       {/* Stats */}
       <article className="tb-card rounded-2xl border border-tb-border bg-tb-surface p-6">
         <h2 className="font-display text-base font-bold text-tb-text">{t('profile.matches.stats')}</h2>
         <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatTile label={t('profile.matches.statsPlayed')} value={demoStats.played} />
-          <StatTile label={t('profile.matches.statsWins')} value={demoStats.wins} tone="success" />
-          <StatTile label={t('profile.matches.statsLosses')} value={demoStats.losses} tone="danger" />
-          <StatTile label={t('profile.matches.statsDraws')} value={demoStats.draws} />
+          <StatTile label={t('profile.matches.statsPlayed')} value={totals.played} />
+          <StatTile label={t('profile.matches.statsWins')} value={totals.wins} tone="success" />
+          <StatTile label={t('profile.matches.statsLosses')} value={totals.losses} tone="danger" />
+          <StatTile label={t('profile.matches.statsDraws')} value={totals.draws} />
         </dl>
       </article>
+
+      {/* Rating por juego */}
+      {ratedGames.length > 0 && (
+        <article className="tb-card rounded-2xl border border-tb-border bg-tb-surface p-6">
+          <h2 className="font-display text-base font-bold text-tb-text">{t('profile.matches.ratings')}</h2>
+          <ul className="mt-4 flex flex-col divide-y divide-tb-border">
+            {ratedGames.map((g) => (
+              <li key={g.gameId} className="flex items-center justify-between py-3">
+                <span className="text-sm font-semibold text-tb-text">{g.gameName}</span>
+                <span className="tb-nums font-display text-lg font-extrabold text-tb-accent">
+                  {Math.round(g.rating!)}
+                  <span className="ml-1 text-xs font-normal text-tb-muted">± {Math.round(g.rd!)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </article>
+      )}
 
       {/* Recientes */}
       <article className="tb-card rounded-2xl border border-tb-border bg-tb-surface p-6">
         <h2 className="font-display text-base font-bold text-tb-text">{t('profile.matches.recent')}</h2>
-        {demoMatches.length === 0 ? (
+        {!recent || recent.length === 0 ? (
           <p className="mt-4 text-sm text-tb-muted">{t('profile.matches.empty')}</p>
         ) : (
           <ul className="mt-4 flex flex-col divide-y divide-tb-border">
-            {demoMatches.map((m) => {
-              const style = resultStyles[m.result];
+            {recent.map((m) => {
+              const result: MatchResult = m.result === 'lose' ? 'loss' : m.result;
+              const style = resultStyles[result];
               const resultLabel = t(
-                `profile.matches.result${m.result.charAt(0).toUpperCase()}${m.result.slice(1)}`,
+                `profile.matches.result${result.charAt(0).toUpperCase()}${result.slice(1)}`,
               );
+              const opponent = m.opponents[0];
+              const opponentNames = m.opponents.map((o) => o.username).join(', ');
               return (
-                <li key={m.id} className="flex items-center gap-3 py-3">
-                  <Avatar initial={m.opponentInitial} color={m.opponentColor} size={36} />
+                <li key={m.matchId} className="flex items-center gap-3 py-3">
+                  <Avatar
+                    initial={opponent?.avatarInitial ?? opponent?.username.charAt(0).toUpperCase() ?? '?'}
+                    color={opponent?.avatarColor ?? '#2f6fe0'}
+                    size={36}
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-tb-text">
-                      {t(`demo.games.${m.gameKey}`)} · {t('profile.matches.vs', { name: m.opponent })}
+                      {m.gameName} · {t('profile.matches.vs', { name: opponentNames || '—' })}
                     </p>
-                    <p className="text-xs text-tb-muted">{t(`demo.matches.timeAgo.${m.whenKey}`)}</p>
+                    <p className="text-xs text-tb-muted">
+                      {m.finishedAt
+                        ? new Date(m.finishedAt).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })
+                        : ''}
+                    </p>
                   </div>
-                  <span
-                    className={`tb-nums rounded-md px-2 py-0.5 text-xs font-semibold ${style.text} ${style.bg}`}
-                  >
-                    {m.score}
-                  </span>
+                  {m.ratingDelta != null && (
+                    <span
+                      className={`tb-nums text-xs font-semibold ${m.ratingDelta >= 0 ? 'text-tb-success' : 'text-tb-danger'}`}
+                    >
+                      {m.ratingDelta >= 0 ? '+' : ''}
+                      {m.ratingDelta}
+                    </span>
+                  )}
                   <span className={`h-2 w-2 shrink-0 rounded-full ${style.dot}`} aria-hidden="true" />
                   <span className={`hidden text-xs font-semibold sm:inline ${style.text}`}>
                     {resultLabel}

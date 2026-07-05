@@ -1,27 +1,81 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import type { TicTacToeView } from '@tableria/games';
-import { ArrowLeftIcon, ChatIcon, ClockIcon, MedalIcon } from '../components/icons';
+import { ArrowLeftIcon, ChatIcon, ClockIcon, MedalIcon, UsersIcon } from '../components/icons';
+import { BriscaBoard } from '../games/BriscaBoard';
+import { ConnectFourBoard } from '../games/ConnectFourBoard';
+import { TicTacToeBoard } from '../games/TicTacToeBoard';
+import { formatDuration } from '../lib/formatDuration';
+import { useFriendsList } from '../lib/friends';
+import { trpc } from '../lib/trpc';
 import { useCountdownSeconds } from '../lib/useCountdown';
 import { matchSocket } from '../lib/ws';
 import { useMatchStore } from '../stores/match';
 
 export const Route = createFileRoute('/_app/partida/$id')({ component: MatchPage });
 
-function Cell({ value, onClick, disabled }: { value: 0 | 1 | null; onClick: () => void; disabled: boolean }) {
+function InviteFriendButton({ matchId }: { matchId: string }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const { friends } = useFriendsList();
+  const onlineFriends = friends.filter((f) => f.presence !== 'offline');
+  const getOrCreateDirect = trpc.conversations.getOrCreateDirect.useMutation();
+
+  function invite(friendId: string) {
+    getOrCreateDirect.mutate(
+      { friendId },
+      {
+        onSuccess: ({ conversationId }) => {
+          matchSocket.send({
+            type: 'dm.send',
+            payload: { conversationId, body: t('partida.inviteMessageBody'), kind: 'invite', matchId },
+          });
+          setOpen(false);
+        },
+      },
+    );
+  }
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled || value !== null}
-      className="flex aspect-square items-center justify-center rounded-xl border border-tb-border bg-tb-surface-2 font-display text-4xl font-extrabold transition-colors enabled:hover:bg-tb-accent-tint disabled:cursor-default"
-    >
-      {value === 0 && <span className="text-tb-accent">X</span>}
-      {value === 1 && <span className="text-tb-warn">O</span>}
-    </button>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 rounded-lg border border-tb-border px-3 py-1.5 text-xs font-medium text-tb-text hover:bg-tb-surface-2"
+      >
+        <UsersIcon className="h-3.5 w-3.5" />
+        {t('partida.inviteFriend')}
+      </button>
+      {open && (
+        <>
+          <div role="presentation" className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-tb-border bg-tb-surface p-2 shadow-lg">
+            {onlineFriends.length === 0 ? (
+              <p className="p-2 text-xs text-tb-muted">{t('partida.noOnlineFriends')}</p>
+            ) : (
+              onlineFriends.map((f) => (
+                <button
+                  key={f.userId}
+                  type="button"
+                  onClick={() => invite(f.userId)}
+                  className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-tb-text hover:bg-tb-surface-2"
+                >
+                  {f.displayName}
+                </button>
+              ))
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
+
+const BOARD_COMPONENTS = {
+  'tres-en-raya': TicTacToeBoard,
+  'conecta-cuatro': ConnectFourBoard,
+  brisca: BriscaBoard,
+} as const;
 
 function MatchPage() {
   const { t } = useTranslation();
@@ -33,6 +87,7 @@ function MatchPage() {
   const ended = useMatchStore((s) => s.ended);
   const chat = useMatchStore((s) => s.chat);
   const connectionStatus = useMatchStore((s) => s.connectionStatus);
+  const { data: matchInfo } = trpc.matches.getById.useQuery({ matchId });
 
   useEffect(() => {
     matchSocket.subscribe({ type: 'match.resume', payload: { matchId } });
@@ -43,13 +98,8 @@ function MatchPage() {
 
   const mySeat = matchState?.players.find((p) => p.userId === me.id)?.seat ?? null;
   const isSpectator = mySeat === null;
-  const view = matchState?.view as TicTacToeView | undefined;
   const myTurn = mySeat !== null && (matchState?.activePlayers.includes(mySeat) ?? false);
-
-  function handleMove(cell: number) {
-    if (!myTurn || !view || view.board[cell] !== null) return;
-    matchSocket.send({ type: 'match.move', payload: { matchId, move: { cell } } });
-  }
+  const BoardComponent = matchInfo ? BOARD_COMPONENTS[matchInfo.gameId as keyof typeof BOARD_COMPONENTS] : undefined;
 
   function handleSendChat(e: FormEvent) {
     e.preventDefault();
@@ -91,12 +141,15 @@ function MatchPage() {
               </span>
             ))}
           </div>
-          {deadline !== null && !ended && (
-            <span className="tb-nums flex items-center gap-1.5 text-sm font-semibold text-tb-text">
-              <ClockIcon className="h-4 w-4" />
-              {deadline}s
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {deadline !== null && !ended && (
+              <span className="tb-nums flex items-center gap-1.5 text-sm font-semibold text-tb-text">
+                <ClockIcon className="h-4 w-4" />
+                {formatDuration(deadline)}
+              </span>
+            )}
+            {!isSpectator && !ended && <InviteFriendButton matchId={matchId} />}
+          </div>
         </div>
 
         {connectionStatus !== 'open' && (
@@ -124,6 +177,21 @@ function MatchPage() {
                         : 'partida.resultLoss',
                   )}
             </p>
+            {!isSpectator &&
+              (() => {
+                const delta = ended.ratingDeltas?.find((d) => d.seat === mySeat);
+                if (!delta) return null;
+                const change = Math.round(delta.ratingAfter - delta.ratingBefore);
+                return (
+                  <p className="tb-nums text-sm font-semibold">
+                    {Math.round(delta.ratingBefore)} → {Math.round(delta.ratingAfter)}{' '}
+                    <span className={change >= 0 ? 'text-tb-success' : 'text-tb-danger'}>
+                      ({change >= 0 ? '+' : ''}
+                      {change})
+                    </span>
+                  </p>
+                );
+              })()}
             <Link
               to="/"
               className="mt-2 flex items-center gap-1.5 rounded-lg border border-tb-border px-3.5 py-2 text-sm font-medium text-tb-text hover:bg-tb-surface-2"
@@ -136,15 +204,19 @@ function MatchPage() {
           <>
             {isSpectator && <p className="mb-3 text-center text-xs text-tb-muted">{t('partida.spectating')}</p>}
             {!isSpectator && (
-              <p className="mb-3 text-center text-sm font-medium text-tb-text">
+              <p className="mb-1 text-center text-sm font-medium text-tb-text">
                 {myTurn ? t('partida.yourTurn') : t('partida.opponentTurn')}
               </p>
             )}
-            <div className="grid grid-cols-3 gap-2">
-              {(view?.board ?? Array(9).fill(null)).map((cell, i) => (
-                <Cell key={i} value={cell} onClick={() => handleMove(i)} disabled={!myTurn} />
-              ))}
-            </div>
+            {BoardComponent && matchState && (
+              <BoardComponent
+                matchId={matchId}
+                seq={matchState.seq}
+                mySeat={mySeat}
+                myTurn={myTurn}
+                view={matchState.view}
+              />
+            )}
           </>
         )}
       </div>

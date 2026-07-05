@@ -9,6 +9,7 @@
     "explore": "Explore",
     "rooms": "Public rooms",
     "friends": "Friends",
+    "messages": "Messages",
     "rankings": "Rankings",
     "tournaments": "Tournaments"
   },
@@ -108,11 +109,20 @@
     "startingIn": "Starting in {{count}}s",
     "markReady": "I'm ready",
     "cancelReady": "Cancel ready",
+    "leave": "Leave room",
+    "mode": { "realtime": "Real time", "async": "Turn-based" },
+    "variant": { "classic": "Classic", "moving": "Moving pieces" },
     "connection": {
       "connecting": "Connecting…",
       "reconnecting": "Reconnecting…",
       "closed": "Disconnected"
     }
+  },
+  "brisca": {
+    "trump": "Trump",
+    "deck": "Deck",
+    "you": "You",
+    "seat": "Seat {{n}}"
   },
   "partida": {
     "yourTurn": "Your turn",
@@ -126,19 +136,123 @@
     "resultSpectator": "The match has ended",
     "chat": "Table chat",
     "chatEmpty": "No messages yet",
-    "chatPlaceholder": "Write a message…"
+    "chatPlaceholder": "Write a message…",
+    "inviteFriend": "Invite friend",
+    "inviteMessageBody": "Come play with me!",
+    "noOnlineFriends": "None of your friends are online right now",
+    "selectPiece": "Pick a piece to move",
+    "selectDestination": "Pick the destination cell"
   },
   "friends": {
     "title": "Friends",
-    "comingIn": "— coming in {{milestone}}."
+    "comingIn": "— coming in {{milestone}}.",
+    "tabsAria": "Friends sections",
+    "tabs": { "friends": "Friends", "requests": "Requests", "blocked": "Blocked" },
+    "addFriend": "Add friend",
+    "usernamePlaceholder": "Username",
+    "sendRequest": "Send request",
+    "requestSent": "Request sent",
+    "alreadyFriends": "You're already friends",
+    "empty": "You don't have any friends yet. Add someone above!",
+    "message": "Message",
+    "remove": "Remove",
+    "block": "Block",
+    "unblock": "Unblock",
+    "incoming": "Incoming requests",
+    "outgoing": "Sent requests",
+    "noIncoming": "No pending requests",
+    "noOutgoing": "You haven't sent any requests",
+    "noBlocked": "You haven't blocked anyone",
+    "wantsToBe": "wants to be your friend",
+    "accept": "Accept",
+    "reject": "Decline",
+    "cancel": "Cancel"
+  },
+  "messages": {
+    "title": "Messages",
+    "empty": "No conversations yet. Message a friend from the friends page.",
+    "unknownUser": "User",
+    "noMessages": "No messages yet",
+    "inviteSummary": "Match invitation",
+    "threadEmpty": "Start the conversation",
+    "inviteReceived": "Match invitation",
+    "joinTable": "Join",
+    "placeholder": "Write a message…",
+    "send": "Send",
+    "selectConversation": "Pick a conversation to start chatting",
+    "back": "Back to the list",
+    "bubbleReply": "Reply",
+    "bubbleOpen": "Open chat",
+    "bubbleDismiss": "Dismiss",
+    "close": "Close chat"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "markAllRead": "Mark all as read",
+    "aria": "Notifications",
+    "friendRequest": "You received a friend request",
+    "friendAccepted": "Accepted your friend request",
+    "invited": "You were invited to a match",
+    "yourTurn": "It's your turn",
+    "tournamentRoundStarted": "Your round match is ready",
+    "tournamentEliminated": "You've been eliminated from the tournament"
+  },
+  "activityFeed": {
+    "friend_request": "{{name}} sent you a friend request",
+    "friend_accepted": "You're now friends with {{name}}",
+    "invited": "{{name}} invited you to a match"
   },
   "rankings": {
     "title": "Rankings",
-    "comingIn": "— coming in {{milestone}}."
+    "comingIn": "— coming in {{milestone}}.",
+    "noActiveGames": "No games available yet.",
+    "season": "Season: {{name}}",
+    "rank": "#",
+    "player": "Player",
+    "rating": "Rating",
+    "record": "W-L-D",
+    "empty": "No ranked matches for this game yet."
   },
   "tournaments": {
     "title": "Tournaments",
-    "comingIn": "— coming in {{milestone}}."
+    "comingIn": "— coming in {{milestone}}.",
+    "create": "Create tournament",
+    "empty": "No tournaments yet. Create the first one!",
+    "notFound": "That tournament doesn't exist",
+    "backToList": "Back to tournaments",
+    "participants": "{{count}} registered",
+    "register": "Register",
+    "unregister": "Withdraw",
+    "checkIn": "Check in",
+    "checkedIn": "Checked in",
+    "noParticipants": "Nobody has registered yet.",
+    "start": "Start tournament",
+    "cancel": "Cancel tournament",
+    "cancelledNotice": "This tournament was cancelled before it started.",
+    "round": "Round {{n}}",
+    "bye": "Advances automatically (bye)",
+    "goToMatch": "Go to your match",
+    "spectate": "Watch match",
+    "tbd": "To be decided",
+    "standings": "Final standings",
+    "state": {
+      "registration": "Registration open",
+      "running": "Running",
+      "finished": "Finished",
+      "cancelled": "Cancelled"
+    },
+    "participantStatus": {
+      "registered": "Registered",
+      "checked_in": "Checked in",
+      "eliminated": "Eliminated"
+    },
+    "form": {
+      "name": "Name",
+      "game": "Game",
+      "rated": "Counts towards rating",
+      "submit": "Create"
+    }
   },
   "game": {
     "notFound": "Game not found",
@@ -160,15 +274,7 @@
       "rules": "Rules"
     },
     "play": {
-      "availability": "The match engine for this game arrives in {{milestone}}.",
-      "cta": "Create room",
-      "creating": "Creating room…",
-      "readyToPlay": "Create a public room and start playing right away.",
-      "steps": {
-        "createRoom": { "title": "Create a room", "body": "Public or private, with a code to invite." },
-        "invite": { "title": "Invite your rivals", "body": "Share the link or wait in the public room." },
-        "play": { "title": "Play in real time", "body": "Turns, timer and automatic reconnection." }
-      }
+      "availability": "The match engine for this game arrives in {{milestone}}."
     },
     "rules": {
       "empty": "The rules for this game are being written. Check back soon."
@@ -177,7 +283,39 @@
     "milestoneM3": "M3",
     "milestoneM5": "M5"
   },
-  "common": { "soon": "Coming soon" },
+  "common": { "soon": "Coming soon", "cancel": "Cancel" },
+  "lobby": {
+    "mode": "Game mode",
+    "realtime": { "title": "Real time", "desc": "Play live, with turns of seconds or minutes." },
+    "async": { "title": "Turn-based", "desc": "Relaxed games over hours or days. We'll notify you when it's your move." },
+    "speed": "Time per turn",
+    "variant": "Variant",
+    "private": "Private table",
+    "privateHint": "Only joinable with the table code",
+    "publicBadge": "Public",
+    "privateBadge": "Private",
+    "rated": "Ranked match",
+    "ratedHint": "Counts towards your rating for this game",
+    "ratedBadge": "Ranked",
+    "casualBadge": "Casual",
+    "start": "Start",
+    "creating": "Opening table…",
+    "yourTable": "Your table",
+    "available": "Open seat",
+    "join": "Join",
+    "waitingTables": "Tables waiting for players",
+    "noTables": "Nobody is waiting right now. Open your table and be the first.",
+    "waitingRival": "Waiting for a rival… share the code or wait for someone to join from the game page.",
+    "readyPrompt": "Rival found! Ready to start?",
+    "startNow": "Start!",
+    "waitingFor": "Waiting for {{name}}…",
+    "cancelReady": "Cancel",
+    "leave": "Leave table",
+    "inGame": "You have a match in progress in this game",
+    "resume": "Resume match",
+    "otherTable": "You're already seated at another table. Finish or leave it to open a new one.",
+    "goToTable": "Go to my table"
+  },
   "sidebar": {
     "status": {
       "online": "Online"
@@ -191,16 +329,11 @@
   "presence": {
     "online": "Online",
     "away": "Away",
+    "inGame": "In a match",
     "offline": "Offline"
   },
   "friendRow": {
     "chatWith": "Chat with {{name}}"
-  },
-  "invite": {
-    "title": "Invite your friends",
-    "body": "Share your link and play together in seconds.",
-    "copy": "Copy link",
-    "copied": "Copied!"
   },
   "theme": {
     "toggle": {
@@ -289,6 +422,7 @@
       "statsWins": "Wins",
       "statsLosses": "Losses",
       "statsDraws": "Draws",
+      "ratings": "Rating by game",
       "recent": "Recent matches",
       "resultWin": "Win",
       "resultLoss": "Loss",

@@ -5,6 +5,8 @@ import { SESSION_COOKIE, getUserFromToken } from '../auth/session.js';
 import type { Env } from '../config.js';
 import type { AuthedSocket } from '../match/registry.js';
 import type { MatchService } from '../match/service.js';
+import { attach as attachPresence, detach as detachPresence } from '../social/presence.js';
+import type { SocialService } from '../social/service.js';
 import { dispatchClientMessage } from './handlers.js';
 import { registerSocket, startHeartbeat, unregisterSocket } from './heartbeat.js';
 
@@ -26,7 +28,13 @@ function extractSessionToken(request: FastifyRequest): string | undefined {
   return pair ? decodeURIComponent(pair.slice(SESSION_COOKIE.length + 1)) : undefined;
 }
 
-export function registerWsGateway(app: FastifyInstance, db: Db, env: Env, matchService: MatchService): void {
+export function registerWsGateway(
+  app: FastifyInstance,
+  db: Db,
+  env: Env,
+  matchService: MatchService,
+  socialService: SocialService,
+): void {
   app.get('/api/ws', { websocket: true }, async (socket, request) => {
     const token = extractSessionToken(request);
     const user = token ? await getUserFromToken(db, env.SESSION_PEPPER, token) : null;
@@ -43,6 +51,7 @@ export function registerWsGateway(app: FastifyInstance, db: Db, env: Env, matchS
     authed.currentMatchId = null;
 
     registerSocket(authed);
+    await attachPresence(db, authed);
 
     socket.on('message', (raw: Buffer) => {
       let parsed: unknown;
@@ -53,7 +62,7 @@ export function registerWsGateway(app: FastifyInstance, db: Db, env: Env, matchS
       }
       const result = clientMessageSchema.safeParse(parsed);
       if (!result.success) return;
-      void dispatchClientMessage(matchService, authed, result.data).catch((err: unknown) => {
+      void dispatchClientMessage(matchService, socialService, authed, result.data).catch((err: unknown) => {
         app.log.error({ err }, 'Error despachando mensaje WS');
       });
     });
@@ -61,6 +70,7 @@ export function registerWsGateway(app: FastifyInstance, db: Db, env: Env, matchS
     socket.on('close', () => {
       unregisterSocket(authed);
       matchService.detachSocket(authed);
+      detachPresence(db, authed);
     });
   });
 

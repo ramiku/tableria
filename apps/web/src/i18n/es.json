@@ -9,6 +9,7 @@
     "explore": "Explorar",
     "rooms": "Salas públicas",
     "friends": "Amigos",
+    "messages": "Mensajes",
     "rankings": "Rankings",
     "tournaments": "Torneos"
   },
@@ -108,11 +109,20 @@
     "startingIn": "Empieza en {{count}}s",
     "markReady": "Estoy listo",
     "cancelReady": "Cancelar listo",
+    "leave": "Abandonar sala",
+    "mode": { "realtime": "Tiempo real", "async": "Por turnos" },
+    "variant": { "classic": "Clásico", "moving": "Mover fichas" },
     "connection": {
       "connecting": "Conectando…",
       "reconnecting": "Reconectando…",
       "closed": "Sin conexión"
     }
+  },
+  "brisca": {
+    "trump": "Triunfo",
+    "deck": "Mazo",
+    "you": "Tú",
+    "seat": "Asiento {{n}}"
   },
   "partida": {
     "yourTurn": "Te toca a ti",
@@ -126,19 +136,123 @@
     "resultSpectator": "La partida ha terminado",
     "chat": "Chat de la mesa",
     "chatEmpty": "Sin mensajes todavía",
-    "chatPlaceholder": "Escribe un mensaje…"
+    "chatPlaceholder": "Escribe un mensaje…",
+    "inviteFriend": "Invitar amigo",
+    "inviteMessageBody": "¡Te invito a jugar!",
+    "noOnlineFriends": "No tienes amigos conectados ahora mismo",
+    "selectPiece": "Elige una ficha para moverla",
+    "selectDestination": "Elige la casilla de destino"
   },
   "friends": {
     "title": "Amigos",
-    "comingIn": "— llega en {{milestone}}."
+    "comingIn": "— llega en {{milestone}}.",
+    "tabsAria": "Secciones de amigos",
+    "tabs": { "friends": "Amigos", "requests": "Solicitudes", "blocked": "Bloqueados" },
+    "addFriend": "Añadir amigo",
+    "usernamePlaceholder": "Nick del usuario",
+    "sendRequest": "Enviar solicitud",
+    "requestSent": "Solicitud enviada",
+    "alreadyFriends": "Ya sois amigos",
+    "empty": "Todavía no tienes amigos. ¡Añade a alguien arriba!",
+    "message": "Mensaje",
+    "remove": "Eliminar",
+    "block": "Bloquear",
+    "unblock": "Desbloquear",
+    "incoming": "Solicitudes recibidas",
+    "outgoing": "Solicitudes enviadas",
+    "noIncoming": "No tienes solicitudes pendientes",
+    "noOutgoing": "No has enviado ninguna solicitud",
+    "noBlocked": "No has bloqueado a nadie",
+    "wantsToBe": "quiere ser tu amigo",
+    "accept": "Aceptar",
+    "reject": "Rechazar",
+    "cancel": "Cancelar"
+  },
+  "messages": {
+    "title": "Mensajes",
+    "empty": "Todavía no tienes conversaciones. Escribe a un amigo desde la página de amigos.",
+    "unknownUser": "Usuario",
+    "noMessages": "Sin mensajes todavía",
+    "inviteSummary": "Invitación a una partida",
+    "threadEmpty": "Empieza la conversación",
+    "inviteReceived": "Invitación a una partida",
+    "joinTable": "Unirse",
+    "placeholder": "Escribe un mensaje…",
+    "send": "Enviar",
+    "selectConversation": "Elige una conversación para empezar a chatear",
+    "back": "Volver a la lista",
+    "bubbleReply": "Responder",
+    "bubbleOpen": "Abrir chat",
+    "bubbleDismiss": "Descartar",
+    "close": "Cerrar chat"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "empty": "Sin notificaciones",
+    "markAllRead": "Marcar todo como leído",
+    "aria": "Notificaciones",
+    "friendRequest": "Te han enviado una solicitud de amistad",
+    "friendAccepted": "Ha aceptado tu solicitud de amistad",
+    "invited": "Te han invitado a una partida",
+    "yourTurn": "Te toca jugar",
+    "tournamentRoundStarted": "Tu partida de la ronda ya está lista",
+    "tournamentEliminated": "Has quedado eliminado del torneo"
+  },
+  "activityFeed": {
+    "friend_request": "{{name}} te envió una solicitud de amistad",
+    "friend_accepted": "Ahora eres amigo de {{name}}",
+    "invited": "{{name}} te invitó a una partida"
   },
   "rankings": {
     "title": "Rankings",
-    "comingIn": "— llega en {{milestone}}."
+    "comingIn": "— llega en {{milestone}}.",
+    "noActiveGames": "Todavía no hay juegos disponibles.",
+    "season": "Temporada: {{name}}",
+    "rank": "#",
+    "player": "Jugador",
+    "rating": "Rating",
+    "record": "V-D-E",
+    "empty": "Aún no hay partidas clasificatorias en este juego."
   },
   "tournaments": {
     "title": "Torneos",
-    "comingIn": "— llega en {{milestone}}."
+    "comingIn": "— llega en {{milestone}}.",
+    "create": "Crear torneo",
+    "empty": "Todavía no hay torneos. ¡Crea el primero!",
+    "notFound": "Ese torneo no existe",
+    "backToList": "Volver a torneos",
+    "participants": "{{count}} inscritos",
+    "register": "Inscribirme",
+    "unregister": "Retirarme",
+    "checkIn": "Confirmarme",
+    "checkedIn": "Confirmado",
+    "noParticipants": "Todavía no se ha inscrito nadie.",
+    "start": "Iniciar torneo",
+    "cancel": "Cancelar torneo",
+    "cancelledNotice": "Este torneo se canceló antes de empezar.",
+    "round": "Ronda {{n}}",
+    "bye": "Pasa directo (bye)",
+    "goToMatch": "Ir a tu partida",
+    "spectate": "Ver partida",
+    "tbd": "Por determinar",
+    "standings": "Clasificación final",
+    "state": {
+      "registration": "Inscripciones abiertas",
+      "running": "En curso",
+      "finished": "Terminado",
+      "cancelled": "Cancelado"
+    },
+    "participantStatus": {
+      "registered": "Inscrito",
+      "checked_in": "Confirmado",
+      "eliminated": "Eliminado"
+    },
+    "form": {
+      "name": "Nombre",
+      "game": "Juego",
+      "rated": "Cuenta para el rating",
+      "submit": "Crear"
+    }
   },
   "game": {
     "notFound": "Juego no encontrado",
@@ -160,15 +274,7 @@
       "rules": "Reglas"
     },
     "play": {
-      "availability": "El motor de partidas para este juego llega en {{milestone}}.",
-      "cta": "Crear sala",
-      "creating": "Creando sala…",
-      "readyToPlay": "Crea una sala pública y empieza a jugar ahora mismo.",
-      "steps": {
-        "createRoom": { "title": "Crea una sala", "body": "Pública o privada, con código para invitar." },
-        "invite": { "title": "Invita a tus rivales", "body": "Comparte el enlace o espera en la sala pública." },
-        "play": { "title": "Juega en tiempo real", "body": "Turnos, temporizador y reconexión automática." }
-      }
+      "availability": "El motor de partidas para este juego llega en {{milestone}}."
     },
     "rules": {
       "empty": "Las reglas de este juego se están escribiendo. Vuelve pronto."
@@ -177,7 +283,39 @@
     "milestoneM3": "M3",
     "milestoneM5": "M5"
   },
-  "common": { "soon": "Próximamente" },
+  "common": { "soon": "Próximamente", "cancel": "Cancelar" },
+  "lobby": {
+    "mode": "Modo de juego",
+    "realtime": { "title": "Tiempo real", "desc": "Juega en vivo, con turnos de segundos o minutos." },
+    "async": { "title": "Por turnos", "desc": "Partidas tranquilas a lo largo de horas o días. Te avisamos cuando te toque." },
+    "speed": "Tiempo por turno",
+    "variant": "Variante",
+    "private": "Sala privada",
+    "privateHint": "Solo se entra con el código de la mesa",
+    "publicBadge": "Pública",
+    "privateBadge": "Privada",
+    "rated": "Partida clasificatoria",
+    "ratedHint": "Cuenta para tu rating de este juego",
+    "ratedBadge": "Clasificatoria",
+    "casualBadge": "Amistosa",
+    "start": "Comenzar",
+    "creating": "Abriendo mesa…",
+    "yourTable": "Tu mesa",
+    "available": "Disponible",
+    "join": "Unirse",
+    "waitingTables": "Mesas esperando jugadores",
+    "noTables": "Nadie está esperando ahora mismo. Abre tu mesa y sé el primero.",
+    "waitingRival": "Esperando rival… comparte el código o espera a que alguien se una desde la ficha del juego.",
+    "readyPrompt": "¡Rival encontrado! ¿Empezamos?",
+    "startNow": "¡Comenzar!",
+    "waitingFor": "Esperando a {{name}}…",
+    "cancelReady": "Cancelar",
+    "leave": "Abandonar mesa",
+    "inGame": "Tienes una partida en curso en este juego",
+    "resume": "Reanudar partida",
+    "otherTable": "Ya estás sentado en otra mesa. Termina o abandónala para abrir una nueva.",
+    "goToTable": "Ir a mi mesa"
+  },
   "sidebar": {
     "status": {
       "online": "Conectado"
@@ -191,16 +329,11 @@
   "presence": {
     "online": "Disponible",
     "away": "Ausente",
+    "inGame": "En partida",
     "offline": "Desconectado"
   },
   "friendRow": {
     "chatWith": "Chatear con {{name}}"
-  },
-  "invite": {
-    "title": "Invita a tus amigos",
-    "body": "Comparte tu enlace y jugad en la misma sala en segundos.",
-    "copy": "Copiar enlace",
-    "copied": "¡Copiado!"
   },
   "theme": {
     "toggle": {
@@ -289,6 +422,7 @@
       "statsWins": "Victorias",
       "statsLosses": "Derrotas",
       "statsDraws": "Empates",
+      "ratings": "Rating por juego",
       "recent": "Últimas partidas",
       "resultWin": "Victoria",
       "resultLoss": "Derrota",

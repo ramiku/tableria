@@ -1,9 +1,11 @@
 import type { ClientMessage } from '@tableria/protocol';
 import type { AuthedSocket } from '../match/registry.js';
 import type { MatchService } from '../match/service.js';
+import type { SocialService } from '../social/service.js';
 
 export async function dispatchClientMessage(
   service: MatchService,
+  social: SocialService,
   socket: AuthedSocket,
   message: ClientMessage,
 ): Promise<void> {
@@ -20,6 +22,9 @@ export async function dispatchClientMessage(
       return;
     case 'chat.send':
       await service.handleChat(socket, message.payload.matchId, message.payload.body);
+      return;
+    case 'dm.send':
+      await social.sendDirectMessage(socket, message.payload.conversationId, message.payload.body, message.payload.kind, message.payload.matchId);
       return;
   }
 }

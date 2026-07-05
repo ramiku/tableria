@@ -245,6 +245,31 @@ export function BookIcon(props: IconProps) {
   );
 }
 
+export function CloseIcon(props: IconProps) {
+  return (
+    <svg {...base} width={14} height={14} {...props}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
+export function BellIcon(props: IconProps) {
+  return (
+    <svg {...base} width={18} height={18} {...props}>
+      <path d="M6 9a6 6 0 1 1 12 0v5l1.8 3H4.2L6 14V9Z" />
+      <path d="M10 20a2 2 0 0 0 4 0" />
+    </svg>
+  );
+}
+
+export function SendIcon(props: IconProps) {
+  return (
+    <svg {...base} width={18} height={18} fill="currentColor" stroke="none" {...props}>
+      <path d="M4 20 20.5 12 4 4l2 7 9 1-9 1-2 7Z" />
+    </svg>
+  );
+}
+
 export function ArrowLeftIcon(props: IconProps) {
   return (
     <svg {...base} width={16} height={16} {...props}>

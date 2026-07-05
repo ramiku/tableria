@@ -8,6 +8,8 @@ import './i18n';
 import './stores/theme';
 import './stores/i18n';
 import './stores/match';
+import './stores/presence';
+import './stores/notifications';
 import './styles/app.css';
 
 const queryClient = new QueryClient();

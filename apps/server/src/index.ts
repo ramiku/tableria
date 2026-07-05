@@ -6,6 +6,7 @@ const app = await buildApp(env);
 
 try {
   await app.matchService.recoverOnBoot();
+  await app.tournamentService.recoverOnBoot();
   await app.listen({ port: env.PORT, host: env.HOST });
 } catch (err) {
   app.log.error(err);

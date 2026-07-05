@@ -1,12 +1,18 @@
+import { useEffect } from 'react';
 import { Link, Outlet, createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Logo } from '../components/Logo';
 import { ThemeToggle } from '../components/ThemeToggle';
-import { Avatar } from '../components/Avatar';
+import { Avatar, type Presence } from '../components/Avatar';
 import { FriendRow, type Friend } from '../components/FriendRow';
-import { InviteCard } from '../components/InviteCard';
-import { GridIcon, DoorIcon, UsersIcon, TrophyIcon, BarsIcon, GearIcon, LogoutIcon } from '../components/icons';
+import { ChatDock } from '../components/ChatDock';
+import { NotificationBell } from '../components/NotificationBell';
+import { GridIcon, DoorIcon, UsersIcon, TrophyIcon, BarsIcon, GearIcon, LogoutIcon, ChatIcon } from '../components/icons';
 import { fetchMe, logout } from '../lib/auth';
+import { useFriendsList, type FriendWithPresence } from '../lib/friends';
+import { trpc } from '../lib/trpc';
+import { matchSocket } from '../lib/ws';
+import { useChatDock } from '../stores/chatDock';
 
 export const Route = createFileRoute('/_app')({
   beforeLoad: async () => {
@@ -21,20 +27,40 @@ const navItems = [
   { to: '/', key: 'nav.explore', Icon: GridIcon },
   { to: '/salas', key: 'nav.rooms', Icon: DoorIcon },
   { to: '/amigos', key: 'nav.friends', Icon: UsersIcon },
+  { to: '/mensajes', key: 'nav.messages', Icon: ChatIcon },
   { to: '/rankings', key: 'nav.rankings', Icon: BarsIcon },
   { to: '/torneos', key: 'nav.tournaments', Icon: TrophyIcon },
 ] as const;
 
-// Datos de muestra hasta que M3 sirva amigos/presencia reales desde la API.
-const demoFriends: Friend[] = [
-  { id: '1', name: 'Lucía Tester', initial: 'L', color: '#2f6fe0', presence: 'online', status: '' },
-  { id: '2', name: 'ramiku1', initial: 'R', color: '#1c5c52', presence: 'online', status: '' },
-];
+function toFriendRow(f: FriendWithPresence, statusOnline: string, statusInGame: string): Friend {
+  return {
+    id: f.userId,
+    name: f.displayName,
+    initial: f.avatarInitial ?? f.username.charAt(0).toUpperCase(),
+    color: f.avatarColor ?? '#2f6fe0',
+    presence: (f.presence === 'in_game' ? 'online' : f.presence) as Presence,
+    status: f.presence === 'in_game' ? statusInGame : f.presence === 'online' ? statusOnline : '',
+  };
+}
 
 function AppLayout() {
   const { t } = useTranslation();
   const { me } = Route.useRouteContext();
   const navigate = useNavigate();
+  const { friends } = useFriendsList();
+  const { data: activity } = trpc.activity.listForMe.useQuery();
+  const utils = trpc.useUtils();
+  const openChat = useChatDock((s) => s.openChat);
+  const getOrCreateDirect = trpc.conversations.getOrCreateDirect.useMutation({
+    onSuccess: () => void utils.conversations.list.invalidate(),
+  });
+
+  useEffect(() => {
+    matchSocket.connect();
+  }, []);
+
+  const onlineFriends = friends.filter((f) => f.presence !== 'offline');
+  const friendsInGame = friends.filter((f) => f.presence === 'in_game');
 
   async function handleLogout() {
     await logout();
@@ -74,11 +100,21 @@ function AppLayout() {
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <p className="px-2 text-xs font-semibold uppercase tracking-wide text-tb-sidebar-muted">
-            {t('rail.friendsOnline')} · {demoFriends.length}
+            {t('rail.friendsOnline')} · {onlineFriends.length}
           </p>
           <div className="mt-1 flex flex-col gap-0.5">
-            {demoFriends.map((friend) => (
-              <FriendRow key={friend.id} friend={friend} />
+            {onlineFriends.length === 0 && <p className="px-2 py-2 text-xs text-tb-sidebar-muted">{t('rail.empty')}</p>}
+            {onlineFriends.map((friend) => (
+              <FriendRow
+                key={friend.userId}
+                friend={toFriendRow(friend, t('presence.online'), t('presence.inGame'))}
+                onChat={() =>
+                  getOrCreateDirect.mutate(
+                    { friendId: friend.userId },
+                    { onSuccess: ({ conversationId }) => openChat(conversationId, friend.displayName) },
+                  )
+                }
+              />
             ))}
           </div>
         </div>
@@ -114,7 +150,8 @@ function AppLayout() {
 
       {/* Columna central: barra superior persistente + contenido de la página */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center justify-end border-b border-tb-border px-8 py-3">
+        <div className="flex items-center justify-end gap-2 border-b border-tb-border px-8 py-3">
+          <NotificationBell />
           <ThemeToggle />
         </div>
         <main className="flex-1 overflow-y-auto px-8 py-8">
@@ -130,20 +167,47 @@ function AppLayout() {
           <h2 className="font-display text-sm font-bold uppercase tracking-wide text-tb-muted">
             {t('rail.activity')}
           </h2>
-          <p className="mt-2 text-sm text-tb-muted">{t('rail.empty')}</p>
+          {!activity || activity.length === 0 ? (
+            <p className="mt-2 text-sm text-tb-muted">{t('rail.empty')}</p>
+          ) : (
+            <ul className="mt-2 flex flex-col gap-3">
+              {activity.map((entry) => (
+                <li key={entry.id} className="flex items-start gap-2.5">
+                  <Avatar
+                    initial={entry.actor.avatarInitial ?? entry.actor.username.charAt(0).toUpperCase()}
+                    color={entry.actor.avatarColor ?? '#2f6fe0'}
+                    size={28}
+                  />
+                  <p className="text-sm text-tb-text">
+                    {t(`activityFeed.${entry.type}`, { name: entry.actor.displayName })}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div>
           <h2 className="font-display text-sm font-bold uppercase tracking-wide text-tb-muted">
             {t('rail.friendsRooms')}
           </h2>
-          <p className="mt-2 text-sm text-tb-muted">{t('rail.empty')}</p>
-        </div>
-
-        <div className="mt-auto">
-          <InviteCard />
+          {friendsInGame.length === 0 ? (
+            <p className="mt-2 text-sm text-tb-muted">{t('rail.empty')}</p>
+          ) : (
+            <ul className="mt-2 flex flex-col gap-2">
+              {friendsInGame.map((f) => (
+                <li key={f.userId} className="flex items-center gap-2.5">
+                  <Avatar initial={f.avatarInitial ?? f.username.charAt(0).toUpperCase()} color={f.avatarColor ?? '#2f6fe0'} size={28} />
+                  <p className="text-sm text-tb-text">{f.displayName}</p>
+                  <span className="text-xs text-tb-muted">{t('presence.inGame')}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </aside>
+
+      <ChatDock meId={me.id} />
     </div>
   );
 }

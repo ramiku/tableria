@@ -1,12 +1,9 @@
 import { asc, eq, matchChatMessages, matchPlayers, matches, users, type Db } from '@tableria/db';
 import type { PlayerRank } from '@tableria/engine';
 import type { ServerMessage } from '@tableria/protocol';
+import type { RatingDeltas } from '../ratings/service.js';
+import { sendToSocket as send } from '../ws/send.js';
 import { allSockets, type AuthedSocket, type MatchRuntime } from './registry.js';
-
-function send(socket: AuthedSocket, message: ServerMessage): void {
-  if (socket.readyState !== socket.OPEN) return;
-  socket.send(JSON.stringify(message));
-}
 
 export function sendError(socket: AuthedSocket, code: string, message: string): void {
   send(socket, { type: 'match.error', payload: { code, message } });
@@ -29,6 +26,8 @@ export async function broadcastLobby(db: Db, runtime: MatchRuntime): Promise<voi
       ready: matchPlayers.ready,
       userId: matchPlayers.userId,
       username: users.username,
+      avatarInitial: users.avatarInitial,
+      avatarColor: users.avatarColor,
     })
     .from(matchPlayers)
     .innerJoin(users, eq(matchPlayers.userId, users.id))
@@ -41,6 +40,8 @@ export async function broadcastLobby(db: Db, runtime: MatchRuntime): Promise<voi
       seat,
       userId: row?.userId ?? null,
       username: row?.username ?? null,
+      avatarInitial: row?.avatarInitial ?? null,
+      avatarColor: row?.avatarColor ?? null,
       ready: row?.ready ?? false,
       connected: row ? (runtime.sockets.players.get(seat)?.size ?? 0) > 0 : false,
     };
@@ -108,8 +109,14 @@ export function broadcastEnded(
   runtime: MatchRuntime,
   reason: 'completed' | 'forfeit',
   ranking: PlayerRank[],
+  ratingDeltas: RatingDeltas,
 ): void {
-  const message: ServerMessage = { type: 'match.ended', payload: { matchId: runtime.matchId, reason, ranking } };
+  const ratingDeltasPayload =
+    ratingDeltas.size > 0 ? Array.from(ratingDeltas.entries()).map(([seat, d]) => ({ seat, ...d })) : null;
+  const message: ServerMessage = {
+    type: 'match.ended',
+    payload: { matchId: runtime.matchId, reason, ranking, ratingDeltas: ratingDeltasPayload },
+  };
   for (const socket of allSockets(runtime)) send(socket, message);
 }
 

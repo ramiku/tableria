@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { asc, desc, eq, gameCategories, gameContent, games } from '@tableria/db';
+import { getGameDefinition } from '../../match/games.js';
 import { publicProcedure, router } from '../trpc.js';
 
 export const gamesRouter = router({
@@ -54,6 +55,12 @@ export const gamesRouter = router({
       .from(gameContent)
       .where(eq(gameContent.gameId, input.slug));
 
-    return { game, rules: content.find((c) => c.sectionKey === 'rules')?.body ?? null };
+    const def = getGameDefinition(input.slug);
+    return {
+      game,
+      rules: content.find((c) => c.sectionKey === 'rules')?.body ?? null,
+      variants: def?.ui.variants ?? [],
+      defaultTurnSeconds: def?.ui.defaultTurnSeconds ?? 30,
+    };
   }),
 });

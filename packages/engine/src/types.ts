@@ -60,5 +60,7 @@ export interface GameDefinition<S, M> {
   ui: {
     defaultTurnSeconds?: number;
     supportsRealtime: boolean;
+    /** Variantes de reglas que ofrece este juego al crear una mesa (metadatos, no lógica). */
+    variants?: { id: string; name: string }[];
   };
 }

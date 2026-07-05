@@ -20,9 +20,14 @@ export interface EngineRuntime {
 
 export interface MatchRuntime {
   matchId: string;
+  code: string;
   gameId: string;
   maxPlayers: number;
   turnDurationS: number;
+  /** realtime: no se avisa de cambio de turno (ambos jugadores ya están mirando el tablero); async: sí. */
+  mode: 'realtime' | 'async';
+  /** Config específica del juego (p.ej. variante elegida) — se pasa tal cual a `setup()`. */
+  options: Record<string, unknown> | null;
   /** null mientras la partida está en waiting/starting (aún no hay setup()). */
   engine: EngineRuntime | null;
   sockets: {
@@ -37,15 +42,21 @@ export interface MatchRuntime {
 
 export function createEmptyRuntime(
   matchId: string,
+  code: string,
   gameId: string,
   maxPlayers: number,
   turnDurationS: number,
+  mode: 'realtime' | 'async',
+  options: Record<string, unknown> | null,
 ): MatchRuntime {
   return {
     matchId,
+    code,
     gameId,
     maxPlayers,
     turnDurationS,
+    mode,
+    options,
     engine: null,
     sockets: { players: new Map(), spectators: new Set() },
     turnTimer: null,

@@ -14,7 +14,7 @@ export interface Friend {
 type PresenceKey = 'online' | 'away' | 'offline';
 
 // Vive exclusivamente en el sidebar (franja de marca fija, siempre oscura)
-export function FriendRow({ friend }: { friend: Friend }) {
+export function FriendRow({ friend, onChat }: { friend: Friend; onChat?: () => void }) {
   const { t } = useTranslation();
   const presenceKey = friend.presence as PresenceKey;
   return (
@@ -26,13 +26,16 @@ export function FriendRow({ friend }: { friend: Friend }) {
           {friend.status || t(`presence.${presenceKey}`)}
         </p>
       </div>
-      <button
-        type="button"
-        aria-label={t('friendRow.chatWith', { name: friend.name })}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-tb-sidebar-muted opacity-0 transition-opacity hover:text-tb-sidebar-accent group-hover:opacity-100 focus-visible:opacity-100"
-      >
-        <ChatIcon />
-      </button>
+      {onChat && (
+        <button
+          type="button"
+          onClick={onChat}
+          aria-label={t('friendRow.chatWith', { name: friend.name })}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-tb-sidebar-muted opacity-0 transition-opacity hover:text-tb-sidebar-accent group-hover:opacity-100 focus-visible:opacity-100"
+        >
+          <ChatIcon />
+        </button>
+      )}
     </div>
   );
 }

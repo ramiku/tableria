@@ -15,13 +15,17 @@ import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
-import { Route as AppTorneosRouteImport } from './routes/_app.torneos'
 import { Route as AppSalasRouteImport } from './routes/_app.salas'
 import { Route as AppRankingsRouteImport } from './routes/_app.rankings'
 import { Route as AppPerfilRouteImport } from './routes/_app.perfil'
+import { Route as AppMensajesRouteImport } from './routes/_app.mensajes'
 import { Route as AppAmigosRouteImport } from './routes/_app.amigos'
+import { Route as AppTorneosIndexRouteImport } from './routes/_app.torneos.index'
+import { Route as AppMensajesIndexRouteImport } from './routes/_app.mensajes.index'
+import { Route as AppTorneosIdRouteImport } from './routes/_app.torneos.$id'
 import { Route as AppSalaCodeRouteImport } from './routes/_app.sala.$code'
 import { Route as AppPartidaIdRouteImport } from './routes/_app.partida.$id'
+import { Route as AppMensajesConversationIdRouteImport } from './routes/_app.mensajes.$conversationId'
 import { Route as AppJuegosSlugRouteImport } from './routes/_app.juegos.$slug'
 
 const RestablecerRoute = RestablecerRouteImport.update({
@@ -53,11 +57,6 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppTorneosRoute = AppTorneosRouteImport.update({
-  id: '/torneos',
-  path: '/torneos',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppSalasRoute = AppSalasRouteImport.update({
   id: '/salas',
   path: '/salas',
@@ -73,9 +72,29 @@ const AppPerfilRoute = AppPerfilRouteImport.update({
   path: '/perfil',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMensajesRoute = AppMensajesRouteImport.update({
+  id: '/mensajes',
+  path: '/mensajes',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAmigosRoute = AppAmigosRouteImport.update({
   id: '/amigos',
   path: '/amigos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTorneosIndexRoute = AppTorneosIndexRouteImport.update({
+  id: '/torneos/',
+  path: '/torneos/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMensajesIndexRoute = AppMensajesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppMensajesRoute,
+} as any)
+const AppTorneosIdRoute = AppTorneosIdRouteImport.update({
+  id: '/torneos/$id',
+  path: '/torneos/$id',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSalaCodeRoute = AppSalaCodeRouteImport.update({
@@ -88,6 +107,12 @@ const AppPartidaIdRoute = AppPartidaIdRouteImport.update({
   path: '/partida/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMensajesConversationIdRoute =
+  AppMensajesConversationIdRouteImport.update({
+    id: '/$conversationId',
+    path: '/$conversationId',
+    getParentRoute: () => AppMensajesRoute,
+  } as any)
 const AppJuegosSlugRoute = AppJuegosSlugRouteImport.update({
   id: '/juegos/$slug',
   path: '/juegos/$slug',
@@ -101,13 +126,17 @@ export interface FileRoutesByFullPath {
   '/registro': typeof RegistroRoute
   '/restablecer': typeof RestablecerRoute
   '/amigos': typeof AppAmigosRoute
+  '/mensajes': typeof AppMensajesRouteWithChildren
   '/perfil': typeof AppPerfilRoute
   '/rankings': typeof AppRankingsRoute
   '/salas': typeof AppSalasRoute
-  '/torneos': typeof AppTorneosRoute
   '/juegos/$slug': typeof AppJuegosSlugRoute
+  '/mensajes/$conversationId': typeof AppMensajesConversationIdRoute
   '/partida/$id': typeof AppPartidaIdRoute
   '/sala/$code': typeof AppSalaCodeRoute
+  '/torneos/$id': typeof AppTorneosIdRoute
+  '/mensajes/': typeof AppMensajesIndexRoute
+  '/torneos/': typeof AppTorneosIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -118,11 +147,14 @@ export interface FileRoutesByTo {
   '/perfil': typeof AppPerfilRoute
   '/rankings': typeof AppRankingsRoute
   '/salas': typeof AppSalasRoute
-  '/torneos': typeof AppTorneosRoute
   '/': typeof AppIndexRoute
   '/juegos/$slug': typeof AppJuegosSlugRoute
+  '/mensajes/$conversationId': typeof AppMensajesConversationIdRoute
   '/partida/$id': typeof AppPartidaIdRoute
   '/sala/$code': typeof AppSalaCodeRoute
+  '/torneos/$id': typeof AppTorneosIdRoute
+  '/mensajes': typeof AppMensajesIndexRoute
+  '/torneos': typeof AppTorneosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -132,14 +164,18 @@ export interface FileRoutesById {
   '/registro': typeof RegistroRoute
   '/restablecer': typeof RestablecerRoute
   '/_app/amigos': typeof AppAmigosRoute
+  '/_app/mensajes': typeof AppMensajesRouteWithChildren
   '/_app/perfil': typeof AppPerfilRoute
   '/_app/rankings': typeof AppRankingsRoute
   '/_app/salas': typeof AppSalasRoute
-  '/_app/torneos': typeof AppTorneosRoute
   '/_app/': typeof AppIndexRoute
   '/_app/juegos/$slug': typeof AppJuegosSlugRoute
+  '/_app/mensajes/$conversationId': typeof AppMensajesConversationIdRoute
   '/_app/partida/$id': typeof AppPartidaIdRoute
   '/_app/sala/$code': typeof AppSalaCodeRoute
+  '/_app/torneos/$id': typeof AppTorneosIdRoute
+  '/_app/mensajes/': typeof AppMensajesIndexRoute
+  '/_app/torneos/': typeof AppTorneosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -150,13 +186,17 @@ export interface FileRouteTypes {
     | '/registro'
     | '/restablecer'
     | '/amigos'
+    | '/mensajes'
     | '/perfil'
     | '/rankings'
     | '/salas'
-    | '/torneos'
     | '/juegos/$slug'
+    | '/mensajes/$conversationId'
     | '/partida/$id'
     | '/sala/$code'
+    | '/torneos/$id'
+    | '/mensajes/'
+    | '/torneos/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -167,11 +207,14 @@ export interface FileRouteTypes {
     | '/perfil'
     | '/rankings'
     | '/salas'
-    | '/torneos'
     | '/'
     | '/juegos/$slug'
+    | '/mensajes/$conversationId'
     | '/partida/$id'
     | '/sala/$code'
+    | '/torneos/$id'
+    | '/mensajes'
+    | '/torneos'
   id:
     | '__root__'
     | '/_app'
@@ -180,14 +223,18 @@ export interface FileRouteTypes {
     | '/registro'
     | '/restablecer'
     | '/_app/amigos'
+    | '/_app/mensajes'
     | '/_app/perfil'
     | '/_app/rankings'
     | '/_app/salas'
-    | '/_app/torneos'
     | '/_app/'
     | '/_app/juegos/$slug'
+    | '/_app/mensajes/$conversationId'
     | '/_app/partida/$id'
     | '/_app/sala/$code'
+    | '/_app/torneos/$id'
+    | '/_app/mensajes/'
+    | '/_app/torneos/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -242,13 +289,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/torneos': {
-      id: '/_app/torneos'
-      path: '/torneos'
-      fullPath: '/torneos'
-      preLoaderRoute: typeof AppTorneosRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/salas': {
       id: '/_app/salas'
       path: '/salas'
@@ -270,11 +310,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPerfilRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/mensajes': {
+      id: '/_app/mensajes'
+      path: '/mensajes'
+      fullPath: '/mensajes'
+      preLoaderRoute: typeof AppMensajesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/amigos': {
       id: '/_app/amigos'
       path: '/amigos'
       fullPath: '/amigos'
       preLoaderRoute: typeof AppAmigosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/torneos/': {
+      id: '/_app/torneos/'
+      path: '/torneos'
+      fullPath: '/torneos/'
+      preLoaderRoute: typeof AppTorneosIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/mensajes/': {
+      id: '/_app/mensajes/'
+      path: '/'
+      fullPath: '/mensajes/'
+      preLoaderRoute: typeof AppMensajesIndexRouteImport
+      parentRoute: typeof AppMensajesRoute
+    }
+    '/_app/torneos/$id': {
+      id: '/_app/torneos/$id'
+      path: '/torneos/$id'
+      fullPath: '/torneos/$id'
+      preLoaderRoute: typeof AppTorneosIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/sala/$code': {
@@ -291,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPartidaIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/mensajes/$conversationId': {
+      id: '/_app/mensajes/$conversationId'
+      path: '/$conversationId'
+      fullPath: '/mensajes/$conversationId'
+      preLoaderRoute: typeof AppMensajesConversationIdRouteImport
+      parentRoute: typeof AppMensajesRoute
+    }
     '/_app/juegos/$slug': {
       id: '/_app/juegos/$slug'
       path: '/juegos/$slug'
@@ -301,28 +376,46 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppMensajesRouteChildren {
+  AppMensajesConversationIdRoute: typeof AppMensajesConversationIdRoute
+  AppMensajesIndexRoute: typeof AppMensajesIndexRoute
+}
+
+const AppMensajesRouteChildren: AppMensajesRouteChildren = {
+  AppMensajesConversationIdRoute: AppMensajesConversationIdRoute,
+  AppMensajesIndexRoute: AppMensajesIndexRoute,
+}
+
+const AppMensajesRouteWithChildren = AppMensajesRoute._addFileChildren(
+  AppMensajesRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAmigosRoute: typeof AppAmigosRoute
+  AppMensajesRoute: typeof AppMensajesRouteWithChildren
   AppPerfilRoute: typeof AppPerfilRoute
   AppRankingsRoute: typeof AppRankingsRoute
   AppSalasRoute: typeof AppSalasRoute
-  AppTorneosRoute: typeof AppTorneosRoute
   AppIndexRoute: typeof AppIndexRoute
   AppJuegosSlugRoute: typeof AppJuegosSlugRoute
   AppPartidaIdRoute: typeof AppPartidaIdRoute
   AppSalaCodeRoute: typeof AppSalaCodeRoute
+  AppTorneosIdRoute: typeof AppTorneosIdRoute
+  AppTorneosIndexRoute: typeof AppTorneosIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAmigosRoute: AppAmigosRoute,
+  AppMensajesRoute: AppMensajesRouteWithChildren,
   AppPerfilRoute: AppPerfilRoute,
   AppRankingsRoute: AppRankingsRoute,
   AppSalasRoute: AppSalasRoute,
-  AppTorneosRoute: AppTorneosRoute,
   AppIndexRoute: AppIndexRoute,
   AppJuegosSlugRoute: AppJuegosSlugRoute,
   AppPartidaIdRoute: AppPartidaIdRoute,
   AppSalaCodeRoute: AppSalaCodeRoute,
+  AppTorneosIdRoute: AppTorneosIdRoute,
+  AppTorneosIndexRoute: AppTorneosIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

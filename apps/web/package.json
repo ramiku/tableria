@@ -28,6 +28,7 @@
     "@tableria/config": "workspace:*",
     "@tableria/games": "workspace:*",
     "@tableria/server": "workspace:*",
+    "@trpc/server": "^11.18.0",
     "@tailwindcss/vite": "^4.1.0",
     "@tanstack/router-plugin": "^1.97.0",
     "@types/react": "^19.0.0",

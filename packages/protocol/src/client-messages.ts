@@ -15,6 +15,15 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('chat.send'),
     payload: z.object({ matchId: z.uuid(), body: z.string().trim().min(1).max(500) }),
   }),
+  z.object({
+    type: z.literal('dm.send'),
+    payload: z.object({
+      conversationId: z.uuid(),
+      body: z.string().trim().min(1).max(2000),
+      kind: z.enum(['text', 'invite']).default('text'),
+      matchId: z.uuid().optional(),
+    }),
+  }),
 ]);
 
 export type ClientMessage = z.infer<typeof clientMessageSchema>;

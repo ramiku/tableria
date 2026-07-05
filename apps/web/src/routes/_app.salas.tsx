@@ -6,6 +6,20 @@ import { trpc } from '../lib/trpc';
 
 export const Route = createFileRoute('/_app/salas')({ component: RoomsPage });
 
+/** Un circulito por asiento: relleno = ocupado, hueco = libre para que se una alguien más. */
+function SeatDots({ occupied, max }: { occupied: number; max: number }) {
+  return (
+    <span className="flex items-center gap-1" aria-hidden="true">
+      {Array.from({ length: max }, (_, i) => (
+        <span
+          key={i}
+          className={`h-2.5 w-2.5 rounded-full ${i < occupied ? 'bg-tb-accent' : 'border border-tb-border bg-transparent'}`}
+        />
+      ))}
+    </span>
+  );
+}
+
 function JoinByCode() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -76,10 +90,13 @@ function RoomsPage() {
               >
                 <div>
                   <p className="font-display text-sm font-bold text-tb-text">{room.gameName}</p>
-                  <p className="mt-1 flex items-center gap-1.5 text-xs text-tb-muted">
-                    <UsersIcon className="h-3.5 w-3.5" />
-                    {t('rooms.playersCount', { count: room.players, max: room.maxPlayers })}
-                  </p>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <SeatDots occupied={room.players} max={room.maxPlayers} />
+                    <p className="flex items-center gap-1.5 text-xs text-tb-muted">
+                      <UsersIcon className="h-3.5 w-3.5" />
+                      {t('rooms.playersCount', { count: room.players, max: room.maxPlayers })}
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"

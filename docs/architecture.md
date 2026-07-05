@@ -100,7 +100,7 @@ interface GameDefinition<S, M> {
 }
 ```
 
-- **State machine de sala**: `waiting → starting(ready-check 20s) → in_game → finished | cancelled | abandoned` (hereda el diseño probado del PHP).
+- **State machine de sala**: `waiting → starting → in_game → finished | cancelled | abandoned`. (El ready-check de 20s heredado del PHP se sustituyó el 2026-07-05 por **arranque instantáneo**: en cuanto el último jugador confirma, la partida empieza en ese momento — decisión de producto del lobby estilo BGA.)
 - **Pipeline de movimiento**: WS autenticado (sesión revalidada contra BD) → `moveSchema.parse` → transacción con `FOR UPDATE` sobre la sala → validar/aplicar/checkEnd → INSERT `match_moves` con `UNIQUE(match_id, seq)` → snapshot cada 20 moves → si fin: resultados + stats + rating **en la misma transacción** → broadcast de `playerView(state, i)` por asiento y `playerView(state, null)` a espectadores.
 - **Persistencia**: event sourcing (`match_moves`) + snapshots (`matches.state_snapshot JSONB` + `snapshot_seq`). Rehidratar = snapshot + replay. Un restart del servidor no pierde ninguna partida. Caché caliente `Map<matchId, MatchRuntime>` con TTL.
 - **Timers restart-safe**: `matches.turn_deadline_at` en BD; scheduler con `setTimeout` para partidas calientes y recuperación al arrancar vía `SELECT … WHERE turn_deadline_at < now() AND state='in_game' FOR UPDATE SKIP LOCKED`. Al expirar: `onTurnTimeout` (forfeit por defecto — sustituye el "claim" manual actual).
@@ -154,14 +154,14 @@ Regla de dependencias: `games → engine → protocol`; `server → db + games`;
 **M2 — Motor + tres-en-raya + lobby N jugadores (L — fase crítica). ✅ Implementado 2026-07-04.** `@tableria/engine` completo con tests; tres-en-raya como primer `GameDefinition`; gateway WS con sesión revalidada; lobby N asientos (pública/privada, código); ready-check 20s; movimientos transaccionales, snapshots, timer persistente, reconexión con resume, espectadores; chat de mesa persistente. Detalle en [«M2 — Motor de juego + tres en raya + lobby (implementado)»](#m2--motor-de-juego--tres-en-raya--lobby-implementado-2026-07-04) más abajo.
 *Demo: 2+ pestañas juegan una partida completa; se reinicia el servidor a mitad y la partida sobrevive.*
 
-**M3 — Social (M).** Amigos (solicitudes/bloqueo), presencia real, DMs y grupos **persistidos en `messages`**, unread/reply, invitaciones a mesa por chat, activity feed, notificaciones in-app.
+**M3 — Social (M). ✅ Implementado 2026-07-05.** Amigos (solicitudes/bloqueo), presencia real, DMs **persistidas en `messages`** (1:1; grupos quedan para más adelante), invitaciones a mesa por chat, activity feed, notificaciones in-app. Detalle en [«M3 — Social (implementado)»](#m3--social-implementado-2026-07-05) más abajo.
 *Demo: invitar a un amigo desde el chat y que entre a tu mesa con un clic.*
 
-**M4 — Competición + Conecta 4 + juego de cartas (L).** Glicko-2 por juego y temporada (escrito en la tx de fin junto a `user_game_stats`), historial de rating, perfiles con stats, leaderboards, partidas rated/casual. **Conecta 4** (valida el motor barato) y **juego de cartas con info oculta 2-4 j.** (tipo Lost Cities / trick-taker — ejercita `playerView`, RNG persistido y N jugadores).
+**M4 — Competición + Conecta 4 + Brisca (L). ✅ Implementado 2026-07-05.** Glicko-2 por juego y temporada (escrito en la tx de fin junto a `user_game_stats`), historial de rating, perfiles con stats, leaderboards, partidas rated/casual. **Conecta 4** (valida el motor barato) y **Brisca** (baraja española, juego de cartas con info oculta 2-4 j. — ejercita `playerView`, RNG persistido y N jugadores). Detalle en [«M4 — Competición + Conecta 4 + Brisca (implementado)»](#m4--competición--conecta-4--brisca-implementado-2026-07-05) más abajo.
 *Demo: jugar rated, ver subir el rating en el leaderboard, espectar con cartas ocultas.*
 
-**M5 — Torneos (M/L).** Single-elim y suizo primero; inscripción, check-in, generación automática de matches por ronda, bracket visual, feed de resultados.
-*Demo: torneo de 8 personas de principio a fin.*
+**M5 — Torneos de eliminación directa (M/L). ✅ Implementado 2026-07-05 (single-elim; suizo diferido explícitamente).** Inscripción, check-in, seeding por rating, generación automática de partidas por ronda (con byes), bracket visual, clasificación final. Detalle en [«M5 — Torneos de eliminación directa (implementado)»](#m5--torneos-de-eliminación-directa-implementado-2026-07-05) más abajo.
+*Demo: torneo de 6-8 personas de principio a fin, con byes y reinicio del servidor a mitad de partida.*
 
 **M6 — Endurecimiento + producción (M).** 2FA TOTP + backup codes + trusted devices, OAuth ×4 (arctic), magic links; auditoría a11y (teclado, focus, aria en tableros); i18n `en` completo; E2E Playwright de flujos críticos; despliegue en tableria.app; backups; monitorización.
 *Demo: producción real con HTTPS.*
@@ -278,3 +278,125 @@ Tres paquetes workspace nuevos, mismo patrón que `@tableria/db` (`type:module`,
 
 - Abandono por desconexión con grace period 60s: hoy solo se marca `disconnectedAt`, sin transición automática a `abandoned`. El firetest de M2 no lo exige; se retoma en M3+.
 - El riesgo #1 del roadmap ("M2 es el corazón") se mitigó verificando el contrato exhaustivamente con tres en raya (18 tests + firetest real) en vez de diseñar el juego de cartas sobre papel primero — juicio pragmático dado que tres en raya ya ejercita turnos, fin de partida con ranking N-jugador y `playerView`; queda pendiente confirmar el contrato contra un juego de información oculta real en M4.
+
+## M3 — Social (implementado 2026-07-05)
+
+Amigos, presencia real, DMs persistidas, invitación a mesa desde el chat con un clic, activity feed y notificaciones in-app — todo sobre el mismo canal WS `/api/ws` de M2, sin abrir un segundo socket.
+
+### Esquema (`packages/db`, migración `0003_narrow_saracen.sql`)
+
+- **`friendships`**: decisión de diseño propia — **fila única canónica por pareja** (`userId < friendId` forzado con `CHECK`), en vez del modelo legacy de arista dirigida que permitía una fila por sentido con estados potencialmente conflictivos. `actorId` registra quién solicitó o quién bloqueó por última vez. Solicitud mutua (A pide a B mientras B ya le había pedido a A) se resuelve como aceptación automática.
+- **`conversations` / `conversationMembers` / `messages`**: portadas del legacy con recorte deliberado — `messages.kind` solo `text | system | invite` (se omiten `game_start`/`game_end`, sin consumidor todavía). `messages.inviteMatchId` enlaza la invitación con la partida real.
+- **`activityFeed`**: `type` acotado a `friend_request | friend_accepted | invited` — eventos de partida (`won`, `created_room`) se difieren a M4 para escribirse en la misma transacción que el rating/stats, en vez de tocar dos veces el pipeline transaccional de M2.
+- **`notifications`**: `userId`, `type`, `payload jsonb`, `readAt`.
+- `users.presence`/`users.lastSeenAt` ya existían desde M0 sin usarse de verdad; M3 los pone en marcha.
+
+### Backend — `apps/server/src/social/`
+
+- **`presence.ts`**: registro en memoria `Map<userId, Set<AuthedSocket>>` (no existía — hasta ahora solo había un `Set` plano en `ws/heartbeat.ts` para el ping/pong). Grace period de 10s antes de marcar `offline` tras el último socket de un usuario, para no parpadear en reconexiones breves. `setInGame()` se invoca desde `match/lifecycle.ts` (`startMatch` y los dos caminos de fin de partida) para reflejar `presence='in_game'` mientras se juega — único punto donde M3 toca código de M2, de forma aditiva.
+- **`friends.ts` / `conversations.ts` / `notifications.ts` / `activity.ts`**: funciones puras sobre `db`. **`service.ts`** (`SocialService`, mismo patrón factory que `createMatchService`) combina persistencia + creación de notificación/actividad + broadcast WS en una sola operación por acción social (enviar solicitud, aceptar, enviar DM, etc.).
+- **Protocolo** (`packages/protocol`): cliente → `dm.send {conversationId, body, kind, matchId?}`; servidor → `presence.snapshot` (al autenticar), `presence.update`, `dm.message`, `notification.new`. Ninguno necesita un mensaje `subscribe` explícito — el servidor ya sabe qué sockets pertenecen a cada `userId` autenticado y empuja directamente, sin tocar el mecanismo de `lastSubscription` (pensado solo para `match.*`).
+- **`ws/send.ts`** nuevo: `sendToSocket()` extraído como helper compartido tras aparecer duplicado idéntico en `match/broadcast.ts` y `social/presence.ts`.
+- **tRPC**: routers `friends` / `conversations` / `notifications` / `activity`, todos `protectedProcedure`. Como el cliente tRPC no usa transformer `superjson`, cada router serializa `Date → ISO string` a mano antes de devolver — mismo cuidado que ya aplicaba `match/broadcast.ts` para los mensajes WS.
+
+### Frontend
+
+- **`stores/presence.ts`** y **`stores/notifications.ts`**: mismo patrón que `stores/match.ts` (listener global registrado una vez sobre `matchSocket.onMessage`).
+- **`lib/friends.ts`** (`useFriendsList`): combina la query tRPC de amigos con la presencia en vivo del store.
+- **`_app.amigos.tsx`**: página real (antes placeholder "llega en M3") con amigos/solicitudes/bloqueados.
+- **`_app.mensajes.tsx`** + **`_app.mensajes.$conversationId.tsx`**: página dedicada para DMs — decisión explícita del usuario frente a un dock flotante tipo v1, por coherencia con la filosofía "URLs reales" del resto de v2.
+- **`_app.partida.$id.tsx`**: botón "Invitar amigo" que crea/reutiliza la conversación y manda un mensaje `kind:'invite'` con el código de la sala; el lado receptor reutiliza `matches.join` (M2) sin ningún cambio.
+- **`NotificationBell.tsx`** nueva en la topbar; sidebar y perfil cableados a datos reales (sustituyen los arrays `demoFriends`/`demoRequests`).
+
+### Hallazgo de tooling (no del producto)
+
+El `WebSocket` global de Node (undici) descarta silenciosamente la cabecera `Cookie` pasada por `options.headers` — igual que los navegadores por seguridad — así que probar el gateway WS autenticado por cookie con `new WebSocket(...)` global falla con 4401 sin explicación aunque la cookie sea válida. Para probar desde Node hace falta el paquete `ws` (si respeta las cabeceras). Un navegador real no tiene este problema.
+
+**Verificación**: firetest de punta a punta con dos usuarios reales (cookies de sesión reales, WebSockets reales vía paquete `ws`): solicitud de amistad → aceptar → presencia online en vivo (snapshot + `presence.update`) → DM persistida → invitación con el código real de la partida → el receptor se une con un solo `matches.join` → notificaciones `friend_accepted`/`invited` en vivo → historial persistido (no solo en memoria) → lista de conversaciones con último mensaje y no leídos → presencia a `offline` tras el grace period. `pnpm turbo lint typecheck test build` en verde (23/23).
+
+## M4 — Competición + Conecta 4 + Brisca (implementado 2026-07-05)
+
+Fase grande (al nivel de M2): Glicko-2 por juego/temporada escrito en la misma transacción que cierra la partida, `user_game_stats` (hasta ahora nunca escrita), leaderboards, perfiles con stats reales, partidas rated/casual, y dos juegos nuevos que validan el motor de M2 contra escenarios distintos a tres en raya — **Conecta 4** (info perfecta, barato) y **Brisca** (baraja española, primer juego con información oculta real). Implementada en 3 pasadas, cada una verificada con WebSockets reales antes de pasar a la siguiente.
+
+### 1. Infraestructura de rating/stats
+
+**Schema** (`packages/db`, migración `0005_smiling_nitro.sql`): `seasons` (una temporada global activa a la vez, sin UI de administración — se rota a mano en BD si hace falta); `userGameRatings` (PK `userId+gameId+seasonId`: `rating`/`rd`/`vol` Glicko-2, W/L/D, `peakRating`, índice `(gameId, seasonId, rating DESC)` para el leaderboard); `ratingHistory` (una fila por partida rated jugada); `userGameStats` (PK `userId+gameId`: contador de toda partida acabada, rated o no — a diferencia de `userGameRatings`, que solo se mueve si la partida era rated).
+
+**Glicko-2 propio** (`apps/server/src/ratings/glicko.ts`, puro, ~110 líneas, sin IO): implementación estándar del algoritmo de Mark Glickman (conversión a escala Glicko-2, resolución de la volatilidad por el método de Illinois, vuelta a escala Glicko), validada en tests contra el ejemplo de referencia del propio paper. `updateGlickoForRanking` generaliza el algoritmo (pensado para 1v1) a un resultado de N jugadores descomponiendo la partida en enfrentamientos por parejas (todos contra todos), con el resultado de cada par derivado del `placement` relativo — todas las actualizaciones parten de los ratings previos a la partida, sin encadenarse entre sí.
+
+**Cierre de partida unificado** (`apps/server/src/match/lifecycle.ts`): se detectó que los dos caminos de fin de partida (natural vía `checkEnd()` y forfeit por timeout) duplicaban la escritura de `placement` — se extrajo `finishMatchTx(tx, runtime, ranking, rated, seatToUserId)`, usado por ambos, que delega en `ratings.applyMatchResult` (`apps/server/src/ratings/service.ts`): escribe `userGameStats` siempre y, si la partida es `rated`, además `userGameRatings` + `ratingHistory` + `matchPlayers.ratingBefore/after` — todo en la misma transacción que ya cerraba la partida. `match.ended` (protocolo) ahora incluye `ratingDeltas` (`null` si la partida era casual) para que el cliente muestre el cambio de rating al instante.
+
+**tRPC**: `matches.create` acepta `rated: boolean` (antes inexistente, siempre `false`); `matches.listPublic`/`listWaiting`/`getByCode` exponen `rated`. Router nuevo `ratings` (`leaderboard({gameId})`, `mySummary()`).
+
+**Frontend**: toggle rated/casual en la ficha de juego (mismo lenguaje visual que el checkbox de sala privada ya existente); `/rankings` con tabla real por juego activo y temporada; perfil (tab «Partidas») con stats agregados reales, rating por juego, e historial de últimas partidas (`matches.recent`, nuevo) con el delta de rating visible — sustituyen los arrays demo que quedaban pendientes desde M1.
+
+**Verificación**: firetest con dos usuarios reales por WebSocket — partida rated de tres en raya completa (rating sube/baja según Glicko-2, verificado también contra el ejemplo del paper), partida casual (actualiza `userGameStats`, no toca `userGameRatings`), y forfeit por timeout disparando el mismo `finishMatchTx`. `pnpm turbo lint typecheck test build` en verde (23/23).
+
+### 2. Conecta 4
+
+`packages/games/src/conecta-cuatro/`: tablero 7×6 (`board: Cell[]`, fila 0 = arriba), caída por gravedad (`lowestEmptyRow`), detección de 4 en línea en las 4 orientaciones desde la última ficha jugada. 14 tests, incluidas las 2 diagonales construidas directamente sobre el estado (en vez de por secuencias de turnos alternados, mucho más simple de razonar) y un tablero de empate matemáticamente garantizado sin 4 en línea (`value(fila,col) = ((fila + 2·col) mod 4) < 2`, con racha máxima demostrable de 2 en las 4 direcciones).
+
+Para poder añadir un segundo juego al tablero de partida hizo falta un refactor previo: `apps/web/src/routes/_app.partida.$id.tsx` tenía el render de tres en raya (incluida la variante "mover fichas") hardcodeado inline. Se extrajo a `apps/web/src/games/TicTacToeBoard.tsx` con un contrato común (`BoardProps`: `matchId`, `seq`, `mySeat`, `myTurn`, `view`), y la página despacha por `gameId` (nuevo `matches.getById`, ya que `match.state` no llevaba el `gameId` de la partida) contra un registro `BOARD_COMPONENTS`. `ConnectFourBoard.tsx` nuevo, con la interacción de "soltar en columna" (clic en cualquier celda de la columna, no solo en la casilla concreta).
+
+Catálogo: fila `conecta-cuatro` ya existía como placeholder (`isActive:false`) desde M0 — se activó junto con el contenido de reglas. El seed pasó de `onConflictDoNothing` a `onConflictDoUpdate` para `games`/`gameContent`: cada milestone reactiva/actualiza filas ya sembradas en pasadas anteriores en vez de dejarlas congeladas en su estado inicial.
+
+**Verificación**: partida rated completa por WebSocket real (victoria por línea horizontal, rating actualizado) y forfeit por timeout — mismo camino genérico que tres en raya, sin ningún caso especial por juego.
+
+### 3. Brisca
+
+Primer juego con **información oculta real** (a diferencia de tres en raya/Conecta 4, donde `playerView` era trivialmente idéntica para todos). Reglas fijadas antes de tocar el motor: baraja española 40 cartas (4 palos × 10 rangos), reparto de 3 cartas por jugador, triunfo destapado y devuelto al fondo del mazo; sin obligación de asistir al palo (a diferencia de Tute); gana la baza el triunfo más alto jugado o, si no hay triunfo, la carta más alta del palo que abrió la mano — una tercera opción nunca gana la baza aunque su rango nominal sea alto; el ganador roba primero y abre la siguiente baza; fin cuando mazo y manos se agotan, gana quien más puntos sumó (As=11, 3=10, Rey=4, Caballo=3, Sota=2, resto=0; 120 puntos en la baraja).
+
+`packages/games/src/brisca/`: el mazo se baraja una única vez en `setup()` con el `Rng` inyectado (Fisher-Yates); a partir de ahí el orden de robo es determinista sin necesitar aleatoriedad dentro de `applyMove` (cumple la restricción de reducer puro del motor). Única jugada posible: `{cardIndex}`; la resolución de la baza y el reparto de cartas nuevas son automáticos dentro de `applyMove`, no una jugada del jugador. `playerView(state, seatIndex)` solo rellena `hand` para el propio asiento — el resto de manos se exponen solo como `handCounts` (recuento), nunca su contenido; espectadores (`seatIndex: null`) no ven ninguna mano. 20 tests cubren reparto, resolución de baza (triunfo gana a no-triunfo pese a menor rango; un tercer palo nunca gana aunque tenga rango alto), reparto tras baza, ranking N-jugador con empates, y una partida completa jugada hasta el final que confirma que los puntos siempre suman 120.
+
+El motor soporta oficialmente 2-4 jugadores (`GameEndResult`/ranking probado con 4 asientos), pero el lobby actual no permite elegir tamaño de mesa — Brisca se lanza con `maxPlayers:2` fijo en el catálogo hasta que una fase posterior añada esa opción (deuda explícita, no bloqueante; documentada igual que el resto de deuda de M2/M3).
+
+`apps/web/src/games/BriscaBoard.tsx`: mano propia jugable, baza en curso (cartas boca arriba, casillas vacías para quien no ha jugado todavía), triunfo, puntuación por asiento, recuento de mazo — sin obligación de asistir al palo, cualquier carta de la mano es jugable en todo momento.
+
+**Verificación — el hallazgo más importante de esta pasada**: firetest con 2 jugadores + 1 espectador por WebSocket real, **inspeccionando el payload crudo de `match.state`** (no solo la UI) para confirmar que la mano ajena nunca aparece en ningún mensaje recibido por el rival ni por el espectador — ni siquiera como substring del JSON. Partida completa (40 cartas) jugada hasta el ranking final con puntos sumando 120. Reinicio del servidor a mitad de partida: la mano, los puntos y el `seq` sobreviven intactos — el hallazgo de tooling de esta prueba fue que Postgres `jsonb` reordena las claves de los objetos alfabéticamente al guardar (`{suit,rank}` vuelve como `{rank,suit}`), así que una comparación ingenua por `JSON.stringify` da un falso negativo; una comparación estructural confirma que los datos son idénticos — no afecta al producto porque todo el código accede a las propiedades por nombre, nunca por igualdad de cadena JSON.
+
+### Deuda explícita (documentada, no bloqueante)
+
+- Brisca fijo a 2 plazas en el lobby pese a que el motor soporta 2-4 (ver arriba).
+- Una sola temporada activa a la vez, sin UI de administración de temporadas.
+- El leaderboard y el resumen de perfil no pagan por partidas async de larga duración de forma distinta a las realtime — mismo tratamiento para ambas.
+
+**Verificación global**: `pnpm turbo lint typecheck test build` en verde (23/23) tras cada pasada; 42 tests nuevos (7 Glicko-2 + 14 Conecta 4 + 20 Brisca + 1 protocolo ampliado por `ratingDeltas`), 92 en total en el monorepo. No se verificó visualmente en navegador (sin herramienta de captura en este entorno) — toda la verificación end-to-end se hizo contra el WebSocket real con el paquete `ws`, inspeccionando los payloads recibidos.
+
+## M5 — Torneos de eliminación directa (implementado 2026-07-05)
+
+El propio roadmap marcaba el riesgo de subestimar los torneos suizos (byes, desempates) y proponía single-elim primero. Preguntado por el alcance, el usuario eligió exactamente esa mitigación: **solo eliminación directa** en esta pasada; el formato suizo queda como pasada de seguimiento explícita.
+
+### Schema (`packages/db`, migración `0006_rainy_anita_blake.sql`)
+
+`tournaments` (format `'single_elim'` únicamente por ahora; state `registration|running|finished|cancelled`; `rated` bool, default `true`; `totalRounds` calculado al arrancar), `tournamentParticipants` (PK `tournamentId+userId`; status `registered|checked_in|eliminated`; `seed` asignado al arrancar; `finalPlacement`), `tournamentRounds` (`roundNumber`, unique por torneo), `tournamentMatches` (`slotIndex` dentro de la ronda, `participantAId`/`participantBId` nullable = bye, `matchId` nullable, `winnerUserId`, state `pending|finished`). **Decisión clave: no se toca la tabla `matches`** — el enlace es unidireccional (`tournamentMatches.matchId` apunta a `matches.id`); el runner detecta que una partida es de torneo con un `select` por `matchId`, así M5 no modifica ninguna fila de M2/M4. Dos tipos nuevos en el `activityTypeEnum` compartido: `tournament_round_started`, `tournament_eliminated`.
+
+### Motor puro de bracket (`apps/server/src/tournaments/bracket.ts`, sin IO)
+
+`seedOrder(size)`: algoritmo recursivo estándar de seeding de torneos (1 vs N, 2 vs N-1, ...) — `seedOrder(8) = [1,8,4,5,2,7,3,6]`, el bracket real de un torneo de 8. `assignBracket(participantsByRatingDesc)`: mapea seeds 1..N a participantes (rating descendente) y N+1..size (potencia de 2 más próxima) a `null` (bye) — por construcción del propio algoritmo de seeding, los byes recaen siempre en los mejores sembrados, sin lógica extra. `placementForEliminationRound(round, totalRounds) = 2^(totalRounds-round)+1` da el puesto final de quien cae eliminado en cada ronda (final→2º, semifinal→3º empatado, etc.), mismo convenio de "empates comparten placement" que `PlayerRank` del motor de juego. 13 tests, incluidos los casos con bye (5 y 6 participantes) verificados a mano contra el resultado real del algoritmo.
+
+### Runner (`apps/server/src/tournaments/service.ts`)
+
+- **`startTournament`**: valida host + ≥2 confirmados, calcula tamaño de bracket y `totalRounds`, asigna `seed` por rating del juego (temporada activa, 1500 si no hay rating todavía) y genera la ronda 1.
+- **`generateRound`**: por cada pareja de la ronda — si ambos existen, crea la partida real (mismo patrón que `matches.create` pero sin el guard de "una mesa activa por usuario" ni paso por lobby: inserta `matches`+`matchPlayers` directamente y llama `matchService.startNow(matchId)`, arranque instantáneo sin ready-check) y notifica a ambos participantes; si uno de los dos es `null`, el bye se resuelve al instante sin crear partida.
+- **`onMatchFinished`**: engancha con un enfoque de evento en vez de una llamada directa — **`apps/server/src/match/events.ts`** es un módulo nuevo y minúsculo (un único listener registrable) que evita un ciclo de imports real (`match/lifecycle.ts` → `tournaments/service.ts` → `match/service.ts` para `startNow` → de vuelta a `match/lifecycle.ts`). De paso, se extrajo `finishRuntimeAndNotify` en `lifecycle.ts` — la secuencia `disarmTurnTimer`+`broadcastEnded`+`setInGameForMatch` estaba triplicada entre los dos caminos de fin de partida; ahora es una sola función que además emite el evento. Determina el ganador por `matchPlayers.placement`; en empate (los 3 juegos actuales pueden empatar), gana el mejor sembrado — sin revancha ni desempate a mejor-de-3, decisión de alcance explícita. Marca al perdedor eliminado con su `finalPlacement`, y si la ronda queda completamente resuelta, genera la siguiente o cierra el torneo si solo quedaba una partida.
+- **`recoverOnBoot`**: mismo patrón que `matchService.recoverOnBoot` (M2) — para torneos `running`, si la última ronda ya está resuelta pero no existe la siguiente, la genera. Registrado junto a la llamada ya existente en `index.ts`.
+
+### tRPC (`apps/server/src/trpc/routers/tournaments.ts`) y frontend
+
+Router `tournaments`: `list`/`getById` (públicos, para ver brackets sin estar inscrito), `create`/`register`/`unregister`/`checkIn`/`start`/`cancel` (protegidos). El creador de un torneo se auto-inscribe como cualquier otro participante — sin privilegios especiales salvo iniciar/cancelar. `_app.torneos.index.tsx` (lista + formulario de creación) y `_app.torneos.$id.tsx` (inscripción/check-in en `registration`; bracket en columnas por ronda con polling de 3s en `running`/`finished`; clasificación final ordenada por `finalPlacement`).
+
+**Hallazgo reutilizado de M3**: la lista se llamó deliberadamente `_app.torneos.index.tsx` y no `_app.torneos.tsx` — con este último, TanStack Router habría tratado la lista como *layout* del detalle (`_app.torneos.$id.tsx`), exactamente el bug de `_app.mensajes.tsx` ya documentado y corregido en M3. Se detectó y corrigió antes de verificar, no después.
+
+**Hallazgo de tipos nuevo**: `NonNullable<ReturnType<typeof trpc.x.useQuery>['data']>` para derivar el tipo del payload de una query **no funciona** en este proyecto (resuelve a `{}`) — el patrón correcto en tRPC es `inferRouterOutputs<AppRouter>['tournaments']['getById']` (de `@trpc/server`, añadido como devDependency de solo-tipos en `apps/web`, mismo patrón que ya usa `@tableria/server`).
+
+**Verificación**: firetest con 6 usuarios reales por WebSocket (bracket de 8, 2 byes) jugado de principio a fin con tres en raya — bracket generado correctamente (2 byes para los mejores sembrados, 2 partidas reales en ronda 1), avance automático de ronda en ronda 2 y ronda 3 (final), clasificación final exacta según la fórmula de placement (campeón=1º, finalista=2º, semifinalistas empatados a 3º, ronda-1 empatados a 5º). Un segundo firetest (torneo de 2, reinicio del servidor a mitad de partida) confirmó que el estado de la partida sobrevive el reinicio y que, de forma orgánica, el timer de turno (30s) venció durante los pasos manuales del reinicio — el forfeit resultante se propagó correctamente al runner de torneos (el ganador quedó campeón, el otro eliminado en 2º puesto), validando que `onMatchFinished` engancha tanto el fin natural como el forfeit.
+
+### Notas de alcance (deuda explícita, no bloqueante)
+
+- Empate en una partida de torneo → gana el mejor sembrado; sin revancha.
+- Sin ventana de check-in con límite de tiempo ni forfeit automático por no confirmarse.
+- Un participante puede tener a la vez una partida de torneo y otra suelta sin bloqueo cruzado.
+- Bracket visual sin líneas de conexión SVG (columnas + tarjetas).
+- Formato suizo, byes con otros formatos, y torneos multi-juego quedan fuera de esta pasada.
+
+`pnpm turbo lint typecheck test build` en verde (23/23); 13 tests nuevos (105 en total en el monorepo).

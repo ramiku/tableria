@@ -1,45 +1,75 @@
 import { randomBytes } from 'node:crypto';
-import { and, eq, matchMoves, matchPlayers, matches, type Db } from '@tableria/db';
+import { and, eq, inArray, matchMoves, matchPlayers, matches, type Db, type Tx } from '@tableria/db';
 import { createRng, type GameEndResult, type MoveCtx, type PlayerRank } from '@tableria/engine';
-import { broadcastEnded, broadcastState, broadcastLobby } from './broadcast.js';
+import { applyMatchResult, type RatingDeltas } from '../ratings/service.js';
+import * as notifications from '../social/notifications.js';
+import { setInGame, socketsFor } from '../social/presence.js';
+import { sendToSocket } from '../ws/send.js';
+import { broadcastEnded, broadcastState } from './broadcast.js';
+import { emitMatchFinished } from './events.js';
 import { getGameDefinition } from './games.js';
 import { loadEngineState } from './persistence.js';
 import type { MatchRuntime } from './registry.js';
-import { armReadyTimer, armTurnTimer, disarmReadyTimer, disarmTurnTimer } from './timers.js';
+import { armTurnTimer, disarmTurnTimer } from './timers.js';
 
-const READY_CHECK_MS = 20_000;
 const UNIQUE_VIOLATION = '23505';
 
-export function scheduleReadyCheck(db: Db, runtime: MatchRuntime): void {
-  const endsAt = new Date(Date.now() + READY_CHECK_MS);
-  armReadyTimer(runtime, endsAt, () => {
-    void startMatch(db, runtime).catch((err: unknown) => {
-      console.error('startMatch falló tras el ready-check', err);
-    });
-  });
-  void broadcastLobby(db, runtime);
+/**
+ * Cierre compartido de partida: marca `placement` de cada asiento y delega en
+ * `ratings.applyMatchResult` la escritura de `userGameStats` (siempre) y, si la
+ * partida es `rated`, del rating Glicko-2 + historial. Usado por los dos
+ * caminos de fin de partida (natural vía `checkEnd()` y forfeit por timeout)
+ * para que ambos escriban rating/stats exactamente igual.
+ */
+async function finishMatchTx(
+  tx: Tx,
+  runtime: MatchRuntime,
+  ranking: PlayerRank[],
+  rated: boolean,
+  seatToUserId: Map<number, string>,
+): Promise<RatingDeltas> {
+  for (const rank of ranking) {
+    await tx
+      .update(matchPlayers)
+      .set({ placement: rank.placement })
+      .where(and(eq(matchPlayers.matchId, runtime.matchId), eq(matchPlayers.seat, rank.seat)));
+  }
+  return applyMatchResult(tx, { matchId: runtime.matchId, gameId: runtime.gameId, rated, ranking, seatToUserId });
 }
 
-export function cancelReadyCheck(db: Db, runtime: MatchRuntime): void {
-  disarmReadyTimer(runtime);
-  void broadcastLobby(db, runtime);
+/**
+ * Secuencia común tras confirmar el fin de una partida (ambos caminos: natural
+ * y forfeit): parar el timer, difundir el resultado, liberar la presencia
+ * "en partida" y avisar a quien esté escuchando cierres de partida (hoy: el
+ * runner de torneos, vía `match/events.ts`, para avanzar el bracket si procede).
+ */
+async function finishRuntimeAndNotify(
+  db: Db,
+  runtime: MatchRuntime,
+  reason: 'completed' | 'forfeit',
+  ranking: PlayerRank[],
+  ratingDeltas: RatingDeltas,
+): Promise<void> {
+  disarmTurnTimer(runtime);
+  broadcastEnded(runtime, reason, ranking, ratingDeltas);
+  await setInGameForMatch(db, runtime.matchId, false);
+  await emitMatchFinished(db, runtime.matchId).catch((err: unknown) => console.error('emitMatchFinished falló', err));
 }
 
 /** Transición starting → in_game: setup del engine, snapshot inicial, primer turnDeadlineAt. */
 export async function startMatch(db: Db, runtime: MatchRuntime): Promise<void> {
-  disarmReadyTimer(runtime);
   const def = getGameDefinition(runtime.gameId);
   if (!def) throw new Error(`Definición de juego no encontrada: ${runtime.gameId}`);
 
   const rows = await db
-    .select({ seat: matchPlayers.seat })
+    .select({ seat: matchPlayers.seat, userId: matchPlayers.userId })
     .from(matchPlayers)
     .where(eq(matchPlayers.matchId, runtime.matchId))
     .orderBy(matchPlayers.seat);
 
   const seed = randomBytes(16).toString('hex');
   const rng = createRng(seed);
-  const state = def.setup({ numPlayers: rows.length, rng });
+  const state = def.setup({ numPlayers: rows.length, rng, options: runtime.options ?? undefined });
   const now = new Date();
   const turnDeadlineAt = new Date(now.getTime() + runtime.turnDurationS * 1000);
 
@@ -54,6 +84,7 @@ export async function startMatch(db: Db, runtime: MatchRuntime): Promise<void> {
   });
 
   await broadcastState(db, runtime);
+  void setInGame(db, rows.map((r) => r.userId), true).catch((err: unknown) => console.error('setInGame falló', err));
 }
 
 export type ApplyMoveOutcome =
@@ -87,6 +118,7 @@ export async function applyPlayerMove(
   if (!parsed.success) return { ok: false, code: 'INVALID_MOVE' };
 
   let endResult: GameEndResult | null = null;
+  let ratingDeltas: RatingDeltas = new Map();
   let outcome: ApplyMoveOutcome;
 
   try {
@@ -117,12 +149,13 @@ export async function applyPlayerMove(
       const snapshotFields = shouldSnapshot ? { stateSnapshot: nextState, snapshotSeq: nextSeq } : {};
 
       if (endResult) {
-        for (const rank of endResult.ranking) {
-          await tx
-            .update(matchPlayers)
-            .set({ placement: rank.placement })
-            .where(and(eq(matchPlayers.matchId, runtime.matchId), eq(matchPlayers.seat, rank.seat)));
-        }
+        const playerRows = await tx
+          .select({ seat: matchPlayers.seat, userId: matchPlayers.userId })
+          .from(matchPlayers)
+          .where(eq(matchPlayers.matchId, runtime.matchId));
+        const seatToUserId = new Map(playerRows.map((r) => [r.seat, r.userId]));
+        ratingDeltas = await finishMatchTx(tx, runtime, endResult.ranking, row.rated, seatToUserId);
+
         await tx
           .update(matches)
           .set({ state: 'finished', finishedAt: new Date(), turnDeadlineAt: null, ...snapshotFields })
@@ -147,8 +180,7 @@ export async function applyPlayerMove(
   if (!outcome.ok) return outcome;
 
   if (endResult) {
-    disarmTurnTimer(runtime);
-    broadcastEnded(runtime, 'completed', (endResult as GameEndResult).ranking);
+    await finishRuntimeAndNotify(db, runtime, 'completed', (endResult as GameEndResult).ranking, ratingDeltas);
   } else {
     const [row] = await db
       .select({ turnDeadlineAt: matches.turnDeadlineAt })
@@ -161,9 +193,42 @@ export async function applyPlayerMove(
       });
     }
     await broadcastState(db, runtime);
+    await notifyTurnIfAsync(db, runtime);
   }
 
   return outcome;
+}
+
+/**
+ * En partidas async no hay nadie mirando el tablero en directo entre turno y turno,
+ * así que se avisa por notificación in-app a quien pase a estar activo. En tiempo real
+ * no hace falta: ambos jugadores ya están delante de la mesa.
+ */
+async function notifyTurnIfAsync(db: Db, runtime: MatchRuntime): Promise<void> {
+  if (runtime.mode !== 'async' || !runtime.engine) return;
+  const activeSeats = runtime.engine.def.activePlayers(runtime.engine.state);
+  if (activeSeats.length === 0) return;
+
+  const rows = await db
+    .select({ seat: matchPlayers.seat, userId: matchPlayers.userId })
+    .from(matchPlayers)
+    .where(and(eq(matchPlayers.matchId, runtime.matchId), inArray(matchPlayers.seat, activeSeats)));
+
+  for (const row of rows) {
+    const payload = { matchId: runtime.matchId, code: runtime.code };
+    const notification = await notifications.create(db, row.userId, 'your_turn', payload);
+    for (const socket of socketsFor(row.userId)) {
+      sendToSocket(socket, {
+        type: 'notification.new',
+        payload: {
+          id: notification.id,
+          type: notification.type,
+          payload: notification.payload,
+          createdAt: notification.createdAt.toISOString(),
+        },
+      });
+    }
+  }
 }
 
 export async function handleTurnTimeout(db: Db, runtime: MatchRuntime): Promise<void> {
@@ -184,7 +249,7 @@ export async function handleTurnTimeout(db: Db, runtime: MatchRuntime): Promise<
 
 async function forfeitMatch(db: Db, runtime: MatchRuntime, forfeitingSeat: number): Promise<void> {
   const rows = await db
-    .select({ seat: matchPlayers.seat })
+    .select({ seat: matchPlayers.seat, userId: matchPlayers.userId })
     .from(matchPlayers)
     .where(eq(matchPlayers.matchId, runtime.matchId))
     .orderBy(matchPlayers.seat);
@@ -194,20 +259,28 @@ async function forfeitMatch(db: Db, runtime: MatchRuntime, forfeitingSeat: numbe
     placement: r.seat === forfeitingSeat ? rows.length : 1,
     result: r.seat === forfeitingSeat ? 'lose' : 'win',
   }));
+  const seatToUserId = new Map(rows.map((r) => [r.seat, r.userId]));
 
-  await db.transaction(async (tx) => {
-    for (const rank of ranking) {
-      await tx
-        .update(matchPlayers)
-        .set({ placement: rank.placement })
-        .where(and(eq(matchPlayers.matchId, runtime.matchId), eq(matchPlayers.seat, rank.seat)));
-    }
+  const [matchRow] = await db.select({ rated: matches.rated }).from(matches).where(eq(matches.id, runtime.matchId)).limit(1);
+  const rated = matchRow?.rated ?? false;
+
+  const ratingDeltas = await db.transaction(async (tx) => {
+    const deltas = await finishMatchTx(tx, runtime, ranking, rated, seatToUserId);
     await tx
       .update(matches)
       .set({ state: 'finished', finishedAt: new Date(), turnDeadlineAt: null })
       .where(eq(matches.id, runtime.matchId));
+    return deltas;
   });
 
-  disarmTurnTimer(runtime);
-  broadcastEnded(runtime, 'forfeit', ranking);
+  await finishRuntimeAndNotify(db, runtime, 'forfeit', ranking, ratingDeltas);
+}
+
+async function setInGameForMatch(db: Db, matchId: string, inGame: boolean): Promise<void> {
+  const rows = await db.select({ userId: matchPlayers.userId }).from(matchPlayers).where(eq(matchPlayers.matchId, matchId));
+  await setInGame(
+    db,
+    rows.map((r) => r.userId),
+    inGame,
+  );
 }

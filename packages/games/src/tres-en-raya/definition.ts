@@ -15,5 +15,12 @@ export const ticTacToeDefinition: GameDefinition<TicTacToeState, TicTacToeMove> 
   checkEnd,
   playerView,
   onTurnTimeout: () => ({ type: 'forfeit' }),
-  ui: { defaultTurnSeconds: 30, supportsRealtime: true },
+  ui: {
+    defaultTurnSeconds: 30,
+    supportsRealtime: true,
+    variants: [
+      { id: 'classic', name: 'Clásico' },
+      { id: 'moving', name: 'Mover fichas' },
+    ],
+  },
 };

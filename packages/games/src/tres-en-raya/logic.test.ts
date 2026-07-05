@@ -156,3 +156,93 @@ describe('playerView', () => {
     expect(playerView(state, 1)).toEqual(playerView(state, null));
   });
 });
+
+describe('variante "moving"', () => {
+  function setupMoving(): TicTacToeState {
+    return setup({ numPlayers: 2, rng: createRng('test-seed'), options: { variant: 'moving' } });
+  }
+
+  /**
+   * Coloca las 3 fichas de cada asiento sin formar ninguna línea:
+   * asiento 0 en 0,1,8 — asiento 1 en 3,6,7. Quedan libres 2, 4 y 5.
+   * Tras esta secuencia le toca a 0, que ya tiene sus 3 fichas (fase de movimiento).
+   */
+  function placeWithoutWinning(): TicTacToeState {
+    let state = setupMoving();
+    state = applyMove(state, { cell: 0 }, ctx(0));
+    state = applyMove(state, { cell: 3 }, ctx(1));
+    state = applyMove(state, { cell: 1 }, ctx(0));
+    state = applyMove(state, { cell: 6 }, ctx(1));
+    state = applyMove(state, { cell: 8 }, ctx(0));
+    state = applyMove(state, { cell: 7 }, ctx(1));
+    return state;
+  }
+
+  it('arranca en variante moving y fase de colocación igual que la clásica', () => {
+    const state = setupMoving();
+    expect(state.variant).toBe('moving');
+    expect(validateMove(state, { cell: 0 }, ctx(0))).toEqual({ ok: true });
+  });
+
+  it('tras colocar sus 3 fichas, un jugador debe mover en vez de colocar', () => {
+    const state = placeWithoutWinning();
+    expect(piecesOnBoardHelper(state.board, 0)).toBe(3);
+    // Le toca a 0 y ya tiene sus 3 fichas: debe mover, no colocar.
+    expect(validateMove(state, { cell: 2 }, ctx(0))).toEqual({ ok: false, code: 'INVALID_MOVE' });
+    expect(validateMove(state, { from: 8, to: 2 }, ctx(0))).toEqual({ ok: true });
+  });
+
+  it('rechaza mover una ficha que no es propia', () => {
+    const state = placeWithoutWinning();
+    expect(validateMove(state, { from: 6, to: 2 }, ctx(0))).toEqual({ ok: false, code: 'NOT_YOUR_PIECE' });
+  });
+
+  it('rechaza mover a una casilla ocupada', () => {
+    const state = placeWithoutWinning();
+    expect(validateMove(state, { from: 8, to: 1 }, ctx(0))).toEqual({ ok: false, code: 'CELL_TAKEN' });
+  });
+
+  it('mover una ficha a la casilla ganadora fija winner', () => {
+    let state = placeWithoutWinning();
+    // 0 tiene 0 y 1 puestos: mover la ficha de 8 a 2 completa la línea 0,1,2.
+    state = applyMove(state, { from: 8, to: 2 }, ctx(0));
+    expect(state.winner).toEqual({ seat: 0, line: [0, 1, 2] });
+    expect(checkEnd(state)).toEqual({
+      ranking: [
+        { seat: 0, placement: 1, result: 'win' },
+        { seat: 1, placement: 2, result: 'lose' },
+      ],
+    });
+  });
+
+  it('declara empate al superar el tope de movimientos sin ganador', () => {
+    let state = placeWithoutWinning();
+
+    // Fase de movimiento: 0 mueve su ficha de 8 entre 8↔5 y 1 mueve la suya de 3 entre 3↔4,
+    // sin tocar nunca la casilla 2 (formaría línea con 0,1) — combinación verificada sin líneas.
+    let toggle0 = true;
+    let toggle1 = true;
+    while (checkEnd(state) === null) {
+      const seat = state.turn;
+      if (seat === 0) {
+        state = applyMove(state, toggle0 ? { from: 8, to: 5 } : { from: 5, to: 8 }, ctx(0));
+        toggle0 = !toggle0;
+      } else {
+        state = applyMove(state, toggle1 ? { from: 3, to: 4 } : { from: 4, to: 3 }, ctx(1));
+        toggle1 = !toggle1;
+      }
+    }
+
+    expect(state.winner).toBeNull();
+    expect(checkEnd(state)).toEqual({
+      ranking: [
+        { seat: 0, placement: 1, result: 'draw' },
+        { seat: 1, placement: 1, result: 'draw' },
+      ],
+    });
+  });
+});
+
+function piecesOnBoardHelper(board: TicTacToeState['board'], seat: 0 | 1): number {
+  return board.filter((c) => c === seat).length;
+}
