@@ -161,11 +161,26 @@ export async function applyPlayerMove(
           .set({ state: 'finished', finishedAt: new Date(), turnDeadlineAt: null, ...snapshotFields })
           .where(eq(matches.id, runtime.matchId));
       } else {
-        const nextDeadline = new Date(Date.now() + runtime.turnDurationS * 1000);
-        await tx
-          .update(matches)
-          .set({ turnDeadlineAt: nextDeadline, ...snapshotFields })
-          .where(eq(matches.id, runtime.matchId));
+        // En juegos con turnos simultáneos (varios asientos activos a la vez, p.ej. todos
+        // dando pista salvo el adivinador) cada jugador manda su movimiento por separado,
+        // pero siguen siendo parte de la MISMA ronda mientras el conjunto de activos tras
+        // el movimiento sea subconjunto del de antes (solo se ha ido vaciando). Recién ahí
+        // se conserva el `turnDeadlineAt` ya armado; si aparece algún asiento nuevo (p.ej.
+        // pasa a ser el turno del adivinador) es una ronda/fase distinta y toca reiniciar el reloj.
+        const activeAfter = def.activePlayers(nextState);
+        const sameRound = activeAfter.length > 0 && activeAfter.every((s) => active.includes(s));
+
+        if (sameRound) {
+          if (Object.keys(snapshotFields).length > 0) {
+            await tx.update(matches).set(snapshotFields).where(eq(matches.id, runtime.matchId));
+          }
+        } else {
+          const nextDeadline = new Date(Date.now() + runtime.turnDurationS * 1000);
+          await tx
+            .update(matches)
+            .set({ turnDeadlineAt: nextDeadline, ...snapshotFields })
+            .where(eq(matches.id, runtime.matchId));
+        }
       }
 
       return { ok: true, ended: endResult !== null } as const;
@@ -187,7 +202,12 @@ export async function applyPlayerMove(
       .from(matches)
       .where(eq(matches.id, runtime.matchId))
       .limit(1);
-    if (row?.turnDeadlineAt) {
+    // Si el deadline ya venció (movimiento aplicado dentro del propio bucle de `handleTurnTimeout`
+    // al forzar a varios asientos de una ronda simultánea — ver `sameRound` más arriba), no se arma
+    // nada: rearmar con un plazo ya pasado dispara casi al instante y duplicaría el forzado de los
+    // asientos restantes, que el bucle en curso ya se encarga de resolver. Mismo criterio que usa
+    // `recoverOnBoot` al arrancar con partidas cuyo turno venció mientras el proceso estaba caído.
+    if (row?.turnDeadlineAt && row.turnDeadlineAt > new Date()) {
       armTurnTimer(runtime, row.turnDeadlineAt, () => {
         void handleTurnTimeout(db, runtime).catch((err: unknown) => console.error('handleTurnTimeout falló', err));
       });
@@ -231,19 +251,31 @@ async function notifyTurnIfAsync(db: Db, runtime: MatchRuntime): Promise<void> {
   }
 }
 
+/**
+ * En juegos por turnos (activePlayers = 1 asiento) esto resuelve el único rezagado, igual que
+ * siempre. En juegos con turnos simultáneos (varios asientos activos a la vez, p.ej. todos dando
+ * pista salvo el adivinador) TODOS los que no movieron a tiempo deben resolverse, no solo el
+ * primero — de lo contrario el resto se queda esperando un movimiento que nunca llega. Se
+ * recalculan los activos en cada iteración por si aplicar la acción de uno ya hizo avanzar la
+ * ronda (p.ej. era el último que faltaba) y deja de tener sentido tocar a los demás.
+ */
 export async function handleTurnTimeout(db: Db, runtime: MatchRuntime): Promise<void> {
   if (!runtime.engine) return;
-  const { def, state } = runtime.engine;
-  const active = def.activePlayers(state);
-  if (active.length === 0) return; // ya ha terminado, nada que forzar
 
-  const seat = active[0]!;
-  const action = def.onTurnTimeout ? def.onTurnTimeout(state, seat) : ({ type: 'forfeit' } as const);
+  for (const seat of runtime.engine.def.activePlayers(runtime.engine.state)) {
+    if (!runtime.engine) return; // la partida terminó a mitad del bucle (p.ej. un forfeit previo)
+    const { def, state } = runtime.engine;
+    const stillActive = def.activePlayers(state);
+    if (!stillActive.includes(seat)) continue; // esta ronda ya se resolvió sin necesitar a este asiento
 
-  if (action.type === 'forfeit') {
-    await forfeitMatch(db, runtime, seat);
-  } else {
-    await applyPlayerMove(db, runtime, seat, action.move);
+    const action = def.onTurnTimeout ? def.onTurnTimeout(state, seat) : ({ type: 'forfeit' } as const);
+
+    if (action.type === 'forfeit') {
+      await forfeitMatch(db, runtime, seat);
+      return; // el forfeit termina la partida entera para todos los asientos
+    } else {
+      await applyPlayerMove(db, runtime, seat, action.move);
+    }
   }
 }
 

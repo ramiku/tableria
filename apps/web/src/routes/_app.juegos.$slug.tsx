@@ -227,7 +227,7 @@ function MyTablePanel({ matchId, code, meId }: { matchId: string; code: string; 
           <p className="mt-3 text-xs font-medium text-tb-warn">{t(`sala.connection.${connectionStatus}`)}</p>
         )}
 
-        <div className="mt-8 flex items-start justify-center gap-8">
+        <div className="mt-8 flex flex-wrap items-start justify-center gap-8">
           {Array.from({ length: maxPlayers }, (_, i) => {
             const seat = seats.find((s) => s.seat === i);
             return seat?.userId ? (
@@ -331,7 +331,7 @@ function WaitingTables({ gameId, canJoin }: { gameId: string; canJoin: boolean }
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {data.map((table) => (
             <div key={table.matchId} className="rounded-2xl border border-tb-border bg-tb-surface p-4">
-              <div className="flex items-start justify-center gap-5">
+              <div className="flex flex-wrap items-start justify-center gap-5">
                 {Array.from({ length: table.maxPlayers }, (_, i) => {
                   const seat = table.seats.find((s) => s.seat === i);
                   return seat ? (
@@ -382,13 +382,14 @@ function WaitingTables({ gameId, canJoin }: { gameId: string; canJoin: boolean }
 
 interface GameLobbyProps {
   gameId: string;
+  minPlayers: number;
   maxPlayers: number;
   variants: { id: string; name: string }[];
   defaultTurnSeconds: number;
   me: { id: string; username: string; avatarInitial: string | null; avatarColor: string | null };
 }
 
-function GameLobby({ gameId, maxPlayers, variants, defaultTurnSeconds, me }: GameLobbyProps) {
+function GameLobby({ gameId, minPlayers, maxPlayers, variants, defaultTurnSeconds, me }: GameLobbyProps) {
   const { t } = useTranslation();
   const utils = trpc.useUtils();
   const [mode, setMode] = useState<'realtime' | 'async'>('realtime');
@@ -396,6 +397,10 @@ function GameLobby({ gameId, maxPlayers, variants, defaultTurnSeconds, me }: Gam
   const [variant, setVariant] = useState(variants[0]?.id ?? '');
   const [isPrivate, setIsPrivate] = useState(false);
   const [rated, setRated] = useState(false);
+  // Aforo variable (p.ej. Pista Única, 3-8): el anfitrión elige cuántos asientos tiene la mesa.
+  // En juegos de aforo fijo (minPlayers === maxPlayers) no se muestra selector y esto no varía.
+  const [seatCount, setSeatCount] = useState(minPlayers);
+  const variableSeats = minPlayers !== maxPlayers;
 
   const { data: myActive, isLoading } = trpc.matches.myActive.useQuery();
   const createMatch = trpc.matches.create.useMutation({
@@ -506,6 +511,19 @@ function GameLobby({ gameId, maxPlayers, variants, defaultTurnSeconds, me }: Gam
               </div>
             )}
 
+            {variableSeats && (
+              <div>
+                <Eyebrow>{t('lobby.seatCount')}</Eyebrow>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {Array.from({ length: maxPlayers - minPlayers + 1 }, (_, i) => minPlayers + i).map((n) => (
+                    <Chip key={n} selected={seatCount === n} onSelect={() => setSeatCount(n)}>
+                      {String(n)}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-tb-border bg-tb-surface-2 px-4 py-3">
               <span>
                 <span className="block text-sm font-semibold text-tb-text">{t('lobby.private')}</span>
@@ -536,9 +554,9 @@ function GameLobby({ gameId, maxPlayers, variants, defaultTurnSeconds, me }: Gam
           {/* Tu mesa (previa) + Comenzar */}
           <div className="flex flex-col rounded-2xl border border-tb-border bg-tb-surface p-6">
             <Eyebrow>{t('lobby.yourTable')}</Eyebrow>
-            <div className="mt-4 flex items-start justify-center gap-6">
+            <div className="mt-4 flex flex-wrap items-start justify-center gap-6">
               <OccupiedSeat user={{ username: me.username, avatarInitial: me.avatarInitial, avatarColor: me.avatarColor }} />
-              {Array.from({ length: maxPlayers - 1 }, (_, i) => (
+              {Array.from({ length: seatCount - 1 }, (_, i) => (
                 <EmptySeat key={i} label={t('lobby.available')} />
               ))}
             </div>
@@ -572,6 +590,7 @@ function GameLobby({ gameId, maxPlayers, variants, defaultTurnSeconds, me }: Gam
                   turnDurationS,
                   variant: variants.length > 1 ? variant : undefined,
                   rated,
+                  numPlayers: variableSeats ? seatCount : undefined,
                 })
               }
               disabled={createMatch.isPending}
@@ -719,6 +738,7 @@ function GamePage() {
           {game.isActive ? (
             <GameLobby
               gameId={game.slug}
+              minPlayers={game.minPlayers}
               maxPlayers={game.maxPlayers}
               variants={variants}
               defaultTurnSeconds={defaultTurnSeconds}

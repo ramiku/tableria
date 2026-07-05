@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeftIcon, ChatIcon, ClockIcon, MedalIcon, UsersIcon } from '../components/icons';
 import { BriscaBoard } from '../games/BriscaBoard';
 import { ConnectFourBoard } from '../games/ConnectFourBoard';
+import { PistaUnicaBoard } from '../games/PistaUnicaBoard';
 import { ReversiBoard } from '../games/ReversiBoard';
 import { TicTacToeBoard } from '../games/TicTacToeBoard';
 import { formatDuration } from '../lib/formatDuration';
@@ -77,6 +78,7 @@ const BOARD_COMPONENTS = {
   'conecta-cuatro': ConnectFourBoard,
   brisca: BriscaBoard,
   reversi: ReversiBoard,
+  'pista-unica': PistaUnicaBoard,
 } as const;
 
 function MatchPage() {
@@ -226,7 +228,10 @@ function MatchPage() {
         ) : (
           <>
             {isSpectator && <p className="mb-3 text-center text-xs text-tb-muted">{t('partida.spectating')}</p>}
-            {!isSpectator && (
+            {/* Pista Única es cooperativo entre 3-8 jugadores y su propio tablero ya explica de
+                quién es el turno con más matiz ("eres quien adivina" / pistas pendientes, etc.) —
+                el genérico "turno del rival" no encaja y sobra aquí. */}
+            {!isSpectator && matchInfo?.gameId !== 'pista-unica' && (
               <p className="mb-1 text-center text-sm font-medium text-tb-text">
                 {myTurn ? t('partida.yourTurn') : t('partida.opponentTurn')}
               </p>

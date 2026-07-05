@@ -197,12 +197,22 @@ export const matchesRouter = router({
         turnDurationS: z.number().int().positive().optional(),
         variant: z.string().optional(),
         rated: z.boolean().default(false),
+        /** Solo tiene efecto en juegos de aforo variable (minPlayers !== maxPlayers, p.ej. Pista Única); se ignora en el resto. */
+        numPlayers: z.number().int().positive().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const [game] = await ctx.db.select().from(games).where(eq(games.id, input.gameId)).limit(1);
       if (!game || !game.isActive) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ese juego no está disponible todavía' });
+      }
+
+      let maxPlayers = game.maxPlayers;
+      if (input.numPlayers != null) {
+        if (input.numPlayers < game.minPlayers || input.numPlayers > game.maxPlayers) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: `Este juego admite entre ${game.minPlayers} y ${game.maxPlayers} jugadores` });
+        }
+        maxPlayers = input.numPlayers;
       }
 
       const def = getGameDefinition(input.gameId);
@@ -234,7 +244,7 @@ export const matchesRouter = router({
               code,
               gameId: game.id,
               hostUserId: userId,
-              maxPlayers: game.maxPlayers,
+              maxPlayers,
               isPrivate: input.isPrivate,
               mode: input.mode,
               turnDurationS,

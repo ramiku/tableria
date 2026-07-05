@@ -81,6 +81,20 @@ const catalog = [
     isActive: true,
     options: { defaultTurnSeconds: 30 },
   },
+  {
+    id: 'pista-unica',
+    name: 'Pista Única',
+    categorySlug: 'party',
+    minPlayers: 3,
+    maxPlayers: 8,
+    durationMin: 15,
+    badge: 'Cooperativo',
+    coverBg: '#5b3a7a',
+    coverFg: '#f3ecfb',
+    description: 'Da una pista de una palabra para que el adivinador acierte la palabra secreta — pero si alguien más piensa lo mismo que tú, ambas pistas se anulan.',
+    isActive: true,
+    options: { defaultTurnSeconds: 60 },
+  },
 ];
 
 const content = [
@@ -103,6 +117,11 @@ const content = [
     gameId: 'reversi',
     sectionKey: 'rules',
     body: 'Tablero de 8×8. Empiezan 4 fichas cruzadas en el centro y mueven las oscuras. Por turnos, cada jugador coloca una ficha en una casilla vacía que encierre, en línea recta (horizontal, vertical o diagonal), una o más fichas rivales entre la nueva ficha y otra propia; todas las fichas encerradas se voltean al color del jugador. Si no tienes ninguna jugada legal, pasas turno. La partida termina cuando el tablero se llena o ambos jugadores pasan seguido; gana quien tiene más fichas de su color en el tablero.',
+  },
+  {
+    gameId: 'pista-unica',
+    sectionKey: 'rules',
+    body: 'Juego cooperativo de 3 a 8 jugadores. Cada partida tiene tantas rondas como jugadores: en cada ronda, uno de vosotros es el adivinador y ve todo menos la palabra secreta; el resto la ve y, a la vez y en secreto, escribe una pista de una sola palabra para ayudar a adivinarla. Antes de mostrarlas, se anulan las pistas que coincidan entre sí (aunque sea con distinto acento o mayúsculas) — si dos personas piensan lo mismo, ninguna de las dos pistas cuenta. El adivinador ve las pistas que sobrevivieron e intenta acertar la palabra. Ganáis todos juntos si aciertan al menos la mitad de las rondas.',
   },
 ];
 
