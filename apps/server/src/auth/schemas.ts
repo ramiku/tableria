@@ -29,3 +29,25 @@ export const resetPasswordSchema = z.object({
   token: z.string().min(1),
   password: passwordSchema,
 });
+
+export const twoFactorEnableSchema = z.object({
+  code: z.string().trim().min(1),
+});
+
+export const twoFactorDisableSchema = z.object({
+  password: z.string().min(1, 'Indica tu contraseña'),
+});
+
+export const twoFactorVerifySchema = z.object({
+  challengeToken: z.string().min(1),
+  code: z.string().trim().min(1),
+  trustDevice: z.boolean().default(false),
+});
+
+export const magicLinkRequestSchema = z.object({
+  identifier: z.string().trim().min(1, 'Indica tu nick o correo'),
+});
+
+export const magicLinkConsumeSchema = z.object({
+  token: z.string().min(1),
+});

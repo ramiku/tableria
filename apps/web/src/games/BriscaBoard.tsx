@@ -73,6 +73,7 @@ export function BriscaBoard({ matchId, mySeat, myTurn, view: rawView }: BoardPro
               type="button"
               onClick={() => handlePlay(i)}
               disabled={!myTurn}
+              aria-label={`${cardLabel(c.rank)} de ${SUIT_LABEL[c.suit]}`}
               className="transition-transform enabled:hover:-translate-y-1 disabled:cursor-default disabled:opacity-70"
             >
               <CardFace suit={c.suit} rank={c.rank} />

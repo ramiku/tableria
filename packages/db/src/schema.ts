@@ -51,6 +51,10 @@ export const users = pgTable('users', {
   emailVerifiedAt: timestamptz('email_verified_at'),
   disabledAt: timestamptz('disabled_at'),
   disabledReason: text('disabled_reason'),
+  // Secreto TOTP cifrado en reposo (AES-256-GCM, ver auth/crypto.ts) — null = 2FA no configurado.
+  totpSecret: text('totp_secret'),
+  // Presencia = 2FA activo; se fija tras confirmar el primer código válido en /2fa/enable.
+  totpEnabledAt: timestamptz('totp_enabled_at'),
   createdAt: timestamptz('created_at').notNull().defaultNow(),
   updatedAt: timestamptz('updated_at').notNull().defaultNow(),
 });
@@ -91,6 +95,54 @@ export const passwordResets = pgTable(
     consumedAt: timestamptz('consumed_at'),
   },
   (t) => [index('password_resets_user_idx').on(t.userId)],
+);
+
+export const twoFactorBackupCodes = pgTable(
+  'two_factor_backup_codes',
+  {
+    id: uuid('id').primaryKey().$defaultFn(uuidv7),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    // HMAC-SHA256(code, SESSION_PEPPER) — mismo hashToken que sesiones/reset; el código en claro
+    // solo se muestra una vez, en la respuesta de /2fa/enable.
+    codeHash: char('code_hash', { length: 64 }).notNull().unique(),
+    usedAt: timestamptz('used_at'),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('two_factor_backup_codes_user_idx').on(t.userId)],
+);
+
+export const trustedDevices = pgTable(
+  'trusted_devices',
+  {
+    id: uuid('id').primaryKey().$defaultFn(uuidv7),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    // HMAC-SHA256(token, SESSION_PEPPER) — el token opaco vive en la cookie `tb_trusted`.
+    tokenHash: char('token_hash', { length: 64 }).notNull().unique(),
+    userAgent: text('user_agent'),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
+    lastUsedAt: timestamptz('last_used_at'),
+    expiresAt: timestamptz('expires_at').notNull(),
+  },
+  (t) => [index('trusted_devices_user_idx').on(t.userId)],
+);
+
+export const magicLinkTokens = pgTable(
+  'magic_link_tokens',
+  {
+    id: uuid('id').primaryKey().$defaultFn(uuidv7),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: char('token_hash', { length: 64 }).notNull().unique(),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
+    expiresAt: timestamptz('expires_at').notNull(),
+    consumedAt: timestamptz('consumed_at'),
+  },
+  (t) => [index('magic_link_tokens_user_idx').on(t.userId)],
 );
 
 // ---------------------------------------------------------------------------

@@ -6,11 +6,13 @@ import type { BoardProps } from './BoardProps';
 
 function Cell({
   value,
+  label,
   onClick,
   disabled,
   selected,
 }: {
   value: 0 | 1 | null;
+  label: string;
   onClick: () => void;
   disabled: boolean;
   selected?: boolean;
@@ -20,6 +22,8 @@ function Cell({
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-label={label}
+      aria-pressed={selected}
       className={`flex aspect-square items-center justify-center rounded-xl border bg-tb-surface-2 font-display text-4xl font-extrabold transition-colors enabled:hover:bg-tb-accent-tint disabled:cursor-default ${
         selected ? 'border-tb-accent ring-2 ring-tb-accent' : 'border-tb-border'
       }`}
@@ -74,14 +78,18 @@ export function TicTacToeBoard({ matchId, seq, mySeat, myTurn, view: rawView }: 
           {selectedCell === null ? t('partida.selectPiece') : t('partida.selectDestination')}
         </p>
       )}
-      <div className="grid grid-cols-3 gap-2">
+      <div role="grid" aria-label={t('partida.a11y.board')} className="grid grid-cols-3 gap-2">
         {(view?.board ?? Array(9).fill(null)).map((cell, i) => {
           const clickable =
             myTurn && (!inMovePhase ? cell === null : cell === mySeat || (selectedCell !== null && cell === null));
+          const content =
+            cell === null ? t('partida.a11y.empty') : cell === mySeat ? t('partida.a11y.myPiece') : t('partida.a11y.opponentPiece');
+          const label = t('partida.a11y.cell', { row: Math.floor(i / 3) + 1, col: (i % 3) + 1, content });
           return (
             <Cell
               key={i}
               value={cell}
+              label={label}
               onClick={() => handleCellClick(i)}
               disabled={!clickable}
               selected={selectedCell === i}

@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '../components/Avatar';
 import {
   CalendarIcon,
+  CheckIcon,
   KeyIcon,
   MedalIcon,
   PencilIcon,
@@ -11,6 +12,17 @@ import {
   StarIcon,
 } from '../components/icons';
 import { LanguageSection } from '../components/LanguageSelector';
+import { ApiError } from '../lib/api';
+import {
+  disableTwoFactor,
+  enableTwoFactor,
+  listTrustedDevices,
+  revokeAllTrustedDevices,
+  revokeTrustedDevice,
+  setupTwoFactor,
+  type TrustedDevice,
+  type TwoFactorSetup,
+} from '../lib/auth';
 import { useFriendsList } from '../lib/friends';
 import { trpc } from '../lib/trpc';
 import { useLocaleStore } from '../stores/i18n';
@@ -170,7 +182,7 @@ function ProfilePage() {
 }
 
 interface AccountTabProps {
-  me: { username: string; displayName: string };
+  me: { username: string; displayName: string; email: string; twoFactorEnabled: boolean };
   currentPwd: string;
   newPwd: string;
   confirmPwd: string;
@@ -201,7 +213,7 @@ function AccountTab(props: AccountTabProps) {
             <Row label={t('profile.account.fields.displayName')} value={me.displayName} />
           </div>
           <div className="sm:pl-6">
-            <Row label={t('profile.account.fields.email')} value="—" muted />
+            <Row label={t('profile.account.fields.email')} value={me.email} muted />
             <Row label={t('profile.account.fields.joinedAt')} value={memberSinceLabel} muted />
           </div>
         </dl>
@@ -258,6 +270,237 @@ function AccountTab(props: AccountTabProps) {
           </form>
         </article>
       </div>
+
+      <TwoFactorCard initiallyEnabled={me.twoFactorEnabled} />
+    </div>
+  );
+}
+
+type TwoFactorStep = 'idle' | 'setup' | 'backupCodes';
+
+function TwoFactorCard({ initiallyEnabled }: { initiallyEnabled: boolean }) {
+  const { t } = useTranslation();
+  const [enabled, setEnabled] = useState(initiallyEnabled);
+  const [step, setStep] = useState<TwoFactorStep>('idle');
+  const [setupData, setSetupData] = useState<TwoFactorSetup | null>(null);
+  const [code, setCode] = useState('');
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [disablePassword, setDisablePassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  function errorMessage(err: unknown): string {
+    return err instanceof ApiError ? err.message : t('profile.account.twoFactor.genericError');
+  }
+
+  async function handleStartSetup() {
+    setError('');
+    setBusy(true);
+    try {
+      const data = await setupTwoFactor();
+      setSetupData(data);
+      setStep('setup');
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleConfirmEnable(e: FormEvent) {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      const { backupCodes: codes } = await enableTwoFactor(code);
+      setBackupCodes(codes);
+      setStep('backupCodes');
+      setCode('');
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleDone() {
+    setEnabled(true);
+    setStep('idle');
+    setSetupData(null);
+    setBackupCodes([]);
+  }
+
+  async function handleDisable(e: FormEvent) {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      await disableTwoFactor(disablePassword);
+      setEnabled(false);
+      setDisablePassword('');
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <article className="tb-card rounded-2xl border border-tb-border bg-tb-surface p-6">
+      <header className="mb-4 flex items-center gap-2">
+        <ShieldIcon />
+        <h2 className="font-display text-base font-bold text-tb-text">{t('profile.account.twoFactor.title')}</h2>
+      </header>
+
+      {error && <p className="mb-3 text-xs font-medium text-tb-danger">{error}</p>}
+
+      {step === 'idle' && !enabled && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="max-w-md text-sm text-tb-muted">{t('profile.account.twoFactor.disabledNotice')}</p>
+          <button
+            type="button"
+            onClick={handleStartSetup}
+            disabled={busy}
+            className="tb-gradient-cta rounded-lg px-4 py-2 text-sm font-semibold text-tb-accent-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {t('profile.account.twoFactor.enable')}
+          </button>
+        </div>
+      )}
+
+      {step === 'setup' && setupData && (
+        <form onSubmit={handleConfirmEnable} className="flex flex-col gap-4">
+          <p className="text-sm text-tb-muted">{t('profile.account.twoFactor.setupInstructions')}</p>
+          <img
+            src={setupData.qrDataUrl}
+            alt={t('profile.account.twoFactor.qrAlt')}
+            className="h-40 w-40 self-start rounded-lg border border-tb-border bg-white p-2"
+          />
+          <p
+            data-testid="two-factor-secret"
+            className="tb-nums break-all rounded-lg border border-tb-border bg-tb-surface-2 px-3 py-2 text-xs text-tb-muted"
+          >
+            {setupData.secret}
+          </p>
+          <Field id="two-factor-setup-code" label={t('profile.account.twoFactor.codeLabel')} type="text" value={code} onChange={setCode} />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setStep('idle');
+                setSetupData(null);
+                setCode('');
+                setError('');
+              }}
+              className="rounded-lg border border-tb-border px-4 py-2 text-sm font-medium text-tb-muted hover:bg-tb-surface-2"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={busy || !code}
+              className="tb-gradient-cta rounded-lg px-4 py-2 text-sm font-semibold text-tb-accent-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {t('profile.account.twoFactor.confirm')}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {step === 'backupCodes' && (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm font-medium text-tb-danger">{t('profile.account.twoFactor.backupCodesWarning')}</p>
+          <ul className="tb-nums grid grid-cols-2 gap-2 rounded-lg border border-tb-border bg-tb-surface-2 p-4 text-sm sm:grid-cols-5">
+            {backupCodes.map((c) => (
+              <li key={c} data-testid="backup-code" className="text-center text-tb-text">
+                {c}
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={handleDone}
+            className="tb-gradient-cta self-start rounded-lg px-4 py-2 text-sm font-semibold text-tb-accent-fg transition-opacity hover:opacity-90"
+          >
+            {t('profile.account.twoFactor.done')}
+          </button>
+        </div>
+      )}
+
+      {step === 'idle' && enabled && (
+        <div className="flex flex-col gap-4">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-tb-success">
+            <CheckIcon className="h-4 w-4" />
+            {t('profile.account.twoFactor.enabledNotice')}
+          </p>
+          <form onSubmit={handleDisable} className="flex flex-col gap-3 sm:max-w-sm">
+            <Field
+              id="two-factor-disable-password"
+              label={t('profile.account.twoFactor.disablePasswordLabel')}
+              type="password"
+              autoComplete="current-password"
+              value={disablePassword}
+              onChange={setDisablePassword}
+            />
+            <button
+              type="submit"
+              disabled={busy || !disablePassword}
+              className="self-start rounded-lg border border-tb-border px-4 py-2 text-sm font-medium text-tb-muted hover:border-tb-danger hover:text-tb-danger disabled:opacity-50"
+            >
+              {t('profile.account.twoFactor.disable')}
+            </button>
+          </form>
+          <TrustedDevicesList />
+        </div>
+      )}
+    </article>
+  );
+}
+
+function TrustedDevicesList() {
+  const { t } = useTranslation();
+  const [devices, setDevices] = useState<TrustedDevice[] | null>(null);
+
+  useEffect(() => {
+    listTrustedDevices()
+      .then((data) => setDevices(data.devices))
+      .catch(() => setDevices([]));
+  }, []);
+
+  async function handleRevoke(id: string) {
+    await revokeTrustedDevice(id);
+    setDevices((prev) => prev?.filter((d) => d.id !== id) ?? null);
+  }
+
+  async function handleRevokeAll() {
+    await revokeAllTrustedDevices();
+    setDevices([]);
+  }
+
+  if (!devices || devices.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-2 border-t border-tb-border pt-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wide text-tb-muted">{t('profile.account.twoFactor.devicesTitle')}</p>
+        <button type="button" onClick={handleRevokeAll} className="text-xs font-semibold text-tb-danger hover:underline">
+          {t('profile.account.twoFactor.revokeAll')}
+        </button>
+      </div>
+      <ul className="flex flex-col divide-y divide-tb-border">
+        {devices.map((d) => (
+          <li key={d.id} className="flex items-center justify-between gap-2 py-2">
+            <span className="truncate text-xs text-tb-muted">{d.userAgent ?? t('profile.account.twoFactor.unknownDevice')}</span>
+            <button
+              type="button"
+              onClick={() => handleRevoke(d.id)}
+              className="shrink-0 text-xs font-semibold text-tb-muted hover:text-tb-danger"
+            >
+              {t('profile.account.twoFactor.revoke')}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -503,8 +746,8 @@ function Row({ label, value, muted = false }: { label: string; value: string; mu
 interface FieldProps {
   id: string;
   label: string;
-  type: 'password';
-  autoComplete: string;
+  type: 'password' | 'text';
+  autoComplete?: string;
   value: string;
   onChange: (v: string) => void;
 }

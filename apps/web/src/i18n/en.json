@@ -23,8 +23,17 @@
       "submitting": "Signing in…",
       "genericError": "Could not sign you in",
       "forgot": "Forgot your password?",
+      "magicLink": "Sign in without a password",
       "noAccount": "Don't have an account?",
       "register": "Sign up"
+    },
+    "twoFactor": {
+      "title": "Two-factor verification",
+      "subtitle": "Enter the code from your authenticator app",
+      "code": "6-digit code or backup code",
+      "trustDevice": "Trust this device for 30 days",
+      "submit": "Verify",
+      "back": "Back"
     },
     "register": {
       "title": "Create your account",
@@ -49,6 +58,17 @@
       "sentTitle": "Check your email",
       "sentBody": "If that account exists, we've sent a link to reset the password. It expires in 1 hour.",
       "backToSignIn": "Back to sign in"
+    },
+    "magicLink": {
+      "title": "Sign in without a password",
+      "subtitle": "We'll email you a sign-in link",
+      "submit": "Send link",
+      "sentTitle": "Check your email",
+      "sentBody": "If that account exists, we've sent a link to sign in. It expires in 15 minutes.",
+      "consuming": "Signing in…",
+      "consumingBody": "One moment, we're verifying your link.",
+      "invalidTitle": "Invalid link",
+      "genericError": "The link is invalid or has expired"
     },
     "reset": {
       "title": "Choose a new password",
@@ -141,7 +161,15 @@
     "inviteMessageBody": "Come play with me!",
     "noOnlineFriends": "None of your friends are online right now",
     "selectPiece": "Pick a piece to move",
-    "selectDestination": "Pick the destination cell"
+    "selectDestination": "Pick the destination cell",
+    "a11y": {
+      "board": "Game board",
+      "cell": "Row {{row}}, column {{col}}: {{content}}",
+      "column": "Column {{col}}, row {{row}}: {{content}}",
+      "empty": "empty",
+      "myPiece": "your piece",
+      "opponentPiece": "opponent's piece"
+    }
   },
   "friends": {
     "title": "Friends",
@@ -406,7 +434,26 @@
       "newPassword": "New password",
       "confirmPassword": "Repeat the new password",
       "savePassword": "Save password",
-      "comingSoon": "Profile editing ships in M1."
+      "comingSoon": "Profile editing ships in M1.",
+      "twoFactor": {
+        "title": "Two-factor verification",
+        "disabledNotice": "Add an extra layer of security by requiring a code from your authenticator app at sign-in.",
+        "enable": "Enable 2FA",
+        "setupInstructions": "Scan this QR code with your authenticator app (Google Authenticator, Authy...) and enter the 6-digit code to confirm.",
+        "qrAlt": "QR code to set up two-factor verification",
+        "codeLabel": "6-digit code",
+        "confirm": "Confirm",
+        "backupCodesWarning": "Save these codes somewhere safe: each can only be used once and won't be shown again.",
+        "done": "I've saved them",
+        "enabledNotice": "Two-factor verification is enabled",
+        "disablePasswordLabel": "Confirm your password to disable it",
+        "disable": "Disable 2FA",
+        "genericError": "Could not complete the operation",
+        "devicesTitle": "Trusted devices",
+        "revoke": "Revoke",
+        "revokeAll": "Revoke all",
+        "unknownDevice": "Unknown device"
+      }
     },
     "friends": {
       "summary": "You have {{count}} friends online",

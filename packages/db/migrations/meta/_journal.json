@@ -50,6 +50,20 @@
       "when": 1783246186091,
       "tag": "0006_rainy_anita_blake",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783248910093,
+      "tag": "0007_blue_the_twelve",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783249620100,
+      "tag": "0008_mixed_bill_hollister",
+      "breakpoints": true
     }
   ]
 }

@@ -23,8 +23,17 @@
       "submitting": "Entrando…",
       "genericError": "No se pudo iniciar sesión",
       "forgot": "¿Olvidaste tu contraseña?",
+      "magicLink": "Entrar sin contraseña",
       "noAccount": "¿No tienes cuenta?",
       "register": "Regístrate"
+    },
+    "twoFactor": {
+      "title": "Verificación en dos pasos",
+      "subtitle": "Introduce el código de tu app de autenticación",
+      "code": "Código de 6 dígitos o backup code",
+      "trustDevice": "Confiar en este dispositivo 30 días",
+      "submit": "Verificar",
+      "back": "Volver"
     },
     "register": {
       "title": "Crea tu cuenta",
@@ -49,6 +58,17 @@
       "sentTitle": "Revisa tu correo",
       "sentBody": "Si esa cuenta existe, te hemos enviado un enlace para restablecer la contraseña. Caduca en 1 hora.",
       "backToSignIn": "Volver a entrar"
+    },
+    "magicLink": {
+      "title": "Entra sin contraseña",
+      "subtitle": "Te enviamos un enlace de acceso a tu correo",
+      "submit": "Enviar enlace",
+      "sentTitle": "Revisa tu correo",
+      "sentBody": "Si esa cuenta existe, te hemos enviado un enlace para entrar. Caduca en 15 minutos.",
+      "consuming": "Entrando…",
+      "consumingBody": "Un momento, estamos verificando tu enlace.",
+      "invalidTitle": "Enlace no válido",
+      "genericError": "El enlace no es válido o ha caducado"
     },
     "reset": {
       "title": "Elige una contraseña nueva",
@@ -141,7 +161,15 @@
     "inviteMessageBody": "¡Te invito a jugar!",
     "noOnlineFriends": "No tienes amigos conectados ahora mismo",
     "selectPiece": "Elige una ficha para moverla",
-    "selectDestination": "Elige la casilla de destino"
+    "selectDestination": "Elige la casilla de destino",
+    "a11y": {
+      "board": "Tablero de juego",
+      "cell": "Fila {{row}}, columna {{col}}: {{content}}",
+      "column": "Columna {{col}}, fila {{row}}: {{content}}",
+      "empty": "vacía",
+      "myPiece": "tu ficha",
+      "opponentPiece": "ficha rival"
+    }
   },
   "friends": {
     "title": "Amigos",
@@ -406,7 +434,26 @@
       "newPassword": "Nueva contraseña",
       "confirmPassword": "Repite la nueva contraseña",
       "savePassword": "Guardar contraseña",
-      "comingSoon": "La edición del perfil llega en M1."
+      "comingSoon": "La edición del perfil llega en M1.",
+      "twoFactor": {
+        "title": "Verificación en dos pasos",
+        "disabledNotice": "Añade una capa extra de seguridad pidiendo un código de tu app de autenticación al iniciar sesión.",
+        "enable": "Activar 2FA",
+        "setupInstructions": "Escanea este código QR con tu app de autenticación (Google Authenticator, Authy...) e introduce el código de 6 dígitos para confirmar.",
+        "qrAlt": "Código QR para configurar la verificación en dos pasos",
+        "codeLabel": "Código de 6 dígitos",
+        "confirm": "Confirmar",
+        "backupCodesWarning": "Guarda estos códigos en un lugar seguro: cada uno solo se puede usar una vez y no se volverán a mostrar.",
+        "done": "Ya los he guardado",
+        "enabledNotice": "La verificación en dos pasos está activada",
+        "disablePasswordLabel": "Confirma tu contraseña para desactivarla",
+        "disable": "Desactivar 2FA",
+        "genericError": "No se pudo completar la operación",
+        "devicesTitle": "Dispositivos de confianza",
+        "revoke": "Revocar",
+        "revokeAll": "Revocar todos",
+        "unknownDevice": "Dispositivo desconocido"
+      }
     },
     "friends": {
       "summary": "Tienes {{count}} amigos en línea",

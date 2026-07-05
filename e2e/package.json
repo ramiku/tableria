@@ -1,0 +1,13 @@
+{
+  "name": "@tableria/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "otpauth": "^9.5.1"
+  }
+}

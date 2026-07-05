@@ -13,6 +13,7 @@ import { Route as RestablecerRouteImport } from './routes/restablecer'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppSalasRouteImport } from './routes/_app.salas'
@@ -46,6 +47,11 @@ const RecuperarRoute = RecuperarRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntrarRoute = EntrarRouteImport.update({
+  id: '/entrar',
+  path: '/entrar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -121,6 +127,7 @@ const AppJuegosSlugRoute = AppJuegosSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/entrar': typeof EntrarRoute
   '/login': typeof LoginRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/torneos/': typeof AppTorneosIndexRoute
 }
 export interface FileRoutesByTo {
+  '/entrar': typeof EntrarRoute
   '/login': typeof LoginRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
@@ -159,6 +167,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/entrar': typeof EntrarRoute
   '/login': typeof LoginRoute
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/entrar'
     | '/login'
     | '/recuperar'
     | '/registro'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/torneos/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/entrar'
     | '/login'
     | '/recuperar'
     | '/registro'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/entrar'
     | '/login'
     | '/recuperar'
     | '/registro'
@@ -239,6 +251,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  EntrarRoute: typeof EntrarRoute
   LoginRoute: typeof LoginRoute
   RecuperarRoute: typeof RecuperarRoute
   RegistroRoute: typeof RegistroRoute
@@ -273,6 +286,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entrar': {
+      id: '/entrar'
+      path: '/entrar'
+      fullPath: '/entrar'
+      preLoaderRoute: typeof EntrarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -422,6 +442,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  EntrarRoute: EntrarRoute,
   LoginRoute: LoginRoute,
   RecuperarRoute: RecuperarRoute,
   RegistroRoute: RegistroRoute,

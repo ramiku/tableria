@@ -101,6 +101,24 @@ function MatchPage() {
   const myTurn = mySeat !== null && (matchState?.activePlayers.includes(mySeat) ?? false);
   const BoardComponent = matchInfo ? BOARD_COMPONENTS[matchInfo.gameId as keyof typeof BOARD_COMPONENTS] : undefined;
 
+  // Región para lectores de pantalla: anuncia cambios de turno y el resultado final,
+  // que de otro modo son puramente visuales (color/negrita del chip de jugador).
+  const liveMessage = ended
+    ? isSpectator
+      ? t('partida.resultSpectator')
+      : t(
+          ended.ranking.find((r) => r.seat === mySeat)?.result === 'win'
+            ? 'partida.resultWin'
+            : ended.ranking.find((r) => r.seat === mySeat)?.result === 'draw'
+              ? 'partida.resultDraw'
+              : 'partida.resultLoss',
+        )
+    : !isSpectator
+      ? myTurn
+        ? t('partida.yourTurn')
+        : t('partida.opponentTurn')
+      : '';
+
   function handleSendChat(e: FormEvent) {
     e.preventDefault();
     const body = chatInput.trim();
@@ -124,6 +142,9 @@ function MatchPage() {
 
   return (
     <section className="mx-auto grid max-w-3xl gap-6 md:grid-cols-[1fr_260px]">
+      <div role="status" aria-live="polite" className="sr-only">
+        {liveMessage}
+      </div>
       <div>
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
@@ -241,6 +262,7 @@ function MatchPage() {
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             placeholder={t('partida.chatPlaceholder')}
+            aria-label={t('partida.chatPlaceholder')}
             className="w-full rounded-lg border border-tb-border bg-tb-surface-2 px-3 py-1.5 text-sm text-tb-text placeholder:text-tb-muted"
           />
         </form>

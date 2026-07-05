@@ -9,6 +9,9 @@ export interface SessionUser {
   username: string;
   displayName: string;
   email: string;
+  avatarInitial: string | null;
+  avatarColor: string | null;
+  twoFactorEnabled: boolean;
 }
 
 export async function createSession(
@@ -37,7 +40,15 @@ export async function getUserFromToken(db: Db, pepper: string, token: string): P
   const now = new Date();
 
   const rows = await db
-    .select({ id: users.id, username: users.username, displayName: users.displayName, email: users.email })
+    .select({
+      id: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      email: users.email,
+      avatarInitial: users.avatarInitial,
+      avatarColor: users.avatarColor,
+      totpEnabledAt: users.totpEnabledAt,
+    })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
     .where(and(eq(sessions.tokenHash, tokenHash), isNull(sessions.revokedAt), gt(sessions.expiresAt, now)))
@@ -49,7 +60,15 @@ export async function getUserFromToken(db: Db, pepper: string, token: string): P
   // Actualización perezosa, no bloquea la respuesta
   void db.update(sessions).set({ lastUsedAt: now }).where(eq(sessions.tokenHash, tokenHash));
 
-  return user;
+  return {
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName,
+    email: user.email,
+    avatarInitial: user.avatarInitial,
+    avatarColor: user.avatarColor,
+    twoFactorEnabled: user.totpEnabledAt !== null,
+  };
 }
 
 export async function revokeSession(db: Db, pepper: string, token: string, reason = 'logout'): Promise<void> {

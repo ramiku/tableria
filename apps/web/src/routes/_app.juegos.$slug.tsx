@@ -216,6 +216,7 @@ function MyTablePanel({ matchId, code, meId }: { matchId: string; code: string; 
         <button
           type="button"
           onClick={handleCopy}
+          data-testid="room-code"
           className="tb-nums mx-auto mt-3 flex items-center gap-2 rounded-lg border border-tb-border bg-tb-surface-2 px-4 py-2 font-display text-2xl font-extrabold tracking-widest text-tb-text"
         >
           {code}

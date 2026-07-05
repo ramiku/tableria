@@ -163,8 +163,8 @@ Regla de dependencias: `games → engine → protocol`; `server → db + games`;
 **M5 — Torneos de eliminación directa (M/L). ✅ Implementado 2026-07-05 (single-elim; suizo diferido explícitamente).** Inscripción, check-in, seeding por rating, generación automática de partidas por ronda (con byes), bracket visual, clasificación final. Detalle en [«M5 — Torneos de eliminación directa (implementado)»](#m5--torneos-de-eliminación-directa-implementado-2026-07-05) más abajo.
 *Demo: torneo de 6-8 personas de principio a fin, con byes y reinicio del servidor a mitad de partida.*
 
-**M6 — Endurecimiento + producción (M).** 2FA TOTP + backup codes + trusted devices, OAuth ×4 (arctic), magic links; auditoría a11y (teclado, focus, aria en tableros); i18n `en` completo; E2E Playwright de flujos críticos; despliegue en tableria.app; backups; monitorización.
-*Demo: producción real con HTTPS.*
+**M6 — Endurecimiento + producción (M).** ✅ **Parte 1 (endurecimiento) implementada 2026-07-05**: 2FA TOTP + backup codes + trusted devices, magic links, auditoría a11y de tableros, E2E Playwright de flujos críticos. **Parte 2 (diferida, necesita credenciales del usuario)**: OAuth ×4 (arctic), despliegue en tableria.app, backups, monitorización. Detalle en [«M6 (parte 1) — Endurecimiento (implementado)»](#m6-parte-1--endurecimiento-implementado-2026-07-05) más abajo.
+*Demo: activar 2FA, entrar con backup code o enlace mágico, navegar un tablero solo con teclado.*
 
 **M7 — Más juegos (M).** **Reversi/Othello** (1v1 información perfecta) y **party game simultáneo 3-8 jugadores** (valida turnos simultáneos y salas grandes). Eliminar `legacy/`.
 *Demo: 5 juegos jugables en producción.*
@@ -400,3 +400,40 @@ Router `tournaments`: `list`/`getById` (públicos, para ver brackets sin estar i
 - Formato suizo, byes con otros formatos, y torneos multi-juego quedan fuera de esta pasada.
 
 `pnpm turbo lint typecheck test build` en verde (23/23); 13 tests nuevos (105 en total en el monorepo).
+
+## M6 (parte 1) — Endurecimiento (implementado 2026-07-05)
+
+El roadmap agrupaba en M6 tanto endurecimiento (verificable en local) como despliegue real (dominio, VPS, apps OAuth por proveedor — credenciales que no existen todavía). Preguntado por el alcance, el usuario eligió **endurecimiento primero**: 2FA, dispositivos de confianza, enlaces mágicos, accesibilidad de tableros y E2E Playwright. OAuth (arctic) y producción/backups/monitorización quedan diferidos explícitamente a una pasada posterior que sí necesita esas credenciales.
+
+### 2FA TOTP + backup codes
+
+**Schema** (migración `0007_blue_the_twelve.sql`): `users.totpSecret` (cifrado, nullable — null = 2FA no configurado) y `users.totpEnabledAt` (nullable — presencia = activo); tabla `twoFactorBackupCodes` (`codeHash` único, `usedAt` nullable). Primer uso real de `ENCRYPTION_KEY` (existía en `config.ts` desde M0 sin consumidor): `apps/server/src/auth/crypto.ts` gana `encryptSecret`/`decryptSecret` (AES-256-GCM, IV aleatorio por llamada, `iv.authTag.ciphertext` en base64). Nueva dependencia `otpauth` para generar el secreto/URI/QR y verificar códigos (ventana ±1 paso); `qrcode` genera el QR como data URL en el servidor (evita una dependencia de QR en el cliente).
+
+Rutas REST nuevas en `apps/server/src/auth/routes.ts`: `/2fa/setup` (genera secreto pendiente + QR), `/2fa/enable {code}` (confirma, fija `totpEnabledAt`, genera 10 backup codes `XXXX-XXXX` — texto plano devuelto **una sola vez**, igual que una contraseña), `/2fa/disable {password}` (reautentica y borra secreto+códigos). **Login con 2FA**: tras verificar la contraseña, si `totpEnabledAt` está fijado no se crea sesión todavía — se devuelve un `challengeToken` de 5 minutos guardado en un `Map` **en memoria**, deliberadamente no persistido (`apps/server/src/auth/twoFactorChallenges.ts`): el peor caso ante un reinicio del servidor a mitad del reto es reintentar el login, no justifica una tabla. `/2fa/verify {challengeToken, code}` acepta un TOTP de 6 dígitos o un backup code (de un solo uso) y solo entonces crea la sesión real.
+
+### Dispositivos de confianza + enlaces mágicos
+
+**Trusted devices** (migración `0008_mixed_bill_hollister.sql`, tabla `trustedDevices`): en `/2fa/verify`, marcar "confiar en este dispositivo 30 días" emite una cookie opaca adicional `tb_trusted` y guarda una fila; en login, si esa cookie coincide con una fila válida no caducada del mismo usuario, **se salta el reto de 2FA** directamente a sesión completa. `_app.perfil.tsx` lista los dispositivos con revocar individual/total.
+
+**Magic links** (tabla `magicLinkTokens`, mismo esquema que `passwordResets`): `/magic-link/request {identifier}` con la misma anti-enumeración que `forgot-password` (respuesta idéntica exista o no la cuenta), token de 15 min de un solo uso; `/magic-link/consume {token}` crea sesión directamente. Decisión de alcance: un enlace mágico **salta el reto de 2FA** — la posesión del correo ya es un factor suficientemente fuerte, evita encadenar dos factores de posesión (mismo tratamiento que la mayoría de proveedores). Página pública nueva `apps/web/src/routes/entrar.tsx` (mismo patrón que `restablecer.tsx`: token en `search`, consumo automático al montar).
+
+### Accesibilidad de los tableros
+
+Los 3 tableros ya usaban `<button>` reales (foco de teclado gratis) y el `:focus-visible` global de M1 ya existía — se añadió `aria-label` por celda/carta (interpolado vía i18n), `aria-pressed` en la selección de tres en raya, `role="grid"` en los contenedores, y una región compartida `aria-live="polite"` (`role="status"`, `sr-only`) en `_app.partida.$id.tsx` que anuncia cambios de turno y el resultado final — un único `<div>` para los tres juegos, no uno por tablero. Revisión adicional: `aria-label` en el input de chat (antes solo tenía `placeholder`). i18n resultó ya estar completo (352 claves idénticas en `es`/`en`) — sin trabajo pendiente ahí.
+
+### E2E Playwright (`e2e/`)
+
+Carpeta nueva, entrada literal en `pnpm-workspace.yaml` (no glob), paquete propio `@tableria/e2e` con scripts `test:e2e`/`test:e2e:ui` (deliberadamente no `test`, para no ser barridos por `turbo run test`). `playwright.config.ts` reutiliza el servidor de dev ya corriendo (`webServer.reuseExistingServer: true`) en vez de levantar una segunda instancia. Cuatro specs de flujos críticos: `auth.spec.ts` (registro→logout→login), `two-factor.spec.ts` (activar 2FA leyendo el secreto de la UI, generar el código con `otpauth` en el propio test, entrar con TOTP y luego con un backup code), `magic-link.spec.ts` (solicitar, leer el correo real de la API de MailHog decodificando quoted-printable, consumir, confirmar que reutilizarlo falla), `match.spec.ts` (dos `BrowserContext` juegan una partida de tres en raya completa por la UI real hasta ver el resultado).
+
+**Hallazgos reales de esta pasada** (no artefactos de test — bugs de producto que los E2E expusieron):
+- **IDs de campo duplicados entre páginas de auth navegables por Link** (`id="identifier"` en `login.tsx` y en `entrar.tsx`): al navegar de `/login` a `/entrar` mediante un `<Link>` (transición cliente, sin recarga completa), durante la ventana de swap del DOM un selector `#identifier` puede resolver momentáneamente al nodo antiguo de `/login` a punto de desmontarse — quien escriba ahí pierde el texto sin ningún error visible (HTML inválido de fondo: dos elementos con el mismo id en el documento). Confirmado con un script de reproducción que sondeaba `el.isConnected` tras el fill: el nodo capturado se desconectaba del documento milisegundos después. Arreglado dando a cada página su propio id (`login-identifier`/`login-password`, `magic-identifier`) — no es solo un ajuste de test, es HTML inválido real que además podría confundir gestores de contraseñas o lectores de pantalla durante la transición.
+- **Colisión de `getByText` con la región `aria-live`**: el mismo texto de resultado ("¡Has ganado!") aparece tanto en el panel visual como en la región `sr-only` recién añadida en esta misma pasada — `match.spec.ts` se ajustó para acotar la búsqueda a `<p>` y no chocar con `role="status"`.
+- **Rate limits de producción chocan con una suite de E2E en bucle**: `/api/auth/register` (máx. 8/15 min) y `/magic-link/request` (máx. 5/15 min) son correctos para producción pero se agotan fácilmente reproduciendo fallos a mano varias veces seguidas durante el diagnóstico — una ejecución limpia y única de los 4 specs (5 registros en total) queda cómodamente dentro del límite; no se tocó el rate-limiting de producción por conveniencia de testing.
+
+**Verificación**: `pnpm turbo lint typecheck test build` en verde (23/23, 105 tests unitarios sin cambios — el trabajo de 2FA/enlaces mágicos se verificó vía E2E, no con unitarios nuevos); los 4 specs de Playwright en verde ejecutados juntos.
+
+### Notas de alcance (deuda explícita, no bloqueante)
+
+- OAuth (Discord/Twitch/Google/GitHub vía `arctic`) queda completamente fuera — necesita que el usuario cree las apps en cada consola de desarrollador.
+- Despliegue a producción (tableria.app), backups y monitorización quedan para una pasada posterior explícita con credenciales de dominio/VPS.
+- Sin auditoría con lector de pantalla real (no hay uno instalado en este entorno) — verificado con el árbol de accesibilidad de DevTools y navegación por teclado.
