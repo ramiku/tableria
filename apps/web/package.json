@@ -12,6 +12,9 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@react-spring/three": "^10.1.2",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "@tableria/protocol": "workspace:*",
     "@tanstack/react-query": "^5.66.0",
     "@tanstack/react-router": "^1.97.0",
@@ -21,6 +24,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^16.0.0",
+    "three": "^0.185.1",
     "zod": "^4.1.0",
     "zustand": "^5.0.0"
   },
@@ -28,11 +32,12 @@
     "@tableria/config": "workspace:*",
     "@tableria/games": "workspace:*",
     "@tableria/server": "workspace:*",
-    "@trpc/server": "^11.18.0",
     "@tailwindcss/vite": "^4.1.0",
     "@tanstack/router-plugin": "^1.97.0",
+    "@trpc/server": "^11.18.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.185.0",
     "@vitejs/plugin-react": "^4.3.4",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.9.0",
