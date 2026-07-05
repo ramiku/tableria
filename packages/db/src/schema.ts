@@ -536,7 +536,7 @@ export const userGameStats = pgTable(
 // Torneos (M5): solo eliminación directa por ahora (formato 'swiss' pendiente)
 // ---------------------------------------------------------------------------
 
-export const tournamentFormatEnum = pgEnum('tournament_format', ['single_elim']);
+export const tournamentFormatEnum = pgEnum('tournament_format', ['single_elim', 'swiss']);
 export const tournamentStateEnum = pgEnum('tournament_state', ['registration', 'running', 'finished', 'cancelled']);
 export const tournamentParticipantStatusEnum = pgEnum('tournament_participant_status', [
   'registered',
@@ -574,10 +574,13 @@ export const tournamentParticipants = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     status: tournamentParticipantStatusEnum('status').notNull().default('registered'),
-    // Asignado al arrancar el torneo (por rating del juego); posición en el bracket.
+    // Asignado al arrancar el torneo (por rating del juego); posición en el bracket / orden inicial suizo.
     seed: integer('seed'),
     // 1 = campeón; empates comparten placement (misma convención que `PlayerRank` del motor).
     finalPlacement: integer('final_placement'),
+    // Solo se usa en formato 'swiss': 1 punto por victoria (o bye), 0.5 por empate, acumulado ronda a ronda.
+    // Sin uso en 'single_elim' (queda en 0): ahí el avance de ronda ya lo decide `finalPlacement`.
+    points: real('points').notNull().default(0),
     joinedAt: timestamptz('joined_at').notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.tournamentId, t.userId] })],

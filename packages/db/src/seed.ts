@@ -55,10 +55,9 @@ const catalog = [
     id: 'brisca',
     name: 'Brisca',
     categorySlug: 'cartas',
-    // El motor soporta 2-4 (ver packages/games/src/brisca), pero el lobby aún no
-    // permite elegir tamaño de mesa: se lanza fijo a 2 hasta que M5+ añada esa opción.
+    // El motor soporta 2-4 desde M4; el lobby ganó el selector de aforo variable en M7 (Pista Única).
     minPlayers: 2,
-    maxPlayers: 2,
+    maxPlayers: 4,
     durationMin: 15,
     badge: 'Cartas',
     coverBg: '#7a2f3a',

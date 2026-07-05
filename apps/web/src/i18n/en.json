@@ -280,10 +280,13 @@
     "cancelledNotice": "This tournament was cancelled before it started.",
     "round": "Round {{n}}",
     "bye": "Advances automatically (bye)",
+    "draw": "Draw",
     "goToMatch": "Go to your match",
     "spectate": "Watch match",
     "tbd": "To be decided",
     "standings": "Final standings",
+    "standingsLive": "Standings",
+    "points": "Points",
     "state": {
       "registration": "Registration open",
       "running": "Running",
@@ -295,9 +298,14 @@
       "checked_in": "Checked in",
       "eliminated": "Eliminated"
     },
+    "format": {
+      "single_elim": "Single elimination",
+      "swiss": "Swiss"
+    },
     "form": {
       "name": "Name",
       "game": "Game",
+      "format": "Format",
       "rated": "Counts towards rating",
       "submit": "Create"
     }

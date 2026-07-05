@@ -115,6 +115,10 @@ function MatchCard({ match, meId }: { match: TournamentMatch; meId: string }) {
       ) : (
         <p className="mt-1 text-xs text-tb-muted">{t('tournaments.bye')}</p>
       )}
+      {/* Solo posible en suizo: eliminación siempre fuerza un ganador, incluso en empate (ver service.ts). */}
+      {!isBye && match.state === 'finished' && !match.winnerUserId && (
+        <p className="mt-1 text-xs font-medium text-tb-muted">{t('tournaments.draw')}</p>
+      )}
       {match.matchId && match.state === 'pending' && (
         <Link
           to="/partida/$id"
@@ -146,19 +150,26 @@ function Bracket({ rounds, meId }: { rounds: TournamentRound[]; meId: string }) 
   );
 }
 
-function Standings({ participants }: { participants: TournamentParticipant[] }) {
+function Standings({ participants, live }: { participants: TournamentParticipant[]; live?: boolean }) {
   const { t } = useTranslation();
-  const sorted = [...participants].sort((a, b) => (a.finalPlacement ?? 999) - (b.finalPlacement ?? 999));
+  // Suizo en curso: todavía no hay `finalPlacement` (se calcula al terminar el torneo),
+  // así que mientras tanto se ordena por puntos acumulados en vivo.
+  const sorted = live
+    ? [...participants].sort((a, b) => b.points - a.points || (a.seed ?? 999) - (b.seed ?? 999))
+    : [...participants].sort((a, b) => (a.finalPlacement ?? 999) - (b.finalPlacement ?? 999));
   return (
     <article className="rounded-2xl border border-tb-border bg-tb-surface p-6">
-      <h2 className="font-display text-base font-bold text-tb-text">{t('tournaments.standings')}</h2>
+      <h2 className="font-display text-base font-bold text-tb-text">
+        {live ? t('tournaments.standingsLive') : t('tournaments.standings')}
+      </h2>
       <ul className="mt-4 flex flex-col divide-y divide-tb-border">
-        {sorted.map((p) => (
+        {sorted.map((p, i) => (
           <li key={p.userId} className="flex items-center gap-3 py-2.5">
-            <span className="tb-nums w-8 text-sm font-bold text-tb-muted">{p.finalPlacement ?? '—'}</span>
+            <span className="tb-nums w-8 text-sm font-bold text-tb-muted">{live ? i + 1 : (p.finalPlacement ?? '—')}</span>
             <Avatar initial={p.avatarInitial ?? p.username.charAt(0).toUpperCase()} color={p.avatarColor ?? '#2f6fe0'} size={32} />
             <span className="flex-1 truncate text-sm font-medium text-tb-text">{p.username}</span>
-            {p.finalPlacement === 1 && <TrophyIcon className="h-4 w-4 shrink-0 text-tb-accent" />}
+            {live && <span className="tb-nums text-sm font-semibold text-tb-muted">{p.points} {t('tournaments.points')}</span>}
+            {!live && p.finalPlacement === 1 && <TrophyIcon className="h-4 w-4 shrink-0 text-tb-accent" />}
           </li>
         ))}
       </ul>
@@ -225,7 +236,7 @@ function TournamentDetailPage() {
             <h1 className="font-display text-2xl font-extrabold">{tournament.name}</h1>
           </div>
           <p className="mt-1 text-sm text-tb-muted">
-            {tournament.gameName} · {t(`tournaments.state.${tournament.state}`)}
+            {tournament.gameName} · {t(`tournaments.format.${tournament.format}`)} · {t(`tournaments.state.${tournament.state}`)}
           </p>
         </div>
         {isHost && tournament.state === 'registration' && (
@@ -261,6 +272,8 @@ function TournamentDetailPage() {
       )}
 
       {(tournament.state === 'running' || tournament.state === 'finished') && <Bracket rounds={rounds} meId={me.id} />}
+
+      {tournament.format === 'swiss' && tournament.state === 'running' && <Standings participants={participants} live />}
 
       {tournament.state === 'finished' && <Standings participants={participants} />}
 

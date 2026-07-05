@@ -280,10 +280,13 @@
     "cancelledNotice": "Este torneo se canceló antes de empezar.",
     "round": "Ronda {{n}}",
     "bye": "Pasa directo (bye)",
+    "draw": "Empate",
     "goToMatch": "Ir a tu partida",
     "spectate": "Ver partida",
     "tbd": "Por determinar",
     "standings": "Clasificación final",
+    "standingsLive": "Clasificación",
+    "points": "Puntos",
     "state": {
       "registration": "Inscripciones abiertas",
       "running": "En curso",
@@ -295,9 +298,14 @@
       "checked_in": "Confirmado",
       "eliminated": "Eliminado"
     },
+    "format": {
+      "single_elim": "Eliminación directa",
+      "swiss": "Suizo"
+    },
     "form": {
       "name": "Nombre",
       "game": "Juego",
+      "format": "Formato",
       "rated": "Cuenta para el rating",
       "submit": "Crear"
     }

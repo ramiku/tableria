@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { PlusIcon, TrophyIcon, UsersIcon } from '../components/icons';
@@ -19,8 +19,17 @@ function CreateTournamentForm({ onDone }: { onDone: () => void }) {
   const { data: gamesList } = trpc.games.list.useQuery();
   const activeGames = (gamesList ?? []).filter((g) => g.isActive);
   const [name, setName] = useState('');
-  const [gameId, setGameId] = useState(activeGames[0]?.slug ?? '');
+  const [gameId, setGameId] = useState('');
+  const [format, setFormat] = useState<'single_elim' | 'swiss'>('single_elim');
   const [rated, setRated] = useState(true);
+
+  // `games.list` es asíncrono: en el primer render `activeGames` todavía está vacío, así que
+  // no basta con inicializar el estado una vez — sin este efecto, el <select> del navegador
+  // muestra el primer juego por defecto en cuanto llegan los datos, pero `gameId` se queda
+  // vacío para siempre y el botón "Crear" queda deshabilitado sin que se note por qué.
+  useEffect(() => {
+    if (!gameId && activeGames.length > 0) setGameId(activeGames[0]!.slug);
+  }, [gameId, activeGames]);
 
   const create = trpc.tournaments.create.useMutation({
     onSuccess: () => {
@@ -32,7 +41,7 @@ function CreateTournamentForm({ onDone }: { onDone: () => void }) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!name.trim() || !gameId) return;
-    create.mutate({ name: name.trim(), gameId, rated });
+    create.mutate({ name: name.trim(), gameId, format, rated });
   }
 
   return (
@@ -63,6 +72,17 @@ function CreateTournamentForm({ onDone }: { onDone: () => void }) {
           </select>
         </label>
       </div>
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-semibold uppercase tracking-wide text-tb-muted">{t('tournaments.form.format')}</span>
+        <select
+          value={format}
+          onChange={(e) => setFormat(e.target.value as 'single_elim' | 'swiss')}
+          className="rounded-lg border border-tb-border bg-tb-surface-2 px-3 py-2 text-sm text-tb-text outline-none focus:border-tb-accent"
+        >
+          <option value="single_elim">{t('tournaments.format.single_elim')}</option>
+          <option value="swiss">{t('tournaments.format.swiss')}</option>
+        </select>
+      </label>
       <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-tb-border bg-tb-surface-2 px-4 py-3">
         <span className="text-sm font-semibold text-tb-text">{t('tournaments.form.rated')}</span>
         <input type="checkbox" checked={rated} onChange={(e) => setRated(e.target.checked)} className="h-4 w-4 accent-tb-accent" />
@@ -134,6 +154,8 @@ function TournamentsPage() {
                   </div>
                   <p className="mt-1 flex items-center gap-1.5 text-xs text-tb-muted">
                     {tournament.gameName}
+                    <span aria-hidden="true">·</span>
+                    {t(`tournaments.format.${tournament.format}`)}
                     <span aria-hidden="true">·</span>
                     <UsersIcon className="h-3.5 w-3.5" />
                     {tournament.participantCount}

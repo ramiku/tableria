@@ -3,6 +3,7 @@ import {
   desc,
   eq,
   inArray,
+  isNull,
   matchPlayers,
   matches,
   seasons,
@@ -20,6 +21,7 @@ import * as notifications from '../social/notifications.js';
 import { socketsFor } from '../social/presence.js';
 import { sendToSocket } from '../ws/send.js';
 import { assignBracket, nextPowerOfTwo, placementForEliminationRound, totalRoundsForSize } from './bracket.js';
+import { pairKey, pairSwissRound, pointsForResult, swissRoundsForSize, type SwissStanding } from './swiss.js';
 
 const DEFAULT_RATING = 1500;
 
@@ -61,9 +63,10 @@ export function createTournamentService(db: Db, matchService: MatchService): Tou
   /**
    * Crea una ronda: una fila `tournamentMatches` por pareja (con la partida real
    * ya creada y arrancada) o, si uno de los dos huecos está vacío, un bye ya
-   * resuelto sin crear partida. `slots` ya viene en el orden de bracket correcto
-   * (de `assignBracket` en la ronda 1, o de los ganadores de la ronda anterior
-   * en las siguientes — ese orden ya es el seeding correcto, no hace falta reordenar).
+   * resuelto sin crear partida. `slots` ya viene en el orden correcto (de
+   * `assignBracket`/`pairSwissRound` en la ronda 1, o de los ganadores/parejas de
+   * la ronda anterior en las siguientes). Formato-agnóstico: ni sabe ni le
+   * importa si el torneo es de eliminación o suizo, solo instancia parejas.
    */
   async function generateRound(
     tournamentId: string,
@@ -72,7 +75,7 @@ export function createTournamentService(db: Db, matchService: MatchService): Tou
     rated: boolean,
     roundNumber: number,
     slots: (string | null)[],
-  ): Promise<void> {
+  ): Promise<string> {
     const [round] = await db.insert(tournamentRounds).values({ tournamentId, roundNumber }).returning({ id: tournamentRounds.id });
     const roundId = round!.id;
     const startedMatchIds: string[] = [];
@@ -125,9 +128,54 @@ export function createTournamentService(db: Db, matchService: MatchService): Tou
     }
 
     for (const matchId of startedMatchIds) await matchService.startNow(matchId);
+    return roundId;
   }
 
-  async function finishTournament(tournamentId: string, championUserId: string): Promise<void> {
+  /** Solo para suizo: un bye vale 1 punto igual que una victoria, sin necesidad de jugarlo. */
+  async function awardByePoints(tournamentId: string, roundId: string): Promise<void> {
+    const byes = await db
+      .select({ userId: tournamentMatches.participantAId })
+      .from(tournamentMatches)
+      .where(and(eq(tournamentMatches.roundId, roundId), isNull(tournamentMatches.participantBId)));
+    for (const bye of byes) {
+      if (!bye.userId) continue;
+      await addPoints(tournamentId, bye.userId, 1);
+    }
+  }
+
+  async function addPoints(tournamentId: string, userId: string, delta: number): Promise<void> {
+    const [row] = await db
+      .select({ points: tournamentParticipants.points })
+      .from(tournamentParticipants)
+      .where(and(eq(tournamentParticipants.tournamentId, tournamentId), eq(tournamentParticipants.userId, userId)))
+      .limit(1);
+    await db
+      .update(tournamentParticipants)
+      .set({ points: (row?.points ?? 0) + delta })
+      .where(and(eq(tournamentParticipants.tournamentId, tournamentId), eq(tournamentParticipants.userId, userId)));
+  }
+
+  /** Todas las parejas que YA se han jugado (excluye byes: descansar no cuenta como enfrentamiento). */
+  async function playedPairsForTournament(tournamentId: string): Promise<Set<string>> {
+    const rows = await db
+      .select({ a: tournamentMatches.participantAId, b: tournamentMatches.participantBId })
+      .from(tournamentMatches)
+      .where(eq(tournamentMatches.tournamentId, tournamentId));
+    const set = new Set<string>();
+    for (const r of rows) if (r.a && r.b) set.add(pairKey(r.a, r.b));
+    return set;
+  }
+
+  /** Quién ya ha descansado alguna ronda (para no hacer descansar dos veces a la misma persona antes que al resto). */
+  async function byeRecipientsForTournament(tournamentId: string): Promise<Set<string>> {
+    const rows = await db
+      .select({ userId: tournamentMatches.participantAId })
+      .from(tournamentMatches)
+      .where(and(eq(tournamentMatches.tournamentId, tournamentId), isNull(tournamentMatches.participantBId)));
+    return new Set(rows.map((r) => r.userId!));
+  }
+
+  async function finishEliminationTournament(tournamentId: string, championUserId: string): Promise<void> {
     await db
       .update(tournamentParticipants)
       .set({ finalPlacement: 1 })
@@ -135,12 +183,32 @@ export function createTournamentService(db: Db, matchService: MatchService): Tou
     await db.update(tournaments).set({ state: 'finished', finishedAt: new Date() }).where(eq(tournaments.id, tournamentId));
   }
 
+  /** Cierra un torneo suizo: clasificación final por puntos desc (empates comparten puesto, desempate estable por seed). */
+  async function finishSwissTournament(tournamentId: string): Promise<void> {
+    const rows = await db
+      .select({ userId: tournamentParticipants.userId, points: tournamentParticipants.points, seed: tournamentParticipants.seed })
+      .from(tournamentParticipants)
+      .where(eq(tournamentParticipants.tournamentId, tournamentId));
+    const sorted = [...rows].sort((x, y) => y.points - x.points || (x.seed ?? 0) - (y.seed ?? 0));
+
+    let placement = 1;
+    for (let i = 0; i < sorted.length; i++) {
+      if (i > 0 && sorted[i]!.points < sorted[i - 1]!.points) placement = i + 1;
+      await db
+        .update(tournamentParticipants)
+        .set({ finalPlacement: placement })
+        .where(and(eq(tournamentParticipants.tournamentId, tournamentId), eq(tournamentParticipants.userId, sorted[i]!.userId)));
+    }
+    await db.update(tournaments).set({ state: 'finished', finishedAt: new Date() }).where(eq(tournaments.id, tournamentId));
+  }
+
   /**
-   * Avanza una ronda completamente resuelta (todas sus `tournamentMatches` en
-   * `finished`): junta los ganadores en orden de `slotIndex` y genera la
-   * siguiente ronda, o cierra el torneo si solo quedaba una partida.
+   * Avanza una ronda de ELIMINACIÓN completamente resuelta (todas sus
+   * `tournamentMatches` en `finished`): junta los ganadores en orden de
+   * `slotIndex` y genera la siguiente ronda, o cierra el torneo si solo
+   * quedaba una partida.
    */
-  async function advanceIfRoundComplete(
+  async function advanceEliminationRound(
     tournamentId: string,
     gameId: string,
     turnDurationS: number,
@@ -154,24 +222,58 @@ export function createTournamentService(db: Db, matchService: MatchService): Tou
     const winners = [...roundMatches].sort((x, y) => x.slotIndex - y.slotIndex).map((m) => m.winnerUserId!);
 
     if (winners.length === 1) {
-      await finishTournament(tournamentId, winners[0]!);
+      await finishEliminationTournament(tournamentId, winners[0]!);
       return;
     }
 
     await generateRound(tournamentId, gameId, turnDurationS, rated, roundNumber + 1, winners);
   }
 
-  async function onMatchFinishedHook(matchId: string): Promise<void> {
-    const [tm] = await db.select().from(tournamentMatches).where(eq(tournamentMatches.matchId, matchId)).limit(1);
-    if (!tm) return; // partida normal, no es de torneo
+  /**
+   * Avanza una ronda SUIZA completamente resuelta: si ya se jugaron todas las
+   * rondas del torneo, cierra y calcula la clasificación final por puntos; si
+   * no, reempareja según la puntuación acumulada (evitando revanchas cuando
+   * es posible) y genera la siguiente ronda.
+   */
+  async function advanceSwissRound(
+    tournamentId: string,
+    gameId: string,
+    turnDurationS: number,
+    rated: boolean,
+    roundId: string,
+    roundNumber: number,
+    totalRounds: number,
+  ): Promise<void> {
+    const roundMatches = await db.select().from(tournamentMatches).where(eq(tournamentMatches.roundId, roundId));
+    if (roundMatches.length === 0 || roundMatches.some((m) => m.state !== 'finished')) return;
 
-    const [tournament] = await db.select().from(tournaments).where(eq(tournaments.id, tm.tournamentId)).limit(1);
-    if (!tournament || tournament.state !== 'running') return;
+    if (roundNumber >= totalRounds) {
+      await finishSwissTournament(tournamentId);
+      return;
+    }
 
+    const participants = await db
+      .select({ userId: tournamentParticipants.userId, points: tournamentParticipants.points, seed: tournamentParticipants.seed })
+      .from(tournamentParticipants)
+      .where(eq(tournamentParticipants.tournamentId, tournamentId));
+    const standings: SwissStanding[] = participants.map((p) => ({ id: p.userId, points: p.points, seed: p.seed ?? 0 }));
+
+    const playedPairs = await playedPairsForTournament(tournamentId);
+    const alreadyHadBye = await byeRecipientsForTournament(tournamentId);
+    const slots = pairSwissRound(standings, playedPairs, alreadyHadBye);
+
+    const newRoundId = await generateRound(tournamentId, gameId, turnDurationS, rated, roundNumber + 1, slots);
+    await awardByePoints(tournamentId, newRoundId);
+  }
+
+  async function onEliminationMatchFinished(
+    tournament: typeof tournaments.$inferSelect,
+    tm: typeof tournamentMatches.$inferSelect,
+  ): Promise<void> {
     const players = await db
       .select({ userId: matchPlayers.userId, placement: matchPlayers.placement })
       .from(matchPlayers)
-      .where(eq(matchPlayers.matchId, matchId));
+      .where(eq(matchPlayers.matchId, tm.matchId!));
     const placementByUser = new Map(players.map((p) => [p.userId, p.placement ?? Number.MAX_SAFE_INTEGER]));
 
     const a = tm.participantAId!;
@@ -203,7 +305,7 @@ export function createTournamentService(db: Db, matchService: MatchService): Tou
       .where(and(eq(tournamentParticipants.tournamentId, tm.tournamentId), eq(tournamentParticipants.userId, loserUserId)));
     await notify(loserUserId, 'tournament_eliminated', { tournamentId: tm.tournamentId, placement });
 
-    await advanceIfRoundComplete(
+    await advanceEliminationRound(
       tm.tournamentId,
       tournament.gameId,
       tournament.turnDurationS ?? 30,
@@ -211,6 +313,69 @@ export function createTournamentService(db: Db, matchService: MatchService): Tou
       tm.roundId,
       round!.roundNumber,
     );
+  }
+
+  /** A diferencia de eliminación, un suizo admite empates de verdad (0.5 puntos cada uno) — nadie queda eliminado. */
+  async function onSwissMatchFinished(
+    tournament: typeof tournaments.$inferSelect,
+    tm: typeof tournamentMatches.$inferSelect,
+  ): Promise<void> {
+    const players = await db
+      .select({ userId: matchPlayers.userId, placement: matchPlayers.placement })
+      .from(matchPlayers)
+      .where(eq(matchPlayers.matchId, tm.matchId!));
+    const placementByUser = new Map(players.map((p) => [p.userId, p.placement ?? Number.MAX_SAFE_INTEGER]));
+
+    const a = tm.participantAId!;
+    const b = tm.participantBId!;
+    const placementA = placementByUser.get(a)!;
+    const placementB = placementByUser.get(b)!;
+
+    let winnerUserId: string | null;
+    let resultA: 'win' | 'lose' | 'draw';
+    let resultB: 'win' | 'lose' | 'draw';
+    if (placementA < placementB) {
+      winnerUserId = a;
+      resultA = 'win';
+      resultB = 'lose';
+    } else if (placementB < placementA) {
+      winnerUserId = b;
+      resultA = 'lose';
+      resultB = 'win';
+    } else {
+      winnerUserId = null;
+      resultA = 'draw';
+      resultB = 'draw';
+    }
+
+    await db.update(tournamentMatches).set({ winnerUserId, state: 'finished' }).where(eq(tournamentMatches.id, tm.id));
+    await addPoints(tm.tournamentId, a, pointsForResult(resultA));
+    await addPoints(tm.tournamentId, b, pointsForResult(resultB));
+
+    const [round] = await db.select().from(tournamentRounds).where(eq(tournamentRounds.id, tm.roundId)).limit(1);
+    await advanceSwissRound(
+      tm.tournamentId,
+      tournament.gameId,
+      tournament.turnDurationS ?? 30,
+      tournament.rated,
+      tm.roundId,
+      round!.roundNumber,
+      tournament.totalRounds!,
+    );
+  }
+
+  async function onMatchFinishedHook(matchId: string): Promise<void> {
+    const [tm] = await db.select().from(tournamentMatches).where(eq(tournamentMatches.matchId, matchId)).limit(1);
+    if (!tm) return; // partida normal, no es de torneo
+
+    const [tournament] = await db.select().from(tournaments).where(eq(tournaments.id, tm.tournamentId)).limit(1);
+    if (!tournament || tournament.state !== 'running') return;
+
+    if (tournament.format === 'swiss') {
+      await onSwissMatchFinished(tournament, tm);
+    } else {
+      await onEliminationMatchFinished(tournament, tm);
+    }
   }
 
   onMatchFinished((_db, matchId) => onMatchFinishedHook(matchId));
@@ -233,9 +398,6 @@ export function createTournamentService(db: Db, matchService: MatchService): Tou
         (x, y) => (ratings.get(y.userId) ?? DEFAULT_RATING) - (ratings.get(x.userId) ?? DEFAULT_RATING),
       );
 
-      const size = nextPowerOfTwo(orderedByRating.length);
-      const totalRounds = totalRoundsForSize(size);
-
       for (let i = 0; i < orderedByRating.length; i++) {
         await db
           .update(tournamentParticipants)
@@ -248,10 +410,20 @@ export function createTournamentService(db: Db, matchService: MatchService): Tou
           );
       }
 
-      await db
-        .update(tournaments)
-        .set({ state: 'running', startedAt: new Date(), totalRounds })
-        .where(eq(tournaments.id, tournamentId));
+      if (t.format === 'swiss') {
+        const totalRounds = swissRoundsForSize(orderedByRating.length);
+        await db.update(tournaments).set({ state: 'running', startedAt: new Date(), totalRounds }).where(eq(tournaments.id, tournamentId));
+
+        const standings: SwissStanding[] = orderedByRating.map((p, i) => ({ id: p.userId, points: 0, seed: i + 1 }));
+        const slots = pairSwissRound(standings, new Set(), new Set());
+        const roundId = await generateRound(tournamentId, t.gameId, t.turnDurationS ?? 30, t.rated, 1, slots);
+        await awardByePoints(tournamentId, roundId);
+        return;
+      }
+
+      const size = nextPowerOfTwo(orderedByRating.length);
+      const totalRounds = totalRoundsForSize(size);
+      await db.update(tournaments).set({ state: 'running', startedAt: new Date(), totalRounds }).where(eq(tournaments.id, tournamentId));
 
       const slots = assignBracket(orderedByRating.map((p) => p.userId));
       await generateRound(tournamentId, t.gameId, t.turnDurationS ?? 30, t.rated, 1, slots);
@@ -267,7 +439,20 @@ export function createTournamentService(db: Db, matchService: MatchService): Tou
           .orderBy(desc(tournamentRounds.roundNumber))
           .limit(1);
         if (!latestRound) continue;
-        await advanceIfRoundComplete(t.id, t.gameId, t.turnDurationS ?? 30, t.rated, latestRound.id, latestRound.roundNumber);
+
+        if (t.format === 'swiss') {
+          await advanceSwissRound(
+            t.id,
+            t.gameId,
+            t.turnDurationS ?? 30,
+            t.rated,
+            latestRound.id,
+            latestRound.roundNumber,
+            t.totalRounds!,
+          );
+        } else {
+          await advanceEliminationRound(t.id, t.gameId, t.turnDurationS ?? 30, t.rated, latestRound.id, latestRound.roundNumber);
+        }
       }
     },
   };
