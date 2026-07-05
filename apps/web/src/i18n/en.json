@@ -162,13 +162,16 @@
     "noOnlineFriends": "None of your friends are online right now",
     "selectPiece": "Pick a piece to move",
     "selectDestination": "Pick the destination cell",
+    "mustPass": "You have no legal move: you must pass",
+    "pass": "Pass turn",
     "a11y": {
       "board": "Game board",
       "cell": "Row {{row}}, column {{col}}: {{content}}",
       "column": "Column {{col}}, row {{row}}: {{content}}",
       "empty": "empty",
       "myPiece": "your piece",
-      "opponentPiece": "opponent's piece"
+      "opponentPiece": "opponent's piece",
+      "legalMove": "legal move"
     }
   },
   "friends": {

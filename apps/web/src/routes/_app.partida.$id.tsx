@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeftIcon, ChatIcon, ClockIcon, MedalIcon, UsersIcon } from '../components/icons';
 import { BriscaBoard } from '../games/BriscaBoard';
 import { ConnectFourBoard } from '../games/ConnectFourBoard';
+import { ReversiBoard } from '../games/ReversiBoard';
 import { TicTacToeBoard } from '../games/TicTacToeBoard';
 import { formatDuration } from '../lib/formatDuration';
 import { useFriendsList } from '../lib/friends';
@@ -75,6 +76,7 @@ const BOARD_COMPONENTS = {
   'tres-en-raya': TicTacToeBoard,
   'conecta-cuatro': ConnectFourBoard,
   brisca: BriscaBoard,
+  reversi: ReversiBoard,
 } as const;
 
 function MatchPage() {

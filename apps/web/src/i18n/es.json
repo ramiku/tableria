@@ -162,13 +162,16 @@
     "noOnlineFriends": "No tienes amigos conectados ahora mismo",
     "selectPiece": "Elige una ficha para moverla",
     "selectDestination": "Elige la casilla de destino",
+    "mustPass": "No tienes ninguna jugada legal: debes pasar turno",
+    "pass": "Pasar turno",
     "a11y": {
       "board": "Tablero de juego",
       "cell": "Fila {{row}}, columna {{col}}: {{content}}",
       "column": "Columna {{col}}, fila {{row}}: {{content}}",
       "empty": "vacía",
       "myPiece": "tu ficha",
-      "opponentPiece": "ficha rival"
+      "opponentPiece": "ficha rival",
+      "legalMove": "jugada legal"
     }
   },
   "friends": {

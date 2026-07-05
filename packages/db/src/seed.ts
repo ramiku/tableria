@@ -74,11 +74,12 @@ const catalog = [
     minPlayers: 2,
     maxPlayers: 2,
     durationMin: 20,
-    badge: 'Próximamente',
+    badge: 'Estrategia',
     coverBg: '#1d3a2f',
     coverFg: '#e9f4ee',
     description: 'Voltea las fichas de tu rival y domina el tablero.',
-    isActive: false,
+    isActive: true,
+    options: { defaultTurnSeconds: 30 },
   },
 ];
 
@@ -97,6 +98,11 @@ const content = [
     gameId: 'brisca',
     sectionKey: 'rules',
     body: 'Baraja española de 40 cartas. Cada jugador recibe 3 cartas; se destapa la siguiente como palo de triunfo. Por turnos, cada jugador juega cualquier carta de su mano (no hay obligación de asistir al palo). Gana la baza el triunfo más alto jugado; si nadie juega triunfo, la carta más alta del palo que abrió la mano. Quien gana la baza se lleva los puntos (As=11, 3=10, Rey=4, Caballo=3, Sota=2, resto=0), roba primero del mazo y abre la siguiente baza. La partida termina cuando el mazo y las manos se agotan; gana quien más puntos ha sumado.',
+  },
+  {
+    gameId: 'reversi',
+    sectionKey: 'rules',
+    body: 'Tablero de 8×8. Empiezan 4 fichas cruzadas en el centro y mueven las oscuras. Por turnos, cada jugador coloca una ficha en una casilla vacía que encierre, en línea recta (horizontal, vertical o diagonal), una o más fichas rivales entre la nueva ficha y otra propia; todas las fichas encerradas se voltean al color del jugador. Si no tienes ninguna jugada legal, pasas turno. La partida termina cuando el tablero se llena o ambos jugadores pasan seguido; gana quien tiene más fichas de su color en el tablero.',
   },
 ];
 

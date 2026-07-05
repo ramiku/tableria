@@ -166,7 +166,7 @@ Regla de dependencias: `games → engine → protocol`; `server → db + games`;
 **M6 — Endurecimiento + producción (M).** ✅ **Parte 1 (endurecimiento) implementada 2026-07-05**: 2FA TOTP + backup codes + trusted devices, magic links, auditoría a11y de tableros, E2E Playwright de flujos críticos. **Parte 2 (diferida, necesita credenciales del usuario)**: OAuth ×4 (arctic), despliegue en tableria.app, backups, monitorización. Detalle en [«M6 (parte 1) — Endurecimiento (implementado)»](#m6-parte-1--endurecimiento-implementado-2026-07-05) más abajo.
 *Demo: activar 2FA, entrar con backup code o enlace mágico, navegar un tablero solo con teclado.*
 
-**M7 — Más juegos (M).** **Reversi/Othello** (1v1 información perfecta) y **party game simultáneo 3-8 jugadores** (valida turnos simultáneos y salas grandes). Eliminar `legacy/`.
+**M7 — Más juegos (M).** ✅ **Reversi/Othello implementado 2026-07-05** (1v1 información perfecta). **Party game simultáneo 3-8 jugadores** (valida turnos simultáneos y salas grandes) y eliminar `legacy/` quedan pendientes. Detalle en [«M7 — Reversi/Othello (implementado)»](#m7--reversiothello-implementado-2026-07-05) más abajo.
 *Demo: 5 juegos jugables en producción.*
 
 Tamaño relativo: M2 ≈ M4 > M5 ≈ M6 ≈ M7 > M1 ≈ M3 > M0.
@@ -430,10 +430,29 @@ Carpeta nueva, entrada literal en `pnpm-workspace.yaml` (no glob), paquete propi
 - **Colisión de `getByText` con la región `aria-live`**: el mismo texto de resultado ("¡Has ganado!") aparece tanto en el panel visual como en la región `sr-only` recién añadida en esta misma pasada — `match.spec.ts` se ajustó para acotar la búsqueda a `<p>` y no chocar con `role="status"`.
 - **Rate limits de producción chocan con una suite de E2E en bucle**: `/api/auth/register` (máx. 8/15 min) y `/magic-link/request` (máx. 5/15 min) son correctos para producción pero se agotan fácilmente reproduciendo fallos a mano varias veces seguidas durante el diagnóstico — una ejecución limpia y única de los 4 specs (5 registros en total) queda cómodamente dentro del límite; no se tocó el rate-limiting de producción por conveniencia de testing.
 
-**Verificación**: `pnpm turbo lint typecheck test build` en verde (23/23, 105 tests unitarios sin cambios — el trabajo de 2FA/enlaces mágicos se verificó vía E2E, no con unitarios nuevos); los 4 specs de Playwright en verde ejecutados juntos.
+**Verificación**: `pnpm turbo lint typecheck test build` en verde (23/23, 105 tests unitarios sin cambios — el trabajo de 2FA/enlaces mágicos se verificó vía E2E, no con unitarios nuevos); los 4 specs de Playwright en verde ejecutados juntos. (Nota de una pasada posterior, 2026-07-05: al retomar el trabajo se detectó que el flujo "confiar en este dispositivo" no tenía spec propio — se añadió `trusted-device.spec.ts` como 5º spec permanente, verificado en verde junto al resto.)
 
 ### Notas de alcance (deuda explícita, no bloqueante)
 
 - OAuth (Discord/Twitch/Google/GitHub vía `arctic`) queda completamente fuera — necesita que el usuario cree las apps en cada consola de desarrollador.
 - Despliegue a producción (tableria.app), backups y monitorización quedan para una pasada posterior explícita con credenciales de dominio/VPS.
 - Sin auditoría con lector de pantalla real (no hay uno instalado en este entorno) — verificado con el árbol de accesibilidad de DevTools y navegación por teclado.
+
+## M7 — Reversi/Othello (implementado 2026-07-05)
+
+Primer juego de M7, elegido por el usuario para ir antes que el party game simultáneo (bajo riesgo, ya que es 1v1 de información perfecta como Conecta 4, en vez de abrir terreno nuevo de turnos simultáneos N-jugador). Sigue el mismo patrón de `packages/games/src/<juego>/` que los juegos anteriores.
+
+**Motor** (`packages/games/src/reversi/`): tablero 8×8 plano (`Cell[64]`), las 4 fichas centrales cruzadas de la apertura estándar, movimiento único `{ type: 'place', cell } | { type: 'pass' }`. Captura en las 8 direcciones: una jugada es legal solo si encierra al menos una línea de fichas rivales entre la nueva ficha y otra propia. **Pase obligatorio modelado explícitamente como movimiento** (no como transición automática del motor): si el asiento activo no tiene ninguna jugada legal, `validateMove` rechaza cualquier `place` con `MUST_PASS` y solo acepta `{type:'pass'}`; si sí tiene jugadas legales, rechaza `pass` con `MUST_PLAY`. Fin de partida quien por tablero lleno **o** dos pases consecutivos (`passStreak` en el estado) — el conteo de discos decide ganador/empate. `playerView` añade `legalMoves: number[]` calculado para el turno activo (información perfecta, así que espectadores y ambos asientos ven la misma vista) para que la UI resalte las casillas jugables y decida cuándo ofrecer el botón de pasar.
+
+**Bug real atrapado por los tests, no por revisión manual**: la primera versión de `applyMove` colocaba la ficha en el tablero y *después* llamaba a `flipsFor` sobre ese mismo tablero ya mutado — pero `flipsFor` devuelve `[]` en cuanto la celda de origen no está vacía (primera línea de la función), así que con la ficha ya colocada la función se autorrechazaba y **ninguna captura se aplicaba nunca**. Los tests de `applyMove` (que sí comprueban el tablero resultante celda a celda, no solo el resultado de `validateMove`) lo cazaron de inmediato; arreglo: calcular los flips sobre `state.board` (antes de la mutación) y aplicar la colocación después. 24 tests (18 del motor + los ya existentes de otros juegos sin tocar).
+
+**Catálogo**: la fila `reversi` ya existía en `packages/db/src/seed.ts` como placeholder (`isActive:false`, sin `options`) de una pasada de scaffolding anterior — se activó (`isActive:true`, `options.defaultTurnSeconds:30`, badge `Próximamente`→`Estrategia`) y se añadió su contenido de reglas (`gameContent`, sección `rules`).
+
+**Frontend**: `apps/web/src/games/ReversiBoard.tsx`, mismo contrato `BoardProps` que los demás tableros, registrado en el `BOARD_COMPONENTS` de `_app.partida.$id.tsx`. Reutiliza los tokens de color ya establecidos para juegos de dos bandos (`bg-tb-accent`/`bg-tb-warn`, los mismos que Conecta 4) en vez de intentar un blanco/negro literal, para mantener consistencia visual con el resto del catálogo bajo ambos temas. Casillas con jugada legal llevan un anillo sutil (`ring-tb-accent/50`) y su propio texto a11y (`partida.a11y.legalMove`); cuando el jugador activo no tiene ninguna jugada legal aparece un aviso con botón "Pasar turno" (`partida.mustPass`/`partida.pass`, nuevas claves i18n `es`/`en`, en paridad). Aria-labels reutilizan literalmente la clave `partida.a11y.cell` ya usada por tres en raya (`"Fila X, columna Y: contenido"`), sin inventar un formato nuevo.
+
+**Verificación**: `pnpm turbo lint typecheck test build` en verde (23/23, 24 tests nuevos). E2E nuevo `e2e/tests/reversi.spec.ts` (dos `BrowserContext` reales): A abre mesa, ambos listos, A juega la única apertura legal (fila 3, columna 4), la captura de la ficha diagonal (fila 4, columna 4) se refleja como "tu ficha"/"ficha rival" correctamente para ambos lados en vivo, B recibe sus propias jugadas legales resaltadas y captura de vuelta, visible también para A. No se jugó la partida completa (60+ movimientos) en el E2E — el motor ya está agotado exhaustivamente por los 18 tests unitarios (aperturas, capturas multi-dirección, pase forzado/rechazado, fin por tablero lleno, fin por doble pase, empate); el E2E cubre la parte que las unitarias no pueden, la integración real lobby→WS→UI con dos clientes.
+
+### Pendiente de M7
+
+- Party game simultáneo 3-8 jugadores (valida turnos simultáneos reales y salas grandes — ningún juego actual los ejercita).
+- Eliminar `legacy/` (solo tiene sentido una vez no quede nada más que portar/consultar de la v1 PHP).
