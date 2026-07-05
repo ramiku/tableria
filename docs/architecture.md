@@ -542,3 +542,13 @@ El usuario pidió dar un aspecto profesional a los tableros con Three.js y anima
 ### Pendiente (a decidir por el usuario)
 
 Este prototipo cubre solo Conecta 4. Replicar el patrón al resto — tres en raya y Reversi (mismo tipo de animación: fichas sobre rejilla), Brisca (cartas: repartir/voltear, animación distinta) y Pista Única (sin tablero real, sería más bien pulido visual que 3D) — queda pendiente de que el usuario apruebe este primero y decida el orden.
+
+## Conecta 4: tablero configurable (6×7/8×8/9×9) + drop animado (implementado 2026-07-06)
+
+Fast-follow sobre el prototipo 3D: el usuario pidió que la configuración de mesa ofrezca varios tamaños de tablero, además de confirmar la animación de caída ya construida.
+
+**Motor** (`packages/games/src/conecta-cuatro/`): `rows`/`cols` pasan de constantes fijas del módulo a campos del propio `ConnectFourState`, fijados en `setup()` a partir de la variante elegida (reutiliza el mecanismo `ui.variants`/`options.variant` que ya usan tres en raya y Reversi — sin abrir ningún camino nuevo en el lobby ni en `matches.create`). `BOARD_PRESETS` (`6x7`|`8x8`|`9x9`) vive en `types.ts`; una variante desconocida cae al preset por defecto en vez de romperse. `lowestEmptyRow`/`findWinningLine` pasan a recibir `cols`/`rows` como parámetros en vez de leer constantes de módulo; `moveSchema` afloja el límite superior de columna a un máximo defensivo (20) porque el rango real ya no es estático — el límite de verdad se comprueba en `validateMove` contra `state.cols` (nuevo código `INVALID_MOVE` para columna fuera de rango). 21 tests (7 nuevos: setup por variante, variante desconocida, rango de columna dependiente del tablero, 4 en línea en un 9×9).
+
+**Frontend** (`ConnectFourBoard.tsx`): todo lo que antes leía las constantes fijas `CONNECT_FOUR_COLS`/`CONNECT_FOUR_ROWS` ahora deriva `cols`/`rows` de `view.cols`/`view.rows` en cada render (con `BOARD_PRESETS['6x7']` como valor de reserva antes de que llegue el primer estado real) — cámara, frustum, marco, posiciones de fichas y la capa accesible son todos funciones de estas dos variables en vez de constantes de módulo. La animación de caída (ya construida en el prototipo) no necesitó cambios: `yFor(-2, rows)` extrapola "por encima del tablero" igual de bien para 6, 8 o 9 filas.
+
+**Verificación**: `pnpm turbo lint typecheck test build` en verde (23/23). Verificado visualmente con capturas de Playwright en 9×9 (marco cuadrado sin recortes, disco bien proporcionado) y con un E2E nuevo y permanente `e2e/tests/connect-four.spec.ts` (dos `BrowserContext` reales): elige la variante 8×8 en el formulario, la badge "8×8" se ve en la sala, el tablero accesible expone exactamente 64 botones, y una partida jugada hasta el final con victoria en vertical.

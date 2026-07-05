@@ -18,5 +18,10 @@ export const connectFourDefinition: GameDefinition<ConnectFourState, ConnectFour
   ui: {
     defaultTurnSeconds: 30,
     supportsRealtime: true,
+    variants: [
+      { id: '6x7', name: '6×7 (clásico)' },
+      { id: '8x8', name: '8×8' },
+      { id: '9x9', name: '9×9' },
+    ],
   },
 };

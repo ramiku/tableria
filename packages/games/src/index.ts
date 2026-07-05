@@ -18,12 +18,13 @@ export type { TicTacToeMove, TicTacToeState, TicTacToeView, Cell, Winner } from 
 export { ticTacToeDefinition };
 
 export type {
+  BoardPreset as ConnectFourBoardPreset,
   ConnectFourMove,
   ConnectFourState,
   ConnectFourView,
   Winner as ConnectFourWinner,
 } from './conecta-cuatro/types.js';
-export { COLS as CONNECT_FOUR_COLS, ROWS as CONNECT_FOUR_ROWS } from './conecta-cuatro/types.js';
+export { BOARD_PRESETS as CONNECT_FOUR_BOARD_PRESETS, DEFAULT_BOARD_PRESET as CONNECT_FOUR_DEFAULT_PRESET } from './conecta-cuatro/types.js';
 export { connectFourDefinition };
 
 export type { BriscaCard, BriscaMove, BriscaPlayerView, BriscaState, Rank as BriscaRank, Suit as BriscaSuit } from './brisca/types.js';

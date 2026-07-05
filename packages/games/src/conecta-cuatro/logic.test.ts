@@ -1,10 +1,12 @@
 import { createRng } from '@tableria/engine';
 import { describe, expect, it } from 'vitest';
 import { activePlayers, applyMove, checkEnd, playerView, setup, validateMove } from './logic.js';
-import { COLS, ROWS, type Cell, type ConnectFourState } from './types.js';
+import { BOARD_PRESETS, type Cell, type ConnectFourState } from './types.js';
 
-function setupState(): ConnectFourState {
-  return setup({ numPlayers: 2, rng: createRng('test-seed') });
+const { rows: ROWS, cols: COLS } = BOARD_PRESETS['6x7'];
+
+function setupState(preset?: string): ConnectFourState {
+  return setup({ numPlayers: 2, rng: createRng('test-seed'), options: preset ? { variant: preset } : undefined });
 }
 
 function ctx(seat: number) {
@@ -15,19 +17,45 @@ function drop(state: ConnectFourState, column: number, seat: 0 | 1): ConnectFour
   return applyMove(state, { column }, ctx(seat));
 }
 
-/** Tablero vacío con algunas fichas ya colocadas directamente (para probar detección de líneas sin depender de la gravedad). */
+/** Tablero 6×7 vacío con algunas fichas ya colocadas directamente (para probar detección de líneas sin depender de la gravedad). */
 function boardWith(cells: { row: number; col: number; seat: 0 | 1 }[]): Cell[] {
   const board = Array<Cell>(ROWS * COLS).fill(null);
   for (const c of cells) board[c.row * COLS + c.col] = c.seat;
   return board;
 }
 
+function stateWith(board: Cell[], extra: Partial<ConnectFourState> = {}): ConnectFourState {
+  return { rows: ROWS, cols: COLS, board, turn: 0, winner: null, ...extra };
+}
+
 describe('setup', () => {
-  it(`arranca con tablero ${ROWS}x${COLS} vacío, turno del asiento 0 y sin ganador`, () => {
+  it(`arranca con tablero ${ROWS}x${COLS} vacío, turno del asiento 0 y sin ganador (preset por defecto)`, () => {
     const state = setupState();
+    expect(state.rows).toBe(ROWS);
+    expect(state.cols).toBe(COLS);
     expect(state.board).toEqual(Array(ROWS * COLS).fill(null));
     expect(state.turn).toBe(0);
     expect(state.winner).toBeNull();
+  });
+
+  it('la variante "8x8" arranca un tablero 8×8', () => {
+    const state = setupState('8x8');
+    expect(state.rows).toBe(8);
+    expect(state.cols).toBe(8);
+    expect(state.board).toHaveLength(64);
+  });
+
+  it('la variante "9x9" arranca un tablero 9×9', () => {
+    const state = setupState('9x9');
+    expect(state.rows).toBe(9);
+    expect(state.cols).toBe(9);
+    expect(state.board).toHaveLength(81);
+  });
+
+  it('una variante desconocida cae al preset por defecto en vez de romperse', () => {
+    const state = setupState('no-existe');
+    expect(state.rows).toBe(ROWS);
+    expect(state.cols).toBe(COLS);
   });
 });
 
@@ -37,11 +65,19 @@ describe('validateMove', () => {
     expect(validateMove(state, { column: 0 }, ctx(1))).toEqual({ ok: false, code: 'NOT_YOUR_TURN' });
   });
 
+  it('rechaza una columna fuera de rango para el tamaño de tablero de esta partida', () => {
+    const state = setupState(); // 6×7: columnas válidas 0..6
+    expect(validateMove(state, { column: 7 }, ctx(0))).toEqual({ ok: false, code: 'INVALID_MOVE' });
+  });
+
+  it('en un tablero 9x9 sí acepta una columna que en el 6x7 habría sido inválida', () => {
+    const state = setupState('9x9');
+    expect(validateMove(state, { column: 8 }, ctx(0))).toEqual({ ok: true });
+  });
+
   it('rechaza columna llena', () => {
-    const board = boardWith(
-      Array.from({ length: ROWS }, (_, row) => ({ row, col: 0, seat: (row % 2) as 0 | 1 })),
-    );
-    const state: ConnectFourState = { board, turn: 0, winner: null };
+    const board = boardWith(Array.from({ length: ROWS }, (_, row) => ({ row, col: 0, seat: (row % 2) as 0 | 1 })));
+    const state = stateWith(board);
     expect(validateMove(state, { column: 0 }, ctx(0))).toEqual({ ok: false, code: 'COLUMN_FULL' });
   });
 
@@ -51,7 +87,7 @@ describe('validateMove', () => {
       { row: 5, col: 1, seat: 0 },
       { row: 5, col: 2, seat: 0 },
     ]);
-    const state: ConnectFourState = { board, turn: 0, winner: { seat: 0, line: [0, 1, 2, 3] } };
+    const state = stateWith(board, { winner: { seat: 0, line: [0, 1, 2, 3] } });
     expect(validateMove(state, { column: 3 }, ctx(1))).toEqual({ ok: false, code: 'GAME_OVER' });
   });
 
@@ -71,6 +107,13 @@ describe('applyMove', () => {
     const next2 = drop(next, 3, 1);
     expect(next2.board[(ROWS - 2) * COLS + 3]).toBe(1);
   });
+
+  it('conserva rows/cols de la partida tras aplicar un movimiento', () => {
+    const state = setupState('8x8');
+    const next = drop(state, 3, 0);
+    expect(next.rows).toBe(8);
+    expect(next.cols).toBe(8);
+  });
 });
 
 describe('líneas de victoria', () => {
@@ -80,15 +123,10 @@ describe('líneas de victoria', () => {
       { row: 5, col: 1, seat: 0 },
       { row: 5, col: 2, seat: 0 },
     ]);
-    const state: ConnectFourState = { board, turn: 0, winner: null };
+    const state = stateWith(board);
     const next = drop(state, 3, 0);
     expect(next.winner?.seat).toBe(0);
-    expect([...next.winner!.line].sort((a, b) => a - b)).toEqual([
-      5 * COLS + 0,
-      5 * COLS + 1,
-      5 * COLS + 2,
-      5 * COLS + 3,
-    ]);
+    expect([...next.winner!.line].sort((a, b) => a - b)).toEqual([5 * COLS + 0, 5 * COLS + 1, 5 * COLS + 2, 5 * COLS + 3]);
     expect(checkEnd(next)).toEqual({
       ranking: [
         { seat: 0, placement: 1, result: 'win' },
@@ -103,15 +141,10 @@ describe('líneas de victoria', () => {
       { row: 4, col: 2, seat: 0 },
       { row: 3, col: 2, seat: 0 },
     ]);
-    const state: ConnectFourState = { board, turn: 0, winner: null };
+    const state = stateWith(board);
     const next = drop(state, 2, 0);
     expect(next.winner?.seat).toBe(0);
-    expect([...next.winner!.line].sort((a, b) => a - b)).toEqual([
-      2 * COLS + 2,
-      3 * COLS + 2,
-      4 * COLS + 2,
-      5 * COLS + 2,
-    ]);
+    expect([...next.winner!.line].sort((a, b) => a - b)).toEqual([2 * COLS + 2, 3 * COLS + 2, 4 * COLS + 2, 5 * COLS + 2]);
   });
 
   it('diagonal ↘ (fila y columna crecen juntas)', () => {
@@ -125,15 +158,10 @@ describe('líneas de victoria', () => {
       { row: 4, col: 2, seat: 0 },
       { row: 5, col: 3, seat: 0 },
     ]);
-    const state: ConnectFourState = { board, turn: 0, winner: null };
+    const state = stateWith(board);
     const next = drop(state, 0, 0);
     expect(next.winner?.seat).toBe(0);
-    expect([...next.winner!.line].sort((a, b) => a - b)).toEqual([
-      2 * COLS + 0,
-      3 * COLS + 1,
-      4 * COLS + 2,
-      5 * COLS + 3,
-    ]);
+    expect([...next.winner!.line].sort((a, b) => a - b)).toEqual([2 * COLS + 0, 3 * COLS + 1, 4 * COLS + 2, 5 * COLS + 3]);
   });
 
   it('diagonal ↙ (fila crece, columna decrece)', () => {
@@ -147,15 +175,23 @@ describe('líneas de victoria', () => {
       { row: 4, col: 1, seat: 0 },
       { row: 5, col: 0, seat: 0 },
     ]);
-    const state: ConnectFourState = { board, turn: 0, winner: null };
+    const state = stateWith(board);
     const next = drop(state, 3, 0);
     expect(next.winner?.seat).toBe(0);
-    expect([...next.winner!.line].sort((a, b) => a - b)).toEqual([
-      2 * COLS + 3,
-      3 * COLS + 2,
-      4 * COLS + 1,
-      5 * COLS + 0,
-    ]);
+    expect([...next.winner!.line].sort((a, b) => a - b)).toEqual([2 * COLS + 3, 3 * COLS + 2, 4 * COLS + 1, 5 * COLS + 0]);
+  });
+
+  it('4 en línea en un tablero 9x9 (tamaño de victoria no cambia con el tablero)', () => {
+    const state = setupState('9x9');
+    let s = state;
+    s = drop(s, 0, 0);
+    s = drop(s, 0, 1);
+    s = drop(s, 1, 0);
+    s = drop(s, 1, 1);
+    s = drop(s, 2, 0);
+    s = drop(s, 2, 1);
+    s = drop(s, 3, 0); // 0 en (row8,col0..3) horizontal
+    expect(s.winner?.seat).toBe(0);
   });
 });
 
@@ -170,7 +206,7 @@ describe('empate', () => {
         board[row * COLS + col] = r < 2 ? 0 : 1;
       }
     }
-    const state: ConnectFourState = { board, turn: 0, winner: null };
+    const state = stateWith(board);
     expect(state.board.every((c) => c !== null)).toBe(true);
     expect(checkEnd(state)).toEqual({
       ranking: [
@@ -192,7 +228,7 @@ describe('activePlayers', () => {
       { row: 5, col: 1, seat: 0 },
       { row: 5, col: 2, seat: 0 },
     ]);
-    const state: ConnectFourState = { board, turn: 0, winner: null };
+    const state = stateWith(board);
     const next = drop(state, 3, 0);
     expect(activePlayers(next)).toEqual([]);
   });
