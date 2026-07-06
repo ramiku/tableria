@@ -10,11 +10,11 @@ import {
   ClockIcon,
   DiceIcon,
   DoorIcon,
-  LinkIcon,
   PlayIcon,
   PlusIcon,
   UsersIcon,
 } from '../components/icons';
+import { UserHoverCard } from '../components/UserHoverCard';
 import { formatDuration } from '../lib/formatDuration';
 import { trpc } from '../lib/trpc';
 import { matchSocket } from '../lib/ws';
@@ -23,8 +23,9 @@ import { useMatchStore } from '../stores/match';
 export const Route = createFileRoute('/_app/juegos/$slug')({ component: GamePage });
 
 const FALLBACK_COVER = '#2f6fe0';
-const REALTIME_PRESETS = [15, 30, 60, 120, 300];
-const ASYNC_PRESETS = [21600, 43200, 86400, 172800, 259200, 604800];
+/** null = "sin tiempo" — última opción de cada lista, siempre amistosa. */
+const REALTIME_PRESETS: (number | null)[] = [15, 30, 60, 120, 300, null];
+const ASYNC_PRESETS: (number | null)[] = [21600, 43200, 86400, 172800, 259200, 604800, null];
 
 function CategoryIcon({ categorySlug, className }: { categorySlug: string | null; className?: string }) {
   if (categorySlug === 'cartas') return <CardsIcon className={className} />;
@@ -42,6 +43,7 @@ function playerRange(min: number, max: number): string {
 // ---------------------------------------------------------------------------
 
 interface SeatUser {
+  userId?: string | null;
   username: string;
   avatarInitial: string | null;
   avatarColor: string | null;
@@ -49,20 +51,23 @@ interface SeatUser {
 }
 
 function OccupiedSeat({ user, size = 56 }: { user: SeatUser; size?: number }) {
+  const avatar = (
+    <span className="relative inline-flex">
+      <Avatar
+        initial={user.avatarInitial ?? user.username.charAt(0).toUpperCase()}
+        color={user.avatarColor ?? FALLBACK_COVER}
+        size={size}
+      />
+      {user.ready && (
+        <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-tb-success text-white ring-2 ring-tb-surface">
+          <CheckIcon className="h-3 w-3" />
+        </span>
+      )}
+    </span>
+  );
   return (
     <div className="flex w-20 flex-col items-center gap-1.5">
-      <span className="relative inline-flex">
-        <Avatar
-          initial={user.avatarInitial ?? user.username.charAt(0).toUpperCase()}
-          color={user.avatarColor ?? FALLBACK_COVER}
-          size={size}
-        />
-        {user.ready && (
-          <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-tb-success text-white ring-2 ring-tb-surface">
-            <CheckIcon className="h-3 w-3" />
-          </span>
-        )}
-      </span>
+      {user.userId ? <UserHoverCard userId={user.userId}>{avatar}</UserHoverCard> : avatar}
       <p className="w-full truncate text-center text-xs font-semibold text-tb-text">{user.username}</p>
     </div>
   );
@@ -133,11 +138,22 @@ function ModeCard({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors ${
-        selected ? 'border-tb-accent bg-tb-accent-tint ring-1 ring-tb-accent' : 'border-tb-border bg-tb-surface hover:border-tb-accent'
+      className={`group relative flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all duration-200 active:scale-[0.98] ${
+        selected
+          ? 'border-tb-accent bg-tb-accent-tint shadow-md shadow-tb-accent/10 ring-1 ring-tb-accent'
+          : 'border-tb-border bg-tb-surface hover:-translate-y-0.5 hover:border-tb-accent/60 hover:shadow-md'
       }`}
     >
-      <span className={`flex h-9 w-9 items-center justify-center rounded-full ${selected ? 'bg-tb-accent text-tb-accent-fg' : 'bg-tb-surface-2 text-tb-muted'}`}>
+      {selected && (
+        <span className="tb-modal-in absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-tb-accent text-tb-accent-fg">
+          <CheckIcon className="h-3 w-3" />
+        </span>
+      )}
+      <span
+        className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+          selected ? 'bg-tb-accent text-tb-accent-fg' : 'bg-tb-surface-2 text-tb-muted group-hover:bg-tb-accent-tint group-hover:text-tb-accent'
+        }`}
+      >
         {icon}
       </span>
       <span className="font-display text-sm font-bold text-tb-text">{title}</span>
@@ -152,8 +168,10 @@ function Chip({ selected, onSelect, children }: { selected: boolean; onSelect: (
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`tb-nums rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
-        selected ? 'bg-tb-accent text-tb-accent-fg' : 'border border-tb-border text-tb-muted hover:border-tb-accent hover:text-tb-accent'
+      className={`tb-nums rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all duration-150 active:scale-95 ${
+        selected
+          ? 'bg-tb-accent text-tb-accent-fg shadow-sm shadow-tb-accent/30'
+          : 'border border-tb-border text-tb-muted hover:-translate-y-0.5 hover:border-tb-accent hover:text-tb-accent hover:shadow-sm'
       }`}
     >
       {children}
@@ -162,20 +180,20 @@ function Chip({ selected, onSelect, children }: { selected: boolean; onSelect: (
 }
 
 // ---------------------------------------------------------------------------
-// Tu mesa: asientos en vivo por WS + confirmación de arranque
+// Tu mesa: asientos en vivo por WS mientras se espera a que se complete.
+// El ready-check ("Estoy listo") vive solo en /sala/$code — en cuanto la mesa
+// se completa, navegamos ahí en vez de duplicar esa pantalla aquí.
 // ---------------------------------------------------------------------------
 
-function MyTablePanel({ matchId, code, meId }: { matchId: string; code: string; meId: string }) {
+function YourWaitingTable({ matchId, code }: { matchId: string; code: string }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const utils = trpc.useUtils();
-  const [copied, setCopied] = useState(false);
+  const [cancelledSeen, setCancelledSeen] = useState(false);
 
   const lobby = useMatchStore((s) => s.lobby);
-  const matchState = useMatchStore((s) => s.matchState);
   const connectionStatus = useMatchStore((s) => s.connectionStatus);
 
-  const setReady = trpc.matches.setReady.useMutation();
   const leaveMatch = trpc.matches.leave.useMutation({
     onSuccess: () => {
       useMatchStore.getState().reset();
@@ -189,109 +207,75 @@ function MyTablePanel({ matchId, code, meId }: { matchId: string; code: string; 
     return () => useMatchStore.getState().reset();
   }, [matchId]);
 
-  useEffect(() => {
-    if (matchState) void navigate({ to: '/partida/$id', params: { id: matchId } });
-  }, [matchState, matchId, navigate]);
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Sin permiso de portapapeles: nada más que hacer.
-    }
-  }
-
   const seats = lobby?.seats ?? [];
   const maxPlayers = lobby?.maxPlayers ?? 2;
   const full = seats.length > 0 && seats.every((s) => s.userId !== null);
-  const mySeat = seats.find((s) => s.userId === meId);
-  const othersPending = seats.filter((s) => s.userId && s.userId !== meId && !s.ready);
+  const cancelled = lobby?.state === 'cancelled';
 
-  return (
-    <div className="mx-auto max-w-xl">
-      <div className="rounded-2xl border border-tb-border bg-tb-surface p-8 text-center">
-        <Eyebrow>{t('lobby.yourTable')}</Eyebrow>
+  useEffect(() => {
+    if (full && !cancelled) void navigate({ to: '/sala/$code', params: { code } });
+  }, [full, cancelled, code, navigate]);
+
+  function handleDismissCancelled() {
+    setCancelledSeen(true);
+    useMatchStore.getState().reset();
+    void utils.matches.myActive.invalidate();
+    void utils.matches.listWaiting.invalidate();
+  }
+
+  if (cancelled && !cancelledSeen) {
+    return (
+      <div className="tb-fade-in-up rounded-2xl border border-tb-border bg-tb-surface p-8 text-center">
+        <p className="text-sm font-medium text-tb-text">{t('lobby.cancelledByHost')}</p>
         <button
           type="button"
-          onClick={handleCopy}
-          data-testid="room-code"
-          className="tb-nums mx-auto mt-3 flex items-center gap-2 rounded-lg border border-tb-border bg-tb-surface-2 px-4 py-2 font-display text-2xl font-extrabold tracking-widest text-tb-text"
+          onClick={handleDismissCancelled}
+          className="tb-gradient-cta mt-4 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
         >
-          {code}
-          {copied ? <CheckIcon className="h-5 w-5 text-tb-success" /> : <LinkIcon className="h-5 w-5 text-tb-muted" />}
+          {t('lobby.cancelledDismiss')}
         </button>
-
-        {connectionStatus !== 'open' && (
-          <p className="mt-3 text-xs font-medium text-tb-warn">{t(`sala.connection.${connectionStatus}`)}</p>
-        )}
-
-        <div className="mt-8 flex flex-wrap items-start justify-center gap-8">
-          {Array.from({ length: maxPlayers }, (_, i) => {
-            const seat = seats.find((s) => s.seat === i);
-            return seat?.userId ? (
-              <OccupiedSeat
-                key={i}
-                size={64}
-                user={{
-                  username: seat.username ?? '?',
-                  avatarInitial: seat.avatarInitial,
-                  avatarColor: seat.avatarColor,
-                  ready: seat.ready,
-                }}
-              />
-            ) : (
-              <EmptySeat key={i} size={64} label={t('lobby.available')} />
-            );
-          })}
-        </div>
-
-        <div className="mt-8">
-          {!full && <p className="text-sm text-tb-muted">{t('lobby.waitingRival')}</p>}
-
-          {full && !mySeat?.ready && (
-            <>
-              <p className="font-display text-lg font-bold text-tb-text">{t('lobby.readyPrompt')}</p>
-              <button
-                type="button"
-                onClick={() => setReady.mutate({ matchId, ready: true })}
-                disabled={setReady.isPending}
-                className="tb-gradient-cta mt-4 w-full rounded-xl px-6 py-3.5 font-display text-base font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              >
-                {t('lobby.startNow')}
-              </button>
-            </>
-          )}
-
-          {full && mySeat?.ready && othersPending.length > 0 && (
-            <>
-              <p className="text-sm font-medium text-tb-text">
-                {t('lobby.waitingFor', { name: othersPending.map((s) => s.username).join(', ') })}
-              </p>
-              <button
-                type="button"
-                onClick={() => setReady.mutate({ matchId, ready: false })}
-                disabled={setReady.isPending}
-                className="mt-3 text-xs font-semibold text-tb-muted hover:text-tb-danger"
-              >
-                {t('lobby.cancelReady')}
-              </button>
-            </>
-          )}
-        </div>
-
-        {lobby?.state === 'waiting' && (
-          <button
-            type="button"
-            onClick={() => leaveMatch.mutate({ matchId })}
-            disabled={leaveMatch.isPending}
-            className="mt-6 w-full rounded-lg border border-tb-border px-4 py-2 text-sm font-medium text-tb-muted transition-colors hover:border-tb-danger hover:text-tb-danger disabled:opacity-50"
-          >
-            {t('lobby.leave')}
-          </button>
-        )}
       </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-tb-border bg-tb-surface p-8 text-center">
+      <Eyebrow>{t('lobby.yourTable')}</Eyebrow>
+
+      {connectionStatus !== 'open' && (
+        <p className="mt-3 text-xs font-medium text-tb-warn">{t(`sala.connection.${connectionStatus}`)}</p>
+      )}
+
+      <div className="mt-8 flex flex-wrap items-start justify-center gap-8">
+        {Array.from({ length: maxPlayers }, (_, i) => {
+          const seat = seats.find((s) => s.seat === i);
+          return seat?.userId ? (
+            <OccupiedSeat
+              key={i}
+              size={64}
+              user={{
+                userId: seat.userId,
+                username: seat.username ?? '?',
+                avatarInitial: seat.avatarInitial,
+                avatarColor: seat.avatarColor,
+              }}
+            />
+          ) : (
+            <EmptySeat key={i} size={64} label={t('lobby.available')} />
+          );
+        })}
+      </div>
+
+      <p className="mt-8 text-sm text-tb-muted">{t('lobby.waitingRival')}</p>
+
+      <button
+        type="button"
+        onClick={() => leaveMatch.mutate({ matchId })}
+        disabled={leaveMatch.isPending}
+        className="mt-6 w-full rounded-lg border border-tb-border px-4 py-2 text-sm font-medium text-tb-muted transition-colors hover:border-tb-danger hover:text-tb-danger disabled:opacity-50"
+      >
+        {t('lobby.leave')}
+      </button>
     </div>
   );
 }
@@ -386,17 +370,15 @@ interface GameLobbyProps {
   maxPlayers: number;
   variants: { id: string; name: string }[];
   defaultTurnSeconds: number;
-  me: { id: string; username: string; avatarInitial: string | null; avatarColor: string | null };
 }
 
-function GameLobby({ gameId, minPlayers, maxPlayers, variants, defaultTurnSeconds, me }: GameLobbyProps) {
+function GameLobby({ gameId, minPlayers, maxPlayers, variants, defaultTurnSeconds }: GameLobbyProps) {
   const { t } = useTranslation();
   const utils = trpc.useUtils();
   const [mode, setMode] = useState<'realtime' | 'async'>('realtime');
-  const [turnDurationS, setTurnDurationS] = useState(defaultTurnSeconds);
+  const [turnDurationS, setTurnDurationS] = useState<number | null>(defaultTurnSeconds);
   const [variant, setVariant] = useState(variants[0]?.id ?? '');
   const [isPrivate, setIsPrivate] = useState(false);
-  const [rated, setRated] = useState(false);
   // Aforo variable (p.ej. Pista Única, 3-8): el anfitrión elige cuántos asientos tiene la mesa.
   // En juegos de aforo fijo (minPlayers === maxPlayers) no se muestra selector y esto no varía.
   const [seatCount, setSeatCount] = useState(minPlayers);
@@ -411,13 +393,14 @@ function GameLobby({ gameId, minPlayers, maxPlayers, variants, defaultTurnSecond
     return <div className="h-72 animate-pulse rounded-2xl border border-tb-border bg-tb-surface-2" />;
   }
 
-  // Sentado en una mesa de ESTE juego → la pantalla es la mesa.
-  if (myActive && myActive.gameId === gameId && (myActive.state === 'waiting' || myActive.state === 'starting')) {
-    return <MyTablePanel matchId={myActive.matchId} code={myActive.code} meId={me.id} />;
-  }
+  const myWaitingTable =
+    myActive && myActive.gameId === gameId && (myActive.state === 'waiting' || myActive.state === 'starting')
+      ? myActive
+      : null;
+  const inGameHere = myActive && myActive.gameId === gameId && myActive.state === 'in_game';
 
   // Partida en curso de este juego → reanudar.
-  if (myActive && myActive.gameId === gameId && myActive.state === 'in_game') {
+  if (inGameHere) {
     return (
       <div className="mx-auto max-w-xl rounded-2xl border border-tb-border bg-tb-surface p-8 text-center">
         <p className="font-display text-lg font-bold text-tb-text">{t('lobby.inGame')}</p>
@@ -433,176 +416,180 @@ function GameLobby({ gameId, minPlayers, maxPlayers, variants, defaultTurnSecond
     );
   }
 
-  // Sentado en una mesa de OTRO juego → aviso + solo mirar.
-  const blockedByOtherTable = !!myActive;
-
-  const presets = mode === 'realtime' ? REALTIME_PRESETS : ASYNC_PRESETS;
-
-  function handleModeChange(next: 'realtime' | 'async') {
-    setMode(next);
-    setTurnDurationS(next === 'realtime' ? defaultTurnSeconds : ASYNC_PRESETS[2]!);
-  }
-
-  return (
-    <div className="flex flex-col gap-8">
-      {blockedByOtherTable ? (
+  // Sentado en una mesa de OTRO juego → aviso + solo mirar las suyas.
+  if (myActive && !myWaitingTable) {
+    return (
+      <div className="flex flex-col gap-8">
         <div className="rounded-2xl border border-tb-border bg-tb-surface p-6 text-center">
           <p className="text-sm text-tb-muted">{t('lobby.otherTable')}</p>
           <Link
             to="/sala/$code"
-            params={{ code: myActive!.code }}
+            params={{ code: myActive.code }}
             className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-tb-border px-3.5 py-2 text-sm font-semibold text-tb-text hover:border-tb-accent hover:text-tb-accent"
           >
             <DoorIcon className="h-4 w-4" />
             {t('lobby.goToTable')}
           </Link>
         </div>
-      ) : (
-        // Las mesas en espera van ANTES de la config: quien entra a la ficha debe
-        // descubrir de un vistazo que hay alguien esperando rival.
-        <WaitingTables gameId={gameId} canJoin />
-      )}
+        <WaitingTables gameId={gameId} canJoin={false} />
+      </div>
+    );
+  }
 
-      {!blockedByOtherTable && (
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
-          {/* Configuración */}
-          <div className="flex flex-col gap-6 rounded-2xl border border-tb-border bg-tb-surface p-6">
-            <div>
-              <Eyebrow>{t('lobby.mode')}</Eyebrow>
-              <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                <ModeCard
-                  selected={mode === 'realtime'}
-                  onSelect={() => handleModeChange('realtime')}
-                  icon={<PlayIcon className="h-4 w-4" />}
-                  title={t('lobby.realtime.title')}
-                  desc={t('lobby.realtime.desc')}
-                />
-                <ModeCard
-                  selected={mode === 'async'}
-                  onSelect={() => handleModeChange('async')}
-                  icon={<ClockIcon className="h-4 w-4" />}
-                  title={t('lobby.async.title')}
-                  desc={t('lobby.async.desc')}
-                />
-              </div>
+  const locked = !!myWaitingTable;
+  const presets = mode === 'realtime' ? REALTIME_PRESETS : ASYNC_PRESETS;
+
+  // Con la mesa ya creada, el resumen se hidrata desde el servidor (sobrevive a un
+  // refresco de página) en vez de desde el estado local del formulario en curso.
+  const displayMode = myWaitingTable?.mode ?? mode;
+  const displayTurnDurationS = myWaitingTable ? myWaitingTable.turnDurationS : turnDurationS;
+  const displayVariant = myWaitingTable?.variant ?? variant;
+  const displayIsPrivate = myWaitingTable?.isPrivate ?? isPrivate;
+  const displayRated = myWaitingTable ? myWaitingTable.rated : turnDurationS !== null;
+
+  function handleModeChange(next: 'realtime' | 'async') {
+    setMode(next);
+    setTurnDurationS(next === 'realtime' ? defaultTurnSeconds : (ASYNC_PRESETS[2] as number));
+  }
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+      {/* Izquierda: mesas esperando jugadores, o la propia mientras se llena */}
+      <div key={locked ? 'mine' : 'public'} className="tb-fade-in-up">
+        {myWaitingTable ? (
+          <YourWaitingTable matchId={myWaitingTable.matchId} code={myWaitingTable.code} />
+        ) : (
+          <WaitingTables gameId={gameId} canJoin />
+        )}
+      </div>
+
+      {/* Derecha: configuración para crear mesa, con "Comenzar" al fondo */}
+      <div className="flex flex-col gap-6 rounded-2xl border border-tb-border bg-tb-surface p-6">
+        <div className={locked ? 'pointer-events-none flex flex-col gap-6 opacity-50' : 'flex flex-col gap-6'}>
+          <div>
+            <Eyebrow>{t('lobby.mode')}</Eyebrow>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <ModeCard
+                selected={displayMode === 'realtime'}
+                onSelect={() => handleModeChange('realtime')}
+                icon={<PlayIcon className="h-4 w-4" />}
+                title={t('lobby.realtime.title')}
+                desc={t('lobby.realtime.desc')}
+              />
+              <ModeCard
+                selected={displayMode === 'async'}
+                onSelect={() => handleModeChange('async')}
+                icon={<ClockIcon className="h-4 w-4" />}
+                title={t('lobby.async.title')}
+                desc={t('lobby.async.desc')}
+              />
             </div>
+          </div>
 
+          <div>
+            <Eyebrow>{t('lobby.speed')}</Eyebrow>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {presets.map((s) => (
+                <Chip key={s ?? 'untimed'} selected={displayTurnDurationS === s} onSelect={() => setTurnDurationS(s)}>
+                  {s === null ? t('lobby.untimed') : formatDuration(s)}
+                </Chip>
+              ))}
+            </div>
+            {displayTurnDurationS === null && <p className="mt-2 text-xs text-tb-muted">{t('lobby.untimedNote')}</p>}
+          </div>
+
+          {variants.length > 1 && (
             <div>
-              <Eyebrow>{t('lobby.speed')}</Eyebrow>
+              <Eyebrow>{t('lobby.variant')}</Eyebrow>
               <div className="mt-2 flex flex-wrap gap-2">
-                {presets.map((s) => (
-                  <Chip key={s} selected={turnDurationS === s} onSelect={() => setTurnDurationS(s)}>
-                    {formatDuration(s)}
+                {variants.map((v) => (
+                  <Chip key={v.id} selected={displayVariant === v.id} onSelect={() => setVariant(v.id)}>
+                    {v.name}
                   </Chip>
                 ))}
               </div>
             </div>
+          )}
 
-            {variants.length > 1 && (
-              <div>
-                <Eyebrow>{t('lobby.variant')}</Eyebrow>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {variants.map((v) => (
-                    <Chip key={v.id} selected={variant === v.id} onSelect={() => setVariant(v.id)}>
-                      {v.name}
-                    </Chip>
-                  ))}
-                </div>
+          {variableSeats && (
+            <div>
+              <Eyebrow>{t('lobby.seatCount')}</Eyebrow>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {Array.from({ length: maxPlayers - minPlayers + 1 }, (_, i) => minPlayers + i).map((n) => (
+                  <Chip key={n} selected={seatCount === n} onSelect={() => setSeatCount(n)}>
+                    {String(n)}
+                  </Chip>
+                ))}
               </div>
-            )}
+            </div>
+          )}
 
-            {variableSeats && (
-              <div>
-                <Eyebrow>{t('lobby.seatCount')}</Eyebrow>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {Array.from({ length: maxPlayers - minPlayers + 1 }, (_, i) => minPlayers + i).map((n) => (
-                    <Chip key={n} selected={seatCount === n} onSelect={() => setSeatCount(n)}>
-                      {String(n)}
-                    </Chip>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-tb-border bg-tb-surface-2 px-4 py-3">
-              <span>
-                <span className="block text-sm font-semibold text-tb-text">{t('lobby.private')}</span>
-                <span className="block text-xs text-tb-muted">{t('lobby.privateHint')}</span>
-              </span>
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-tb-border bg-tb-surface-2 px-4 py-3 transition-colors hover:border-tb-accent/40">
+            <span>
+              <span className="block text-sm font-semibold text-tb-text">{t('lobby.private')}</span>
+              <span className="block text-xs text-tb-muted">{t('lobby.privateHint')}</span>
+            </span>
+            <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
               <input
                 type="checkbox"
-                checked={isPrivate}
+                checked={displayIsPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
-                className="h-4 w-4 shrink-0 accent-tb-accent"
+                className="peer sr-only"
               />
-            </label>
-
-            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-tb-border bg-tb-surface-2 px-4 py-3">
-              <span>
-                <span className="block text-sm font-semibold text-tb-text">{t('lobby.rated')}</span>
-                <span className="block text-xs text-tb-muted">{t('lobby.ratedHint')}</span>
-              </span>
-              <input
-                type="checkbox"
-                checked={rated}
-                onChange={(e) => setRated(e.target.checked)}
-                className="h-4 w-4 shrink-0 accent-tb-accent"
-              />
-            </label>
-          </div>
-
-          {/* Tu mesa (previa) + Comenzar */}
-          <div className="flex flex-col rounded-2xl border border-tb-border bg-tb-surface p-6">
-            <Eyebrow>{t('lobby.yourTable')}</Eyebrow>
-            <div className="mt-4 flex flex-wrap items-start justify-center gap-6">
-              <OccupiedSeat user={{ username: me.username, avatarInitial: me.avatarInitial, avatarColor: me.avatarColor }} />
-              {Array.from({ length: seatCount - 1 }, (_, i) => (
-                <EmptySeat key={i} label={t('lobby.available')} />
-              ))}
-            </div>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
-              <span className="rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
-                {t(`sala.mode.${mode}`)}
-              </span>
-              <span className="tb-nums rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
-                {formatDuration(turnDurationS)}
-              </span>
-              {variants.length > 1 && (
-                <span className="rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
-                  {variants.find((v) => v.id === variant)?.name}
-                </span>
-              )}
-              <span className="rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
-                {isPrivate ? t('lobby.privateBadge') : t('lobby.publicBadge')}
-              </span>
-              <span className="rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
-                {rated ? t('lobby.ratedBadge') : t('lobby.casualBadge')}
-              </span>
-            </div>
-            {createMatch.isError && <p className="mt-3 text-center text-xs text-tb-danger">{createMatch.error.message}</p>}
-            <button
-              type="button"
-              onClick={() =>
-                createMatch.mutate({
-                  gameId,
-                  isPrivate,
-                  mode,
-                  turnDurationS,
-                  variant: variants.length > 1 ? variant : undefined,
-                  rated,
-                  numPlayers: variableSeats ? seatCount : undefined,
-                })
-              }
-              disabled={createMatch.isPending}
-              className="tb-gradient-cta mt-5 w-full rounded-xl px-6 py-3.5 font-display text-base font-extrabold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {createMatch.isPending ? t('lobby.creating') : t('lobby.start')}
-            </button>
-          </div>
+              <span className="absolute inset-0 rounded-full bg-tb-border transition-colors duration-200 peer-checked:bg-tb-accent" />
+              <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 peer-checked:translate-x-5" />
+            </span>
+          </label>
         </div>
-      )}
 
-      {blockedByOtherTable && <WaitingTables gameId={gameId} canJoin={false} />}
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
+          <span className="rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
+            {t(`sala.mode.${displayMode}`)}
+          </span>
+          <span className="tb-nums rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
+            {displayTurnDurationS == null ? t('lobby.untimed') : formatDuration(displayTurnDurationS)}
+          </span>
+          {variants.length > 1 && (
+            <span className="rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
+              {variants.find((v) => v.id === displayVariant)?.name}
+            </span>
+          )}
+          <span className="rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
+            {displayIsPrivate ? t('lobby.privateBadge') : t('lobby.publicBadge')}
+          </span>
+          <span className="rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
+            {displayRated ? t('lobby.ratedBadge') : t('lobby.casualBadge')}
+          </span>
+        </div>
+
+        {createMatch.isError && <p className="text-center text-xs text-tb-danger">{createMatch.error.message}</p>}
+
+        {locked ? (
+          <p className="flex w-full items-center justify-center gap-2 rounded-xl bg-tb-accent-tint px-6 py-3.5 text-center font-display text-sm font-semibold text-tb-accent">
+            <span className="h-2 w-2 shrink-0 rounded-full bg-tb-accent motion-safe:animate-pulse" />
+            {t('lobby.tableOpen')}
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() =>
+              createMatch.mutate({
+                gameId,
+                isPrivate,
+                mode,
+                turnDurationS,
+                variant: variants.length > 1 ? variant : undefined,
+                numPlayers: variableSeats ? seatCount : undefined,
+              })
+            }
+            disabled={createMatch.isPending}
+            className="tb-gradient-cta flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 font-display text-base font-extrabold text-white shadow-md shadow-tb-accent/20 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-tb-accent/30 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-md"
+          >
+            <PlayIcon className="h-4 w-4" />
+            {createMatch.isPending ? t('lobby.creating') : t('lobby.start')}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -614,7 +601,6 @@ function GameLobby({ gameId, minPlayers, maxPlayers, variants, defaultTurnSecond
 function GamePage() {
   const { t } = useTranslation();
   const { slug } = Route.useParams();
-  const { me } = Route.useRouteContext();
   const { data, isLoading } = trpc.games.bySlug.useQuery({ slug });
   const [tab, setTab] = useState<'jugar' | 'reglas'>('jugar');
 
@@ -742,7 +728,6 @@ function GamePage() {
               maxPlayers={game.maxPlayers}
               variants={variants}
               defaultTurnSeconds={defaultTurnSeconds}
-              me={me}
             />
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-tb-border bg-tb-surface p-6">

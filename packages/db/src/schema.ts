@@ -37,27 +37,34 @@ const timestamptz = (name: string) => timestamp(name, { withTimezone: true });
 
 export const presenceEnum = pgEnum('presence', ['online', 'away', 'in_game', 'offline']);
 
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey().$defaultFn(uuidv7),
-  username: citext('username').notNull().unique(),
-  displayName: text('display_name').notNull(),
-  email: citext('email').notNull().unique(),
-  passwordHash: text('password_hash'),
-  avatarInitial: varchar('avatar_initial', { length: 4 }),
-  avatarColor: varchar('avatar_color', { length: 16 }),
-  statusMessage: text('status_message'),
-  presence: presenceEnum('presence').notNull().default('offline'),
-  lastSeenAt: timestamptz('last_seen_at'),
-  emailVerifiedAt: timestamptz('email_verified_at'),
-  disabledAt: timestamptz('disabled_at'),
-  disabledReason: text('disabled_reason'),
-  // Secreto TOTP cifrado en reposo (AES-256-GCM, ver auth/crypto.ts) — null = 2FA no configurado.
-  totpSecret: text('totp_secret'),
-  // Presencia = 2FA activo; se fija tras confirmar el primer código válido en /2fa/enable.
-  totpEnabledAt: timestamptz('totp_enabled_at'),
-  createdAt: timestamptz('created_at').notNull().defaultNow(),
-  updatedAt: timestamptz('updated_at').notNull().defaultNow(),
-});
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').primaryKey().$defaultFn(uuidv7),
+    username: citext('username').notNull().unique(),
+    displayName: text('display_name').notNull(),
+    email: citext('email').notNull().unique(),
+    passwordHash: text('password_hash'),
+    avatarInitial: varchar('avatar_initial', { length: 4 }),
+    avatarColor: varchar('avatar_color', { length: 16 }),
+    statusMessage: text('status_message'),
+    presence: presenceEnum('presence').notNull().default('offline'),
+    lastSeenAt: timestamptz('last_seen_at'),
+    emailVerifiedAt: timestamptz('email_verified_at'),
+    disabledAt: timestamptz('disabled_at'),
+    disabledReason: text('disabled_reason'),
+    // Secreto TOTP cifrado en reposo (AES-256-GCM, ver auth/crypto.ts) — null = 2FA no configurado.
+    totpSecret: text('totp_secret'),
+    // Presencia = 2FA activo; se fija tras confirmar el primer código válido en /2fa/enable.
+    totpEnabledAt: timestamptz('totp_enabled_at'),
+    // Reputación de comportamiento (1-100, 100 = intachable) — independiente del rating de
+    // nivel de juego. Ver `reputationEvents` para el ledger de eventos que la mueven.
+    reputation: smallint('reputation').notNull().default(100),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
+    updatedAt: timestamptz('updated_at').notNull().defaultNow(),
+  },
+  (t) => [check('users_reputation_range', sql`${t.reputation} between 1 and 100`)],
+);
 
 export const sessions = pgTable(
   'sessions',
@@ -530,6 +537,70 @@ export const userGameStats = pgTable(
     lastPlayedAt: timestamptz('last_played_at'),
   },
   (t) => [primaryKey({ columns: [t.userId, t.gameId] })],
+);
+
+// ---------------------------------------------------------------------------
+// Reputación: eje de comportamiento, independiente del rating de nivel de juego
+// ---------------------------------------------------------------------------
+
+export const reputationReasonEnum = pgEnum('reputation_reason', [
+  'match_abandoned',
+  'match_forfeit_timeout',
+  'match_completed_clean',
+  'chat_blocked_profanity',
+  'user_report',
+  'passive_recovery',
+]);
+
+// Ledger append-only (mismo espíritu que `ratingHistory`): cada evento que mueve
+// `users.reputation` queda registrado con su before/after, tanto para poder auditar
+// como para calcular ventanas rodantes (escalada de abandonos, aviso de insultos en 24h).
+export const reputationEvents = pgTable(
+  'reputation_events',
+  {
+    id: uuid('id').primaryKey().$defaultFn(uuidv7),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    reason: reputationReasonEnum('reason').notNull(),
+    delta: smallint('delta').notNull(),
+    reputationBefore: smallint('reputation_before').notNull(),
+    reputationAfter: smallint('reputation_after').notNull(),
+    matchId: uuid('match_id').references(() => matches.id, { onDelete: 'set null' }),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('reputation_events_user_created_idx').on(t.userId, t.createdAt)],
+);
+
+export const userReportReasonEnum = pgEnum('user_report_reason', [
+  'abusive_language',
+  'unsportsmanlike',
+  'cheating',
+  'other',
+]);
+
+export const userReports = pgTable(
+  'user_reports',
+  {
+    id: uuid('id').primaryKey().$defaultFn(uuidv7),
+    reporterId: uuid('reporter_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    reportedUserId: uuid('reported_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    matchId: uuid('match_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    reason: userReportReasonEnum('reason').notNull(),
+    comment: text('comment'),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    // Un mismo reportador no puede reportar dos veces a la misma persona por la misma partida.
+    unique('user_reports_unique').on(t.reporterId, t.reportedUserId, t.matchId),
+    index('user_reports_reported_idx').on(t.reportedUserId),
+  ],
 );
 
 // ---------------------------------------------------------------------------

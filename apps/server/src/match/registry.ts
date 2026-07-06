@@ -23,7 +23,8 @@ export interface MatchRuntime {
   code: string;
   gameId: string;
   maxPlayers: number;
-  turnDurationS: number;
+  /** null = partida "sin tiempo": nunca se arma temporizador de turno ni hay forfeit por reloj. */
+  turnDurationS: number | null;
   /** realtime: no se avisa de cambio de turno (ambos jugadores ya están mirando el tablero); async: sí. */
   mode: 'realtime' | 'async';
   /** Config específica del juego (p.ej. variante elegida) — se pasa tal cual a `setup()`. */
@@ -38,6 +39,9 @@ export interface MatchRuntime {
   readyTimer: NodeJS.Timeout | null;
   /** Instante en el que termina la cuenta atrás de 20s del ready-check (transitorio, no persistido). */
   readyCheckEndsAt: Date | null;
+  /** Asientos que han pedido cortar la partida por abandono mutuo (transitorio, no persistido) —
+   * se efectúa en cuanto coincide con todos los asientos sentados. */
+  abandonRequests: Set<number>;
 }
 
 export function createEmptyRuntime(
@@ -45,7 +49,7 @@ export function createEmptyRuntime(
   code: string,
   gameId: string,
   maxPlayers: number,
-  turnDurationS: number,
+  turnDurationS: number | null,
   mode: 'realtime' | 'async',
   options: Record<string, unknown> | null,
 ): MatchRuntime {
@@ -62,6 +66,7 @@ export function createEmptyRuntime(
     turnTimer: null,
     readyTimer: null,
     readyCheckEndsAt: null,
+    abandonRequests: new Set(),
   };
 }
 

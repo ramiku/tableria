@@ -26,5 +26,14 @@ export async function dispatchClientMessage(
     case 'dm.send':
       await social.sendDirectMessage(socket, message.payload.conversationId, message.payload.body, message.payload.kind, message.payload.matchId);
       return;
+    case 'match.forfeit':
+      await service.handleForfeit(socket, message.payload.matchId);
+      return;
+    case 'match.abandonRequest':
+      await service.handleAbandonRequest(socket, message.payload.matchId);
+      return;
+    case 'match.abandonCancel':
+      await service.handleAbandonCancel(socket, message.payload.matchId);
+      return;
   }
 }

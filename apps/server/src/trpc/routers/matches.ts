@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { and, desc, eq, games, inArray, matchPlayers, matches, sql, users } from '@tableria/db';
 import { insertWithUniqueCode } from '../../match/codes.js';
 import { getGameDefinition } from '../../match/games.js';
+import { listFriendIds } from '../../social/friends.js';
 import { protectedProcedure, publicProcedure, router } from '../trpc.js';
 
 export const matchesRouter = router({
@@ -35,7 +36,11 @@ export const matchesRouter = router({
       .groupBy(matchPlayers.matchId);
     const countMap = new Map(counts.map((c) => [c.matchId, c.n]));
 
-    return rows.map((r) => ({ ...r, players: countMap.get(r.matchId) ?? 0 }));
+    // Ni vacías (mesa huérfana de antes de que abandonar como anfitrión cancelara la mesa entera)
+    // ni llenas (a punto de arrancar, ya no admiten más jugadores): solo mesas a las que unirse.
+    return rows
+      .map((r) => ({ ...r, players: countMap.get(r.matchId) ?? 0 }))
+      .filter((r) => r.players > 0 && r.players < r.maxPlayers);
   }),
 
   /** Últimas partidas acabadas del usuario, con rival(es) y resultado — para el perfil. */
@@ -108,12 +113,76 @@ export const matchesRouter = router({
   /** Mesa activa del usuario (esperando, arrancando o en juego) — el lobby de cada juego decide su estado con esto. */
   myActive: protectedProcedure.query(async ({ ctx }) => {
     const [row] = await ctx.db
-      .select({ matchId: matches.id, code: matches.code, gameId: matches.gameId, state: matches.state })
+      .select({
+        matchId: matches.id,
+        code: matches.code,
+        gameId: matches.gameId,
+        state: matches.state,
+        mode: matches.mode,
+        turnDurationS: matches.turnDurationS,
+        rated: matches.rated,
+        isPrivate: matches.isPrivate,
+        maxPlayers: matches.maxPlayers,
+        options: matches.options,
+      })
       .from(matchPlayers)
       .innerJoin(matches, eq(matches.id, matchPlayers.matchId))
       .where(and(eq(matchPlayers.userId, ctx.user.id), inArray(matches.state, ['waiting', 'starting', 'in_game'])))
       .limit(1);
-    return row ?? null;
+    if (!row) return null;
+    const { options, ...rest } = row;
+    return { ...rest, variant: ((options as { variant?: string } | null)?.variant ?? null) as string | null };
+  }),
+
+  /**
+   * Mesas en espera creadas por un amigo (aunque sean privadas — la visibilidad aquí la da la
+   * amistad, no `isPrivate`) — para "Salas de amigos" en el rail: unirse en un clic desde ahí.
+   */
+  friendsWaiting: protectedProcedure.query(async ({ ctx }) => {
+    const friendIds = await listFriendIds(ctx.db, ctx.user.id);
+    if (friendIds.length === 0) return [];
+
+    const rows = await ctx.db
+      .select({
+        matchId: matches.id,
+        code: matches.code,
+        gameId: matches.gameId,
+        gameName: games.name,
+        maxPlayers: matches.maxPlayers,
+        hostDisplayName: users.displayName,
+        hostAvatarInitial: users.avatarInitial,
+        hostAvatarColor: users.avatarColor,
+      })
+      .from(matches)
+      .innerJoin(games, eq(matches.gameId, games.id))
+      .innerJoin(users, eq(users.id, matches.hostUserId))
+      .where(and(eq(matches.state, 'waiting'), inArray(matches.hostUserId, friendIds)))
+      .orderBy(desc(matches.createdAt))
+      .limit(20);
+
+    if (rows.length === 0) return [];
+
+    const seatRows = await ctx.db
+      .select({ matchId: matchPlayers.matchId, userId: matchPlayers.userId })
+      .from(matchPlayers)
+      .where(
+        inArray(
+          matchPlayers.matchId,
+          rows.map((r) => r.matchId),
+        ),
+      );
+    const seatsByMatch = new Map<string, string[]>();
+    for (const s of seatRows) {
+      const list = seatsByMatch.get(s.matchId) ?? [];
+      list.push(s.userId);
+      seatsByMatch.set(s.matchId, list);
+    }
+
+    // Ya llena o ya sentado en ella (p.ej. la creó otro amigo dentro de la misma mesa): no es "unirse".
+    return rows
+      .map((r) => ({ ...r, seats: seatsByMatch.get(r.matchId) ?? [] }))
+      .filter((r) => r.seats.length < r.maxPlayers && !r.seats.includes(ctx.user.id))
+      .map(({ seats: _seats, ...r }) => r);
   }),
 
   /** Mesas públicas en espera de un juego, con sus asientos — para unirse pulsando el círculo libre. */
@@ -175,6 +244,7 @@ export const matchesRouter = router({
       .select({
         matchId: matches.id,
         gameId: matches.gameId,
+        gameName: games.name,
         state: matches.state,
         mode: matches.mode,
         isPrivate: matches.isPrivate,
@@ -183,6 +253,7 @@ export const matchesRouter = router({
         rated: matches.rated,
       })
       .from(matches)
+      .innerJoin(games, eq(matches.gameId, games.id))
       .where(eq(matches.code, input.code.toUpperCase()))
       .limit(1);
     return row ?? null;
@@ -194,9 +265,9 @@ export const matchesRouter = router({
         gameId: z.string(),
         isPrivate: z.boolean().default(false),
         mode: z.enum(['realtime', 'async']).default('realtime'),
-        turnDurationS: z.number().int().positive().optional(),
+        /** null explícito = "sin tiempo" (amistosa, sin forfeit por reloj); ausente = usar el default del juego. */
+        turnDurationS: z.number().int().positive().nullable().optional(),
         variant: z.string().optional(),
-        rated: z.boolean().default(false),
         /** Solo tiene efecto en juegos de aforo variable (minPlayers !== maxPlayers, p.ej. Pista Única); se ignora en el resto. */
         numPlayers: z.number().int().positive().optional(),
       }),
@@ -217,7 +288,13 @@ export const matchesRouter = router({
 
       const def = getGameDefinition(input.gameId);
       const catalogOptions = (game.options ?? {}) as { defaultTurnSeconds?: number };
-      const turnDurationS = input.turnDurationS ?? catalogOptions.defaultTurnSeconds ?? def?.ui.defaultTurnSeconds ?? 30;
+      // "Sin tiempo" (input.turnDurationS === null) siempre es amistosa; cualquier partida con
+      // reloj de turno es competitiva — ya no es una elección aparte del anfitrión.
+      const untimed = input.turnDurationS === null;
+      const turnDurationS = untimed
+        ? null
+        : (input.turnDurationS ?? catalogOptions.defaultTurnSeconds ?? def?.ui.defaultTurnSeconds ?? 30);
+      const rated = !untimed;
       const userId = ctx.user.id;
 
       const availableVariants = def?.ui.variants ?? [];
@@ -249,7 +326,7 @@ export const matchesRouter = router({
               mode: input.mode,
               turnDurationS,
               options: matchOptions,
-              rated: input.rated,
+              rated,
             })
             .returning({ id: matches.id, code: matches.code });
           if (!match) throw new Error('No se pudo crear la sala');
@@ -351,13 +428,23 @@ export const matchesRouter = router({
     }),
 
   leave: protectedProcedure.input(z.object({ matchId: z.uuid() })).mutation(async ({ ctx, input }) => {
-    const [match] = await ctx.db.select({ state: matches.state }).from(matches).where(eq(matches.id, input.matchId)).limit(1);
+    const [match] = await ctx.db
+      .select({ state: matches.state, hostUserId: matches.hostUserId })
+      .from(matches)
+      .where(eq(matches.id, input.matchId))
+      .limit(1);
     if (!match || match.state !== 'waiting') {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'No puedes abandonar la sala ahora' });
     }
-    await ctx.db
-      .delete(matchPlayers)
-      .where(and(eq(matchPlayers.matchId, input.matchId), eq(matchPlayers.userId, ctx.user.id)));
+
+    if (match.hostUserId === ctx.user.id) {
+      // El anfitrión se va: se cierra la mesa entera para todos, no solo su asiento.
+      await ctx.db.update(matches).set({ state: 'cancelled' }).where(eq(matches.id, input.matchId));
+    } else {
+      await ctx.db
+        .delete(matchPlayers)
+        .where(and(eq(matchPlayers.matchId, input.matchId), eq(matchPlayers.userId, ctx.user.id)));
+    }
     await ctx.matchService.broadcastLobby(input.matchId);
     return { ok: true };
   }),

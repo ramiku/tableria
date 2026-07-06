@@ -13,6 +13,7 @@ import {
 } from '../components/icons';
 import { LanguageSection } from '../components/LanguageSelector';
 import { ApiError } from '../lib/api';
+import { formatMemberSince } from '../lib/formatDate';
 import {
   disableTwoFactor,
   enableTwoFactor,
@@ -48,10 +49,6 @@ const demoAchievements: { id: string; nameKey: string; descKey: string; unlocked
 ];
 
 const memberSince = new Date(2026, 0, 12); // 12 ene 2026 — dato demo
-
-function formatMemberSince(date: Date, locale: string) {
-  return date.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-}
 
 const resultStyles: Record<MatchResult, { dot: string; text: string; bg: string }> = {
   win: { dot: 'bg-tb-success', text: 'text-tb-success', bg: 'bg-tb-accent-tint' },

@@ -16,10 +16,13 @@ test('dos jugadores abren una partida de reversi y las capturas se reflejan en v
     // A crea la mesa (asiento 0 → oscuras, primer turno).
     await pageA.goto('/juegos/reversi');
     await pageA.getByRole('button', { name: 'Comenzar' }).click();
-    const code = (await pageA.getByTestId('room-code').innerText()).trim();
 
-    await pageA.goto(`/sala/${code}`);
-    await pageB.goto(`/sala/${code}`);
+    // B se une pulsando "Unirse" desde la ficha del juego (ya no hay código que compartir).
+    await pageB.goto('/juegos/reversi');
+    await pageB.getByRole('button', { name: 'Unirse' }).first().click();
+
+    await pageA.waitForURL('**/sala/*');
+    await pageB.waitForURL('**/sala/*');
     await pageA.getByRole('button', { name: 'Estoy listo' }).click();
     await pageB.getByRole('button', { name: 'Estoy listo' }).click();
     await pageA.waitForURL('**/partida/*');

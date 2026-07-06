@@ -71,13 +71,19 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('match.ended'),
     payload: z.object({
       matchId: z.uuid(),
-      reason: z.enum(['completed', 'forfeit']),
+      // 'abandoned' = abandono mutuo acordado: no hay ranking real, nadie gana ni pierde.
+      reason: z.enum(['completed', 'forfeit', 'abandoned']),
       ranking: z.array(rankingEntrySchema),
-      // null si la partida era casual (no rated); si no, delta de rating por asiento.
+      // null si la partida era casual (no rated) o si fue un abandono mutuo; si no, delta por asiento.
       ratingDeltas: z
         .array(z.object({ seat: z.number().int(), ratingBefore: z.number(), ratingAfter: z.number() }))
         .nullable(),
     }),
+  }),
+  // Estado en vivo de las peticiones de abandono mutuo (qué asientos ya lo han pedido).
+  z.object({
+    type: z.literal('match.abandonStatus'),
+    payload: z.object({ matchId: z.uuid(), requestedSeats: z.array(z.number().int()) }),
   }),
   z.object({
     type: z.literal('match.error'),

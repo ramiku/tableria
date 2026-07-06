@@ -1,6 +1,9 @@
 import { eq, users, type Db } from '@tableria/db';
 import type { ServerMessage } from '@tableria/protocol';
+import { sendError } from '../match/broadcast.js';
 import type { AuthedSocket } from '../match/registry.js';
+import { containsProfanity } from '../moderation/profanity.js';
+import * as reputation from '../reputation/service.js';
 import { sendToSocket } from '../ws/send.js';
 import * as activity from './activity.js';
 import * as conversations from './conversations.js';
@@ -72,6 +75,11 @@ export function createSocialService(db: Db): SocialService {
     async sendDirectMessage(socket, conversationId, body, kind, matchId) {
       const member = await conversations.isMember(db, conversationId, socket.userId);
       if (!member) throw new Error('No perteneces a esta conversación');
+
+      if (kind === 'text' && containsProfanity(body)) {
+        await reputation.recordProfanityBlock(db, socket.userId);
+        return sendError(socket, 'BLOCKED_LANGUAGE', 'Tu mensaje se bloqueó por lenguaje inadecuado');
+      }
 
       const entry = await conversations.sendMessage(db, conversationId, socket.userId, body, kind, matchId);
       const message: ServerMessage = {

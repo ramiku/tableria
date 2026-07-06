@@ -13,6 +13,11 @@ interface MatchStoreState {
   matchState: StatePayload | null;
   ended: EndedPayload | null;
   chat: ChatEntry[];
+  /** Asientos que han pedido cortar la partida por abandono mutuo (vacío = nadie lo ha pedido). */
+  abandonRequestedSeats: number[];
+  /** Último error de mensaje bloqueado por lenguaje (chat de mesa o DM) — para avisar en la UI. */
+  chatBlockedError: string | null;
+  clearChatBlockedError(): void;
   reset(): void;
 }
 
@@ -22,7 +27,10 @@ export const useMatchStore = create<MatchStoreState>((set) => ({
   matchState: null,
   ended: null,
   chat: [],
-  reset: () => set({ lobby: null, matchState: null, ended: null, chat: [] }),
+  abandonRequestedSeats: [],
+  chatBlockedError: null,
+  clearChatBlockedError: () => set({ chatBlockedError: null }),
+  reset: () => set({ lobby: null, matchState: null, ended: null, chat: [], abandonRequestedSeats: [] }),
 }));
 
 function handleMessage(message: ServerMessage): void {
@@ -34,7 +42,10 @@ function handleMessage(message: ServerMessage): void {
       useMatchStore.setState({ matchState: message.payload, lobby: null });
       return;
     case 'match.ended':
-      useMatchStore.setState({ ended: message.payload });
+      useMatchStore.setState({ ended: message.payload, abandonRequestedSeats: [] });
+      return;
+    case 'match.abandonStatus':
+      useMatchStore.setState({ abandonRequestedSeats: message.payload.requestedSeats });
       return;
     case 'chat.message': {
       const { id, userId, username, body, createdAt } = message.payload;
@@ -46,6 +57,9 @@ function handleMessage(message: ServerMessage): void {
       return;
     case 'match.error':
       console.error('[match.error]', message.payload.code, message.payload.message);
+      if (message.payload.code === 'BLOCKED_LANGUAGE') {
+        useMatchStore.setState({ chatBlockedError: message.payload.message });
+      }
       return;
   }
 }

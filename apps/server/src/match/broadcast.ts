@@ -107,7 +107,7 @@ export async function broadcastState(db: Db, runtime: MatchRuntime): Promise<voi
 
 export function broadcastEnded(
   runtime: MatchRuntime,
-  reason: 'completed' | 'forfeit',
+  reason: 'completed' | 'forfeit' | 'abandoned',
   ranking: PlayerRank[],
   ratingDeltas: RatingDeltas,
 ): void {
@@ -116,6 +116,15 @@ export function broadcastEnded(
   const message: ServerMessage = {
     type: 'match.ended',
     payload: { matchId: runtime.matchId, reason, ranking, ratingDeltas: ratingDeltasPayload },
+  };
+  for (const socket of allSockets(runtime)) send(socket, message);
+}
+
+/** Estado en vivo de quién ha pedido cortar la partida por abandono mutuo. */
+export function broadcastAbandonStatus(runtime: MatchRuntime): void {
+  const message: ServerMessage = {
+    type: 'match.abandonStatus',
+    payload: { matchId: runtime.matchId, requestedSeats: Array.from(runtime.abandonRequests) },
   };
   for (const socket of allSockets(runtime)) send(socket, message);
 }

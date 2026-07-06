@@ -23,11 +23,16 @@ test('3 jugadores juegan Pista Única: ronda normal con pistas simultáneas y ro
     await pageA.goto('/juegos/pista-unica');
     await pageA.getByRole('button', { name: '15s' }).click();
     await pageA.getByRole('button', { name: 'Comenzar' }).click();
-    const code = (await pageA.getByTestId('room-code').innerText()).trim();
 
-    await pageA.goto(`/sala/${code}`);
-    await pageB.goto(`/sala/${code}`);
-    await pageC.goto(`/sala/${code}`);
+    // B y C se unen pulsando "Unirse" desde la ficha del juego (ya no hay código que compartir).
+    await pageB.goto('/juegos/pista-unica');
+    await pageB.getByRole('button', { name: 'Unirse' }).first().click();
+    await pageC.goto('/juegos/pista-unica');
+    await pageC.getByRole('button', { name: 'Unirse' }).first().click();
+
+    await pageA.waitForURL('**/sala/*');
+    await pageB.waitForURL('**/sala/*');
+    await pageC.waitForURL('**/sala/*');
     await pageA.getByRole('button', { name: 'Estoy listo' }).click();
     await pageB.getByRole('button', { name: 'Estoy listo' }).click();
     await pageC.getByRole('button', { name: 'Estoy listo' }).click();

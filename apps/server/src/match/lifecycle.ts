@@ -2,10 +2,11 @@ import { randomBytes } from 'node:crypto';
 import { and, eq, inArray, matchMoves, matchPlayers, matches, type Db, type Tx } from '@tableria/db';
 import { createRng, type GameEndResult, type MoveCtx, type PlayerRank } from '@tableria/engine';
 import { applyMatchResult, type RatingDeltas } from '../ratings/service.js';
+import * as reputation from '../reputation/service.js';
 import * as notifications from '../social/notifications.js';
 import { setInGame, socketsFor } from '../social/presence.js';
 import { sendToSocket } from '../ws/send.js';
-import { broadcastEnded, broadcastState } from './broadcast.js';
+import { broadcastAbandonStatus, broadcastEnded, broadcastState } from './broadcast.js';
 import { emitMatchFinished } from './events.js';
 import { getGameDefinition } from './games.js';
 import { loadEngineState } from './persistence.js';
@@ -71,7 +72,8 @@ export async function startMatch(db: Db, runtime: MatchRuntime): Promise<void> {
   const rng = createRng(seed);
   const state = def.setup({ numPlayers: rows.length, rng, options: runtime.options ?? undefined });
   const now = new Date();
-  const turnDeadlineAt = new Date(now.getTime() + runtime.turnDurationS * 1000);
+  // null = partida "sin tiempo": no se arma temporizador, nunca hay forfeit por reloj.
+  const turnDeadlineAt = runtime.turnDurationS != null ? new Date(now.getTime() + runtime.turnDurationS * 1000) : null;
 
   await db
     .update(matches)
@@ -79,9 +81,11 @@ export async function startMatch(db: Db, runtime: MatchRuntime): Promise<void> {
     .where(eq(matches.id, runtime.matchId));
 
   runtime.engine = { def, state, seq: 0 };
-  armTurnTimer(runtime, turnDeadlineAt, () => {
-    void handleTurnTimeout(db, runtime).catch((err: unknown) => console.error('handleTurnTimeout falló', err));
-  });
+  if (turnDeadlineAt) {
+    armTurnTimer(runtime, turnDeadlineAt, () => {
+      void handleTurnTimeout(db, runtime).catch((err: unknown) => console.error('handleTurnTimeout falló', err));
+    });
+  }
 
   await broadcastState(db, runtime);
   void setInGame(db, rows.map((r) => r.userId), true).catch((err: unknown) => console.error('setInGame falló', err));
@@ -156,6 +160,12 @@ export async function applyPlayerMove(
         const seatToUserId = new Map(playerRows.map((r) => [r.seat, r.userId]));
         ratingDeltas = await finishMatchTx(tx, runtime, endResult.ranking, row.rated, seatToUserId);
 
+        // Terminó con normalidad (nadie abandonó) — el incentivo de "buen juego": +1 de
+        // reputación para todos los que la jugaron hasta el final, tope 100.
+        for (const userId of seatToUserId.values()) {
+          await reputation.recordMatchEnd(tx, userId, runtime.matchId, 'clean');
+        }
+
         await tx
           .update(matches)
           .set({ state: 'finished', finishedAt: new Date(), turnDeadlineAt: null, ...snapshotFields })
@@ -174,12 +184,15 @@ export async function applyPlayerMove(
           if (Object.keys(snapshotFields).length > 0) {
             await tx.update(matches).set(snapshotFields).where(eq(matches.id, runtime.matchId));
           }
-        } else {
+        } else if (runtime.turnDurationS != null) {
           const nextDeadline = new Date(Date.now() + runtime.turnDurationS * 1000);
           await tx
             .update(matches)
             .set({ turnDeadlineAt: nextDeadline, ...snapshotFields })
             .where(eq(matches.id, runtime.matchId));
+        } else if (Object.keys(snapshotFields).length > 0) {
+          // Partida "sin tiempo": no hay deadline que reiniciar, solo persistir el snapshot si toca.
+          await tx.update(matches).set(snapshotFields).where(eq(matches.id, runtime.matchId));
         }
       }
 
@@ -193,6 +206,13 @@ export async function applyPlayerMove(
   }
 
   if (!outcome.ok) return outcome;
+
+  // Un movimiento real cancela cualquier petición de abandono mutuo pendiente — seguir
+  // jugando es la señal más clara de que ya no se quiere cortar la partida.
+  if (runtime.abandonRequests.size > 0) {
+    runtime.abandonRequests.clear();
+    broadcastAbandonStatus(runtime);
+  }
 
   if (endResult) {
     await finishRuntimeAndNotify(db, runtime, 'completed', (endResult as GameEndResult).ranking, ratingDeltas);
@@ -271,7 +291,7 @@ export async function handleTurnTimeout(db: Db, runtime: MatchRuntime): Promise<
     const action = def.onTurnTimeout ? def.onTurnTimeout(state, seat) : ({ type: 'forfeit' } as const);
 
     if (action.type === 'forfeit') {
-      await forfeitMatch(db, runtime, seat);
+      await forfeitMatch(db, runtime, seat, 'timeout');
       return; // el forfeit termina la partida entera para todos los asientos
     } else {
       await applyPlayerMove(db, runtime, seat, action.move);
@@ -279,7 +299,18 @@ export async function handleTurnTimeout(db: Db, runtime: MatchRuntime): Promise<
   }
 }
 
-async function forfeitMatch(db: Db, runtime: MatchRuntime, forfeitingSeat: number): Promise<void> {
+/**
+ * Cierra la partida por abandono de un solo asiento — derrota real para quien
+ * abandona, victoria para el resto. `reason` distingue el motivo a efectos de
+ * reputación: `'quit'` (abandono voluntario, `match.forfeit`) penaliza más que
+ * `'timeout'` (no mover a tiempo, puede ser un corte de conexión).
+ */
+export async function forfeitMatch(
+  db: Db,
+  runtime: MatchRuntime,
+  forfeitingSeat: number,
+  reason: 'timeout' | 'quit',
+): Promise<void> {
   const rows = await db
     .select({ seat: matchPlayers.seat, userId: matchPlayers.userId })
     .from(matchPlayers)
@@ -302,10 +333,53 @@ async function forfeitMatch(db: Db, runtime: MatchRuntime, forfeitingSeat: numbe
       .update(matches)
       .set({ state: 'finished', finishedAt: new Date(), turnDeadlineAt: null })
       .where(eq(matches.id, runtime.matchId));
+
+    for (const [seat, userId] of seatToUserId) {
+      const kind = seat === forfeitingSeat ? (reason === 'quit' ? 'abandoned' : 'timeout') : 'clean';
+      await reputation.recordMatchEnd(tx, userId, runtime.matchId, kind);
+    }
     return deltas;
   });
 
+  runtime.abandonRequests.clear();
   await finishRuntimeAndNotify(db, runtime, 'forfeit', ranking, ratingDeltas);
+}
+
+/**
+ * Abandono mutuo: se propone con `match.abandonRequest` y solo se efectúa cuando
+ * todos los asientos sentados lo han pedido. Neutral por diseño — a diferencia de
+ * `forfeitMatch`, no toca rating ni estadísticas ni reputación de nadie, porque no
+ * hay ganador ni perdedor real, solo un cierre consensuado.
+ */
+export async function requestMutualAbandon(db: Db, runtime: MatchRuntime, seat: number): Promise<void> {
+  if (!runtime.engine) return;
+  runtime.abandonRequests.add(seat);
+
+  if (runtime.abandonRequests.size < runtime.maxPlayers) {
+    broadcastAbandonStatus(runtime);
+    return;
+  }
+
+  disarmTurnTimer(runtime);
+  await db
+    .update(matches)
+    .set({ state: 'abandoned', finishedAt: new Date(), turnDeadlineAt: null })
+    .where(eq(matches.id, runtime.matchId));
+  await db.update(matchPlayers).set({ leftAt: new Date() }).where(eq(matchPlayers.matchId, runtime.matchId));
+
+  runtime.engine = null;
+  runtime.abandonRequests.clear();
+
+  broadcastEnded(runtime, 'abandoned', [], new Map());
+  await setInGameForMatch(db, runtime.matchId, false);
+  // A diferencia de `finishRuntimeAndNotify`, no se llama a `emitMatchFinished`: un abandono
+  // mutuo no tiene ranking ni ganador, así que el runner de torneos (único listener hoy) no
+  // tendría con qué avanzar el bracket — las mesas de torneo quedan fuera de alcance por ahora.
+}
+
+export function cancelMutualAbandon(runtime: MatchRuntime, seat: number): void {
+  if (!runtime.abandonRequests.delete(seat)) return;
+  broadcastAbandonStatus(runtime);
 }
 
 async function setInGameForMatch(db: Db, matchId: string, inGame: boolean): Promise<void> {

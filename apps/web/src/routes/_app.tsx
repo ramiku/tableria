@@ -49,10 +49,17 @@ function AppLayout() {
   const navigate = useNavigate();
   const { friends } = useFriendsList();
   const { data: activity } = trpc.activity.listForMe.useQuery();
+  const { data: friendsRooms } = trpc.matches.friendsWaiting.useQuery(undefined, { refetchInterval: 5000 });
   const utils = trpc.useUtils();
   const openChat = useChatDock((s) => s.openChat);
   const getOrCreateDirect = trpc.conversations.getOrCreateDirect.useMutation({
     onSuccess: () => void utils.conversations.list.invalidate(),
+  });
+  const joinFriendRoom = trpc.matches.join.useMutation({
+    onSuccess: (_result, variables) => {
+      void utils.matches.myActive.invalidate();
+      void navigate({ to: '/sala/$code', params: { code: variables.code } });
+    },
   });
 
   useEffect(() => {
@@ -60,7 +67,6 @@ function AppLayout() {
   }, []);
 
   const onlineFriends = friends.filter((f) => f.presence !== 'offline');
-  const friendsInGame = friends.filter((f) => f.presence === 'in_game');
 
   async function handleLogout() {
     await logout();
@@ -191,19 +197,34 @@ function AppLayout() {
           <h2 className="font-display text-sm font-bold uppercase tracking-wide text-tb-muted">
             {t('rail.friendsRooms')}
           </h2>
-          {friendsInGame.length === 0 ? (
+          {!friendsRooms || friendsRooms.length === 0 ? (
             <p className="mt-2 text-sm text-tb-muted">{t('rail.empty')}</p>
           ) : (
-            <ul className="mt-2 flex flex-col gap-2">
-              {friendsInGame.map((f) => (
-                <li key={f.userId} className="flex items-center gap-2.5">
-                  <Avatar initial={f.avatarInitial ?? f.username.charAt(0).toUpperCase()} color={f.avatarColor ?? '#2f6fe0'} size={28} />
-                  <p className="text-sm text-tb-text">{f.displayName}</p>
-                  <span className="text-xs text-tb-muted">{t('presence.inGame')}</span>
+            <ul className="mt-2 flex flex-col gap-1">
+              {friendsRooms.map((room) => (
+                <li key={room.matchId} className="group flex items-center gap-2.5 rounded-lg px-1 py-1.5 -mx-1 transition-colors hover:bg-tb-surface">
+                  <Avatar
+                    initial={room.hostAvatarInitial ?? room.hostDisplayName.charAt(0).toUpperCase()}
+                    color={room.hostAvatarColor ?? '#2f6fe0'}
+                    size={28}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-tb-text">{room.hostDisplayName}</p>
+                    <p className="truncate text-xs text-tb-muted">{room.gameName}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => joinFriendRoom.mutate({ code: room.code })}
+                    disabled={joinFriendRoom.isPending}
+                    className="shrink-0 rounded-lg border border-tb-border px-2.5 py-1 text-xs font-semibold text-tb-accent opacity-0 transition-opacity hover:border-tb-accent hover:bg-tb-accent-tint group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-50"
+                  >
+                    {t('lobby.join')}
+                  </button>
                 </li>
               ))}
             </ul>
           )}
+          {joinFriendRoom.isError && <p className="mt-1.5 text-xs font-medium text-tb-danger">{joinFriendRoom.error.message}</p>}
         </div>
       </aside>
 

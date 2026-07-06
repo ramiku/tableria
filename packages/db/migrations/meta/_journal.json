@@ -71,6 +71,13 @@
       "when": 1783288530305,
       "tag": "0009_blushing_blockbuster",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783332472206,
+      "tag": "0010_youthful_zombie",
+      "breakpoints": true
     }
   ]
 }

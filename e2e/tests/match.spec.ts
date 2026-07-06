@@ -16,11 +16,14 @@ test('dos jugadores completan una partida de tres en raya de principio a fin', a
     // A crea la mesa (queda sentado en el asiento 0 → X, primer turno).
     await pageA.goto('/juegos/tres-en-raya');
     await pageA.getByRole('button', { name: 'Comenzar' }).click();
-    const code = (await pageA.getByTestId('room-code').innerText()).trim();
 
-    // Ambos confirman desde /sala/$code — misma página, mismo botón para los dos.
-    await pageA.goto(`/sala/${code}`);
-    await pageB.goto(`/sala/${code}`);
+    // B se une pulsando "Unirse" desde la ficha del juego (ya no hay código que compartir).
+    await pageB.goto('/juegos/tres-en-raya');
+    await pageB.getByRole('button', { name: 'Unirse' }).first().click();
+
+    // La mesa se completa: ambos pasan solos a /sala/$code — mismo botón para los dos.
+    await pageA.waitForURL('**/sala/*');
+    await pageB.waitForURL('**/sala/*');
 
     await pageA.getByRole('button', { name: 'Estoy listo' }).click();
     await pageB.getByRole('button', { name: 'Estoy listo' }).click();

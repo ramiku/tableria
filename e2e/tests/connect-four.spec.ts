@@ -17,10 +17,13 @@ test('dos jugadores eligen tablero 8x8 y completan una partida de Conecta 4 (tab
     await pageA.goto('/juegos/conecta-cuatro');
     await pageA.getByRole('button', { name: '8×8' }).click();
     await pageA.getByRole('button', { name: 'Comenzar' }).click();
-    const code = (await pageA.getByTestId('room-code').innerText()).trim();
 
-    await pageA.goto(`/sala/${code}`);
-    await pageB.goto(`/sala/${code}`);
+    // B se une pulsando "Unirse" desde la ficha del juego (ya no hay código que compartir).
+    await pageB.goto('/juegos/conecta-cuatro');
+    await pageB.getByRole('button', { name: 'Unirse' }).first().click();
+
+    await pageA.waitForURL('**/sala/*');
+    await pageB.waitForURL('**/sala/*');
     await expect(pageA.getByText('8×8')).toBeVisible();
     await pageA.getByRole('button', { name: 'Estoy listo' }).click();
     await pageB.getByRole('button', { name: 'Estoy listo' }).click();

@@ -1,7 +1,16 @@
 import { and, eq, matchChatMessages, matchPlayers, matchSpectators, matches, type Db } from '@tableria/db';
+import { containsProfanity } from '../moderation/profanity.js';
+import * as reputation from '../reputation/service.js';
 import { broadcastChat, broadcastLobby, broadcastState, sendChatHistory, sendError } from './broadcast.js';
 import { getGameDefinition } from './games.js';
-import { applyPlayerMove, handleTurnTimeout, startMatch } from './lifecycle.js';
+import {
+  applyPlayerMove,
+  cancelMutualAbandon,
+  forfeitMatch,
+  handleTurnTimeout,
+  requestMutualAbandon,
+  startMatch,
+} from './lifecycle.js';
 import { loadEngineState } from './persistence.js';
 import {
   addPlayerSocket,
@@ -21,6 +30,11 @@ export interface MatchService {
   detachSocket(socket: AuthedSocket): void;
   handleMove(socket: AuthedSocket, matchId: string, rawMove: unknown): Promise<void>;
   handleChat(socket: AuthedSocket, matchId: string, body: string): Promise<void>;
+  /** Abandono unilateral: derrota real e inmediata para quien lo manda. */
+  handleForfeit(socket: AuthedSocket, matchId: string): Promise<void>;
+  /** Abandono mutuo: propone cortar sin que cuente para nadie; se efectúa cuando todos piden. */
+  handleAbandonRequest(socket: AuthedSocket, matchId: string): Promise<void>;
+  handleAbandonCancel(socket: AuthedSocket, matchId: string): Promise<void>;
   recoverOnBoot(): Promise<void>;
 }
 
@@ -35,7 +49,8 @@ export function createMatchService(db: Db): MatchService {
     if (!row) return null;
 
     const def = getGameDefinition(row.gameId);
-    const turnDurationS = row.turnDurationS ?? def?.ui.defaultTurnSeconds ?? 30;
+    // null aquí es una decisión ya persistida ("sin tiempo"), no un dato ausente: se respeta tal cual.
+    const turnDurationS = row.turnDurationS;
     const runtime = createEmptyRuntime(
       matchId,
       row.code,
@@ -144,6 +159,11 @@ export function createMatchService(db: Db): MatchService {
       const runtime = await ensureRuntime(matchId);
       if (!runtime) return sendError(socket, 'MATCH_NOT_FOUND', 'La partida no existe');
 
+      if (containsProfanity(body)) {
+        await reputation.recordProfanityBlock(db, socket.userId);
+        return sendError(socket, 'BLOCKED_LANGUAGE', 'Tu mensaje se bloqueó por lenguaje inadecuado');
+      }
+
       const [inserted] = await db
         .insert(matchChatMessages)
         .values({ matchId, userId: socket.userId, body })
@@ -157,6 +177,50 @@ export function createMatchService(db: Db): MatchService {
         body: inserted.body,
         createdAt: inserted.createdAt,
       });
+    },
+
+    async handleForfeit(socket, matchId) {
+      const runtime = await ensureRuntime(matchId);
+      if (!runtime) return sendError(socket, 'MATCH_NOT_FOUND', 'La partida no existe');
+      if (!runtime.engine) return sendError(socket, 'MATCH_NOT_IN_GAME', 'La partida no está en curso');
+
+      const [seatRow] = await db
+        .select({ seat: matchPlayers.seat })
+        .from(matchPlayers)
+        .where(and(eq(matchPlayers.matchId, matchId), eq(matchPlayers.userId, socket.userId)))
+        .limit(1);
+      if (!seatRow) return sendError(socket, 'SEAT_NOT_FOUND', 'No estás sentado en esta partida');
+
+      await forfeitMatch(db, runtime, seatRow.seat, 'quit');
+    },
+
+    async handleAbandonRequest(socket, matchId) {
+      const runtime = await ensureRuntime(matchId);
+      if (!runtime) return sendError(socket, 'MATCH_NOT_FOUND', 'La partida no existe');
+      if (!runtime.engine) return sendError(socket, 'MATCH_NOT_IN_GAME', 'La partida no está en curso');
+
+      const [seatRow] = await db
+        .select({ seat: matchPlayers.seat })
+        .from(matchPlayers)
+        .where(and(eq(matchPlayers.matchId, matchId), eq(matchPlayers.userId, socket.userId)))
+        .limit(1);
+      if (!seatRow) return sendError(socket, 'SEAT_NOT_FOUND', 'No estás sentado en esta partida');
+
+      await requestMutualAbandon(db, runtime, seatRow.seat);
+    },
+
+    async handleAbandonCancel(socket, matchId) {
+      const runtime = await ensureRuntime(matchId);
+      if (!runtime) return;
+
+      const [seatRow] = await db
+        .select({ seat: matchPlayers.seat })
+        .from(matchPlayers)
+        .where(and(eq(matchPlayers.matchId, matchId), eq(matchPlayers.userId, socket.userId)))
+        .limit(1);
+      if (!seatRow) return;
+
+      cancelMutualAbandon(runtime, seatRow.seat);
     },
 
     async recoverOnBoot() {

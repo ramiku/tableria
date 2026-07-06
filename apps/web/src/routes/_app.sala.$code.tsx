@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '../components/Avatar';
-import { CheckIcon, LinkIcon, UsersIcon } from '../components/icons';
+import { UsersIcon } from '../components/icons';
+import { UserHoverCard } from '../components/UserHoverCard';
 import { trpc } from '../lib/trpc';
 import { matchSocket } from '../lib/ws';
 import { useMatchStore } from '../stores/match';
@@ -14,7 +15,7 @@ function RoomPage() {
   const { code } = Route.useParams();
   const { me } = Route.useRouteContext();
   const navigate = useNavigate();
-  const [copied, setCopied] = useState(false);
+  const utils = trpc.useUtils();
 
   const { data, isLoading } = trpc.matches.getByCode.useQuery({ code });
   const lobby = useMatchStore((s) => s.lobby);
@@ -57,6 +58,13 @@ function RoomPage() {
     }
   }, [data?.state, matchState, matchId, navigate]);
 
+  // El anfitrión puede irse mientras el resto ya está aquí confirmando "listo" — se entera
+  // por WS en vivo (el snapshot REST de `data.state` no se actualiza solo). En ese momento
+  // "mi mesa activa" también deja de apuntar a esta partida.
+  useEffect(() => {
+    if (lobby?.state === 'cancelled') void utils.matches.myActive.invalidate();
+  }, [lobby?.state, utils]);
+
   if (isLoading) {
     return (
       <section>
@@ -79,7 +87,22 @@ function RoomPage() {
     );
   }
 
-  if (data.state === 'finished' || data.state === 'cancelled' || data.state === 'abandoned') {
+  if (data.state === 'cancelled' || lobby?.state === 'cancelled') {
+    return (
+      <section className="flex flex-col items-center gap-3 py-16 text-center">
+        <h1 className="font-display text-xl font-bold">{t('sala.cancelledByHost')}</h1>
+        <Link
+          to="/juegos/$slug"
+          params={{ slug: data.gameId }}
+          className="mt-2 rounded-lg border border-tb-border px-3.5 py-2 text-sm font-medium text-tb-text hover:bg-tb-surface-2"
+        >
+          {t('sala.backToGame')}
+        </Link>
+      </section>
+    );
+  }
+
+  if (data.state === 'finished' || data.state === 'abandoned') {
     return (
       <section className="flex flex-col items-center gap-3 py-16 text-center">
         <h1 className="font-display text-xl font-bold">{t('sala.notActive')}</h1>
@@ -96,16 +119,6 @@ function RoomPage() {
   const seats = lobby?.seats ?? [];
   const mySeat = seats.find((s) => s.userId === me.id);
 
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Sin permiso de portapapeles: no hay nada más que hacer aquí.
-    }
-  }
-
   function toggleReady() {
     if (!matchId || !mySeat) return;
     setReady.mutate({ matchId, ready: !mySeat.ready });
@@ -119,17 +132,10 @@ function RoomPage() {
   return (
     <section className="mx-auto max-w-lg">
       <div className="rounded-2xl border border-tb-border bg-tb-surface p-6 text-center">
-        <p className="text-sm text-tb-muted">{t('sala.title')}</p>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="tb-nums mx-auto mt-2 flex items-center gap-2 rounded-lg border border-tb-border bg-tb-surface-2 px-4 py-2 font-display text-2xl font-extrabold tracking-widest text-tb-text"
-        >
-          {code}
-          {copied ? <CheckIcon className="h-5 w-5 text-tb-success" /> : <LinkIcon className="h-5 w-5 text-tb-muted" />}
-        </button>
+        <p className="text-xs font-bold uppercase tracking-wide text-tb-muted">{t('sala.title')}</p>
+        <h1 className="mt-1 font-display text-2xl font-extrabold text-tb-text">{data.gameName}</h1>
 
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
           <span className="rounded-full bg-tb-surface-2 px-2.5 py-0.5 text-xs font-medium text-tb-muted">
             {t(`sala.mode.${data.mode}`)}
           </span>
@@ -155,12 +161,14 @@ function RoomPage() {
             return (
               <div key={seat} className="flex items-center justify-between rounded-xl bg-tb-surface-2 px-4 py-3">
                 <span className="flex items-center gap-2.5 text-sm font-medium text-tb-text">
-                  {s?.username ? (
-                    <Avatar
-                      initial={s.avatarInitial ?? s.username.charAt(0).toUpperCase()}
-                      color={s.avatarColor ?? '#2f6fe0'}
-                      size={32}
-                    />
+                  {s?.username && s.userId ? (
+                    <UserHoverCard userId={s.userId}>
+                      <Avatar
+                        initial={s.avatarInitial ?? s.username.charAt(0).toUpperCase()}
+                        color={s.avatarColor ?? '#2f6fe0'}
+                        size={32}
+                      />
+                    </UserHoverCard>
                   ) : (
                     <UsersIcon className="h-4 w-4 text-tb-muted" />
                   )}

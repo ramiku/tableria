@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '../components/Avatar';
+import { UserHoverCard } from '../components/UserHoverCard';
 import { trpc } from '../lib/trpc';
 
 export const Route = createFileRoute('/_app/rankings')({ component: RankingsPage });
@@ -71,11 +72,13 @@ function RankingsPage() {
                       <td className="tb-nums py-3 text-sm font-bold text-tb-muted">{i + 1}</td>
                       <td className="py-3">
                         <div className="flex items-center gap-2.5">
-                          <Avatar
-                            initial={entry.avatarInitial ?? entry.username.charAt(0).toUpperCase()}
-                            color={entry.avatarColor ?? '#2f6fe0'}
-                            size={32}
-                          />
+                          <UserHoverCard userId={entry.userId}>
+                            <Avatar
+                              initial={entry.avatarInitial ?? entry.username.charAt(0).toUpperCase()}
+                              color={entry.avatarColor ?? '#2f6fe0'}
+                              size={32}
+                            />
+                          </UserHoverCard>
                           <span className="text-sm font-semibold text-tb-text">{entry.username}</span>
                         </div>
                       </td>

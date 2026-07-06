@@ -191,3 +191,23 @@ a.tb-nav-active .tb-nav-dot {
     animation: none;
   }
 }
+
+/* Entrada de las columnas del lobby de juego y de la tarjeta "tu mesa" al aparecer */
+@keyframes tb-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.tb-fade-in-up {
+  animation: tb-fade-in-up 0.35s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tb-fade-in-up {
+    animation: none;
+  }
+}
