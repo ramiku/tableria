@@ -23,13 +23,14 @@ apps/
 packages/
   db/         esquema Drizzle + migraciones + seed
   engine/     motor de juego genérico (TS puro, sin IO)
-  games/      definiciones de juegos (tres-en-raya, conecta-cuatro, …)
+  games/      definiciones de juegos (tres-en-raya, conecta-cuatro, brisca, reversi, pista-unica)
   protocol/   contratos Zod compartidos (mensajes WS, DTOs)
   config/     tsconfig/eslint compartidos
 docs/
   legacy-schema/   esquemas SQL de la v1 (referencia)
-legacy/       implementación v1 (PHP + XAMPP) — solo referencia local, fuera de git
 ```
+
+La v1 (PHP + XAMPP) vivió en `legacy/` como referencia durante la migración; se eliminó del disco al cerrar M7 (nunca estuvo trackeada por git, así que no queda en el historial).
 
 ## Desarrollo
 
@@ -64,10 +65,16 @@ pnpm dev
 | M0 | Esqueleto monorepo, BD, CI, shell SPA | ✅ |
 | M1 | Auth (registro/login/recuperación) + catálogo real vía tRPC | ✅ |
 | M2 | Motor de juego genérico + tres-en-raya + lobby N jugadores en tiempo real | ✅ |
-| M3 | Social: amigos, presencia, chat persistente, notificaciones | ⬜ |
-| M4 | Ratings Glicko-2, leaderboards + Conecta 4 + juego de cartas | ⬜ |
-| M5 | Torneos (single-elim, suizo) | ⬜ |
-| M6 | 2FA, OAuth, magic links, a11y, i18n en, producción | ⬜ |
-| M7 | Reversi + party game; retirar legacy | ⬜ |
+| M3 | Social: amigos, presencia, chat persistente, notificaciones | ✅ |
+| M4 | Ratings Glicko-2, leaderboards + Conecta 4 + Brisca | ✅ |
+| M5 | Torneos (single-elim, suizo) | ✅ |
+| M6 | 2FA, dispositivos de confianza, magic links, a11y, E2E (parte 1) | ✅ |
+| M7 | Reversi + Pista Única (party 3-8 jugadores); retirar legacy | ✅ |
 
-El plan de arquitectura completo está en `docs/architecture.md`.
+**Roadmap M0-M7 completo.** Post-roadmap (en curso, sin fecha de cierre): Brisca a 2-4 jugadores,
+prototipo visual 3D con Three.js (Conecta 4), rediseño del lobby de partida (mesas de amigos,
+salas públicas agrupadas, partidas "sin tiempo"), y un sistema de reputación de usuarios.
+Pendiente y sin credenciales aún: M6 parte 2 (OAuth, despliegue a producción).
+
+El detalle completo de cada fase (decisiones, bugs encontrados, verificación) está en
+`docs/architecture.md`.
