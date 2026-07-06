@@ -3,7 +3,7 @@ import { create } from 'zustand';
 /**
  * Chat flotante global (dock abajo-derecha). Cualquier parte de la app puede
  * abrir una conversación aquí (icono de chat de un amigo, burbuja de mensaje
- * entrante) sin navegar — la página /mensajes sigue existiendo pero el dock
+ * entrante) sin navegar — la página /social/mensajes sigue existiendo pero el dock
  * es el camino principal.
  *
  * Ciclo de vida: abierto (panel) → minimizado (burbuja, la X del panel) →

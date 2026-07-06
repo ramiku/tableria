@@ -14,12 +14,28 @@ import {
 import { loadEngineState } from './persistence.js';
 import {
   addPlayerSocket,
+  allSockets,
   createEmptyRuntime,
   removeSocketEverywhere,
   type AuthedSocket,
   type MatchRuntime,
 } from './registry.js';
 import { armTurnTimer } from './timers.js';
+
+/** Asiento de `userId` en `matchId`, o `null` si no está sentado en esa partida. */
+export async function getSeat(db: Db, matchId: string, userId: string): Promise<number | null> {
+  const [row] = await db
+    .select({ seat: matchPlayers.seat })
+    .from(matchPlayers)
+    .where(and(eq(matchPlayers.matchId, matchId), eq(matchPlayers.userId, userId)))
+    .limit(1);
+  return row?.seat ?? null;
+}
+
+/** ¿`userId` es jugador (sentado) de `matchId`? Usado, entre otros, para autorizar el chat de voz. */
+export async function isSeated(db: Db, matchId: string, userId: string): Promise<boolean> {
+  return (await getSeat(db, matchId, userId)) !== null;
+}
 
 export interface MatchService {
   /** Arranque inmediato en cuanto todos los asientos confirman — sin cuenta atrás. */
@@ -35,6 +51,8 @@ export interface MatchService {
   /** Abandono mutuo: propone cortar sin que cuente para nadie; se efectúa cuando todos piden. */
   handleAbandonRequest(socket: AuthedSocket, matchId: string): Promise<void>;
   handleAbandonCancel(socket: AuthedSocket, matchId: string): Promise<void>;
+  /** Sockets actualmente adjuntos a la partida (jugadores + espectadores) — usado por el chat de voz. */
+  getMatchSockets(matchId: string): AuthedSocket[];
   recoverOnBoot(): Promise<void>;
 }
 
@@ -94,14 +112,10 @@ export function createMatchService(db: Db): MatchService {
       const runtime = await ensureRuntime(matchId);
       if (!runtime) return sendError(socket, 'MATCH_NOT_FOUND', 'La partida no existe');
 
-      const [seatRow] = await db
-        .select({ seat: matchPlayers.seat })
-        .from(matchPlayers)
-        .where(and(eq(matchPlayers.matchId, matchId), eq(matchPlayers.userId, socket.userId)))
-        .limit(1);
-      if (!seatRow) return sendError(socket, 'SEAT_NOT_FOUND', 'No estás sentado en esta partida');
+      const seat = await getSeat(db, matchId, socket.userId);
+      if (seat === null) return sendError(socket, 'SEAT_NOT_FOUND', 'No estás sentado en esta partida');
 
-      addPlayerSocket(runtime, seatRow.seat, socket);
+      addPlayerSocket(runtime, seat, socket);
       socket.currentMatchId = matchId;
       await db
         .update(matchPlayers)
@@ -144,14 +158,10 @@ export function createMatchService(db: Db): MatchService {
       const runtime = await ensureRuntime(matchId);
       if (!runtime) return sendError(socket, 'MATCH_NOT_FOUND', 'La partida no existe');
 
-      const [seatRow] = await db
-        .select({ seat: matchPlayers.seat })
-        .from(matchPlayers)
-        .where(and(eq(matchPlayers.matchId, matchId), eq(matchPlayers.userId, socket.userId)))
-        .limit(1);
-      if (!seatRow) return sendError(socket, 'SEAT_NOT_FOUND', 'No estás sentado en esta partida');
+      const seat = await getSeat(db, matchId, socket.userId);
+      if (seat === null) return sendError(socket, 'SEAT_NOT_FOUND', 'No estás sentado en esta partida');
 
-      const outcome = await applyPlayerMove(db, runtime, seatRow.seat, rawMove);
+      const outcome = await applyPlayerMove(db, runtime, seat, rawMove);
       if (!outcome.ok) sendError(socket, outcome.code, 'Movimiento no válido');
     },
 
@@ -184,14 +194,10 @@ export function createMatchService(db: Db): MatchService {
       if (!runtime) return sendError(socket, 'MATCH_NOT_FOUND', 'La partida no existe');
       if (!runtime.engine) return sendError(socket, 'MATCH_NOT_IN_GAME', 'La partida no está en curso');
 
-      const [seatRow] = await db
-        .select({ seat: matchPlayers.seat })
-        .from(matchPlayers)
-        .where(and(eq(matchPlayers.matchId, matchId), eq(matchPlayers.userId, socket.userId)))
-        .limit(1);
-      if (!seatRow) return sendError(socket, 'SEAT_NOT_FOUND', 'No estás sentado en esta partida');
+      const seat = await getSeat(db, matchId, socket.userId);
+      if (seat === null) return sendError(socket, 'SEAT_NOT_FOUND', 'No estás sentado en esta partida');
 
-      await forfeitMatch(db, runtime, seatRow.seat, 'quit');
+      await forfeitMatch(db, runtime, seat, 'quit');
     },
 
     async handleAbandonRequest(socket, matchId) {
@@ -199,28 +205,25 @@ export function createMatchService(db: Db): MatchService {
       if (!runtime) return sendError(socket, 'MATCH_NOT_FOUND', 'La partida no existe');
       if (!runtime.engine) return sendError(socket, 'MATCH_NOT_IN_GAME', 'La partida no está en curso');
 
-      const [seatRow] = await db
-        .select({ seat: matchPlayers.seat })
-        .from(matchPlayers)
-        .where(and(eq(matchPlayers.matchId, matchId), eq(matchPlayers.userId, socket.userId)))
-        .limit(1);
-      if (!seatRow) return sendError(socket, 'SEAT_NOT_FOUND', 'No estás sentado en esta partida');
+      const seat = await getSeat(db, matchId, socket.userId);
+      if (seat === null) return sendError(socket, 'SEAT_NOT_FOUND', 'No estás sentado en esta partida');
 
-      await requestMutualAbandon(db, runtime, seatRow.seat);
+      await requestMutualAbandon(db, runtime, seat);
     },
 
     async handleAbandonCancel(socket, matchId) {
       const runtime = await ensureRuntime(matchId);
       if (!runtime) return;
 
-      const [seatRow] = await db
-        .select({ seat: matchPlayers.seat })
-        .from(matchPlayers)
-        .where(and(eq(matchPlayers.matchId, matchId), eq(matchPlayers.userId, socket.userId)))
-        .limit(1);
-      if (!seatRow) return;
+      const seat = await getSeat(db, matchId, socket.userId);
+      if (seat === null) return;
 
-      cancelMutualAbandon(runtime, seatRow.seat);
+      cancelMutualAbandon(runtime, seat);
+    },
+
+    getMatchSockets(matchId) {
+      const runtime = runtimes.get(matchId);
+      return runtime ? allSockets(runtime) : [];
     },
 
     async recoverOnBoot() {

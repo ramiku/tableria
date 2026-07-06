@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { ContinueBanner } from '../components/ContinueBanner';
 import { GameCard } from '../components/GameCard';
@@ -7,6 +7,14 @@ import { CardsIcon, PlusIcon, SearchIcon, UsersIcon } from '../components/icons'
 import { trpc } from '../lib/trpc';
 
 export const Route = createFileRoute('/_app/')({ component: ExplorePage });
+
+/** "Ana", "Ana y Luis", "Ana y 2 más" — igual de compacto se mire por donde se mire el número de rivales. */
+function formatWithNames(names: string[], t: (key: string, opts?: Record<string, unknown>) => string): string {
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0]!;
+  if (names.length === 2) return t('continueBanner.withTwo', { first: names[0], second: names[1] });
+  return t('continueBanner.withMore', { first: names[0], count: names.length - 1 });
+}
 
 function useGreeting(name: string) {
   const { t } = useTranslation();
@@ -28,10 +36,13 @@ function CatalogSkeleton() {
 
 function ExplorePage() {
   const { t } = useTranslation();
-  const greeting = useGreeting('Tableria');
+  const navigate = useNavigate();
+  const { me } = Route.useRouteContext();
+  const greeting = useGreeting(me.displayName);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<string>('all');
   const { data: catalog, isLoading, isError } = trpc.games.list.useQuery();
+  const { data: myTurn } = trpc.matches.myTurn.useQuery(undefined, { refetchInterval: 15_000 });
 
   const categories = useMemo(() => {
     if (!catalog) return [];
@@ -84,14 +95,16 @@ function ExplorePage() {
         </div>
       </header>
 
-      <div className="mt-5">
-        <ContinueBanner
-          gameName={t('demo.banner.game')}
-          withNames={t('demo.banner.with')}
-          turnLabel={t('demo.banner.turn')}
-          yourTurn
-        />
-      </div>
+      {myTurn && (
+        <div className="mt-5">
+          <ContinueBanner
+            gameName={myTurn.gameName}
+            withNames={formatWithNames(myTurn.opponentNames, t)}
+            turnDeadlineAt={myTurn.turnDeadlineAt}
+            onResume={() => void navigate({ to: '/partida/$id', params: { id: myTurn.matchId } })}
+          />
+        </div>
+      )}
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-lg font-bold">{t('explore.catalog')}</h2>

@@ -12,6 +12,7 @@ export interface SessionUser {
   avatarInitial: string | null;
   avatarColor: string | null;
   twoFactorEnabled: boolean;
+  isAdmin: boolean;
 }
 
 export async function createSession(
@@ -48,6 +49,8 @@ export async function getUserFromToken(db: Db, pepper: string, token: string): P
       avatarInitial: users.avatarInitial,
       avatarColor: users.avatarColor,
       totpEnabledAt: users.totpEnabledAt,
+      isAdmin: users.isAdmin,
+      disabledAt: users.disabledAt,
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
@@ -55,7 +58,8 @@ export async function getUserFromToken(db: Db, pepper: string, token: string): P
     .limit(1);
 
   const user = rows[0];
-  if (!user) return null;
+  // Una cuenta suspendida pierde toda sesión activa en el siguiente request/heartbeat.
+  if (!user || user.disabledAt) return null;
 
   // Actualización perezosa, no bloquea la respuesta
   void db.update(sessions).set({ lastUsedAt: now }).where(eq(sessions.tokenHash, tokenHash));
@@ -68,6 +72,7 @@ export async function getUserFromToken(db: Db, pepper: string, token: string): P
     avatarInitial: user.avatarInitial,
     avatarColor: user.avatarColor,
     twoFactorEnabled: user.totpEnabledAt !== null,
+    isAdmin: user.isAdmin,
   };
 }
 

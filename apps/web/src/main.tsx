@@ -10,6 +10,7 @@ import './stores/i18n';
 import './stores/match';
 import './stores/presence';
 import './stores/notifications';
+import './stores/voice';
 import './styles/app.css';
 
 const queryClient = new QueryClient();

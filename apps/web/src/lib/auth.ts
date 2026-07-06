@@ -13,6 +13,7 @@ export interface PublicUser {
 export interface Me extends PublicUser {
   email: string;
   twoFactorEnabled: boolean;
+  isAdmin: boolean;
 }
 
 export async function fetchMe(): Promise<Me | null> {
@@ -21,6 +22,21 @@ export async function fetchMe(): Promise<Me | null> {
     return data.user;
   } catch {
     return null;
+  }
+}
+
+export interface MaintenanceStatus {
+  enabled: boolean;
+  maintenanceMessage: string | null;
+}
+
+/** Sin autenticación — se consulta desde `_app` en cada carga para decidir si mostrar la pantalla de mantenimiento. */
+export async function fetchMaintenanceStatus(): Promise<MaintenanceStatus> {
+  try {
+    const data = await apiFetch<{ ok: true; enabled: boolean; message: string | null }>('/api/maintenance-status');
+    return { enabled: data.enabled, maintenanceMessage: data.message };
+  } catch {
+    return { enabled: false, maintenanceMessage: null };
   }
 }
 

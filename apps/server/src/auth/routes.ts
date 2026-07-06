@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { and, eq, gt, isNull, magicLinkTokens, or, passwordResets, twoFactorBackupCodes, users, type Db } from '@tableria/db';
-import type { Env } from '../config.js';
+import { isHttps, type Env } from '../config.js';
 import { decryptSecret, encryptSecret, hashPassword, hashToken, randomToken, verifyPassword } from './crypto.js';
 import { createSession, getUserFromToken, revokeAllSessions, revokeSession, SESSION_COOKIE } from './session.js';
 import { verifyCsrf } from './csrf.js';
@@ -52,7 +52,7 @@ interface AuthDeps {
 }
 
 export async function registerAuthRoutes(app: FastifyInstance, { db, env, mailer }: AuthDeps): Promise<void> {
-  const secureCookies = env.NODE_ENV === 'production';
+  const secureCookies = isHttps(env.WEB_ORIGIN);
   const sessionCookieOpts = {
     path: '/',
     httpOnly: true,
@@ -133,6 +133,12 @@ export async function registerAuthRoutes(app: FastifyInstance, { db, env, mailer
 
       const valid = await verifyPassword(user.passwordHash, password);
       if (!valid) return invalid();
+
+      if (user.disabledAt) {
+        return reply
+          .code(403)
+          .send({ ok: false, error: user.disabledReason ?? 'Esta cuenta ha sido suspendida' });
+      }
 
       const trustedToken = request.cookies[TRUSTED_DEVICE_COOKIE];
       const isTrusted = user.totpEnabledAt && trustedToken ? await isTrustedDevice(db, env.SESSION_PEPPER, trustedToken, user.id) : false;
@@ -387,6 +393,9 @@ export async function registerAuthRoutes(app: FastifyInstance, { db, env, mailer
       const user = userRows[0];
       if (!user) {
         return reply.code(400).send({ ok: false, error: 'El enlace no es válido o ha caducado' });
+      }
+      if (user.disabledAt) {
+        return reply.code(403).send({ ok: false, error: user.disabledReason ?? 'Esta cuenta ha sido suspendida' });
       }
 
       await db.update(magicLinkTokens).set({ consumedAt: now }).where(eq(magicLinkTokens.id, magicLink.id));

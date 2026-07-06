@@ -1,0 +1,30 @@
+# No copiar node_modules del host al contexto de build: si se instaló en Windows
+# (como este repo de desarrollo), sus binarios nativos no sirven dentro del
+# contenedor Linux. Se reinstala todo limpio dentro de la imagen.
+node_modules
+**/node_modules
+
+# Se reconstruye siempre dentro de la imagen — no tiene sentido arrastrar el
+# dist ya compilado en el host (y podría ser de otra plataforma/arquitectura).
+**/dist
+.turbo
+**/.tanstack
+**/*.tsbuildinfo
+
+.git
+.github
+
+# E2E / artefactos de test — no hacen falta dentro de la imagen de producción.
+e2e/test-results
+e2e/playwright-report
+coverage
+
+# Secretos y entorno local — nunca al contexto de build.
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+.vscode
+.idea
+*.log

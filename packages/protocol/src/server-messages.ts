@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { voiceRoomSchema, voiceSignalSchema } from './client-messages.js';
 
 export const seatSchema = z.object({
   seat: z.number().int(),
@@ -110,6 +111,17 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('dm.message'),
     payload: dmEntrySchema,
+  }),
+  z.object({
+    type: z.literal('voice.roster'),
+    payload: z.object({
+      room: voiceRoomSchema,
+      participants: z.array(z.object({ userId: z.uuid(), username: z.string() })),
+    }),
+  }),
+  z.object({
+    type: z.literal('voice.signal'),
+    payload: z.object({ room: voiceRoomSchema, fromUserId: z.uuid(), signal: voiceSignalSchema }),
   }),
   z.object({
     type: z.literal('notification.new'),

@@ -1,5 +1,6 @@
 import { router } from './trpc.js';
 import { activityRouter } from './routers/activity.js';
+import { adminRouter } from './routers/admin.js';
 import { conversationsRouter } from './routers/conversations.js';
 import { friendsRouter } from './routers/friends.js';
 import { gamesRouter } from './routers/games.js';
@@ -21,6 +22,7 @@ export const appRouter = router({
   tournaments: tournamentsRouter,
   moderation: moderationRouter,
   users: usersRouter,
+  admin: adminRouter,
 });
 
 export type AppRouter = typeof appRouter;

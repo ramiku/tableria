@@ -1,4 +1,5 @@
 import { and, eq, gt, lt, reputationEvents, userReports, users, type Db, type Tx } from '@tableria/db';
+import { logAdminAction } from '../admin/audit.js';
 import { clampReputation, escalatedAbandonDelta, MAX_REPUTATION, profanityDelta } from './rules.js';
 
 const ESCALATION_WINDOW_DAYS = 30;
@@ -13,7 +14,8 @@ export type ReputationReason =
   | 'match_completed_clean'
   | 'chat_blocked_profanity'
   | 'user_report'
-  | 'passive_recovery';
+  | 'passive_recovery'
+  | 'admin_adjustment';
 
 export type UserReportReason = 'abusive_language' | 'unsportsmanlike' | 'cheating' | 'other';
 
@@ -119,6 +121,29 @@ export async function recordReport(
   }
   await applyReputationEvent(db, params.reportedUserId, 'user_report', REPORT_PENALTY, params.matchId);
   return { ok: true };
+}
+
+/**
+ * Ajuste manual desde el panel de admin: fija un valor absoluto (no un delta) y deja
+ * constancia tanto en el ledger de reputación (mismo punto único de escritura que todo
+ * lo demás) como en la auditoría del panel.
+ */
+export async function adminSetReputation(
+  db: Db,
+  params: { adminUserId: string; targetUserId: string; newValue: number; reason: string },
+): Promise<void> {
+  const clamped = clampReputation(params.newValue);
+  const [row] = await db.select({ reputation: users.reputation }).from(users).where(eq(users.id, params.targetUserId)).limit(1);
+  if (!row) return;
+
+  await applyReputationEvent(db, params.targetUserId, 'admin_adjustment', clamped - row.reputation);
+  await logAdminAction(db, {
+    adminUserId: params.adminUserId,
+    action: 'players.setReputation',
+    targetType: 'user',
+    targetId: params.targetUserId,
+    detail: { newValue: clamped, reason: params.reason },
+  });
 }
 
 /**

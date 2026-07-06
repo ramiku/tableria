@@ -35,4 +35,9 @@ function handleMessage(message: ServerMessage): void {
   }
 }
 
-matchSocket.onMessage(handleMessage);
+// `import.meta.hot.dispose` deshace la suscripción de la instancia saliente del módulo antes
+// de que Vite ejecute la nueva tras un HMR — sin esto, cada recarga en caliente de este archivo
+// (o de algo que lo re-evalúe) apila un listener más sobre el socket singleton, y cada mensaje
+// entrante acaba procesándose una vez por listener acumulado (duplicados solo en dev).
+const unsubscribe = matchSocket.onMessage(handleMessage);
+if (import.meta.hot) import.meta.hot.dispose(() => unsubscribe());

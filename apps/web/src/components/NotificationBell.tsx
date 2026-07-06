@@ -46,6 +46,11 @@ export function NotificationBell() {
       markReadMutation.mutate({ id: n.id });
       markReadLocal(n.id);
     }
+    if (n.type === 'friend_request' || n.type === 'friend_accepted') {
+      setOpen(false);
+      void navigate({ to: '/social/amigos' });
+      return;
+    }
     if ((n.type === 'invited' || n.type === 'your_turn') && n.payload && typeof n.payload === 'object' && 'code' in n.payload) {
       const code = (n.payload as { code: unknown }).code;
       if (typeof code === 'string') {

@@ -36,4 +36,7 @@ function handleMessage(message: ServerMessage): void {
   useNotificationsStore.setState((s) => ({ items: [{ id, type, payload, readAt: null, createdAt }, ...s.items] }));
 }
 
-matchSocket.onMessage(handleMessage);
+// Ver el comentario equivalente en `stores/presence.ts`: sin este dispose, cada HMR de este
+// archivo apila un listener más sobre el socket singleton (duplicados solo en dev).
+const unsubscribe = matchSocket.onMessage(handleMessage);
+if (import.meta.hot) import.meta.hot.dispose(() => unsubscribe());

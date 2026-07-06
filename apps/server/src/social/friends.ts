@@ -1,4 +1,4 @@
-import { and, eq, friendships, or, users, type Db } from '@tableria/db';
+import { and, eq, friendships, ilike, ne, or, users, type Db } from '@tableria/db';
 
 /** `friendships` guarda una sola fila por pareja, siempre en orden canónico userId < friendId. */
 export function canonicalPair(a: string, b: string): [string, string] {
@@ -34,6 +34,25 @@ async function profilesFor(db: Db, userIds: string[]): Promise<Map<string, Frien
     .from(users)
     .where(or(...userIds.map((id) => eq(users.id, id))));
   return new Map(rows.map((r) => [r.userId, r]));
+}
+
+/** Búsqueda en vivo para el cuadro de "añadir amigo" — por nick o nombre, excluyéndome a mí mismo. */
+export async function searchUsers(db: Db, meId: string, query: string): Promise<FriendProfile[]> {
+  const like = `%${query}%`;
+  return db
+    .select({
+      userId: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      avatarInitial: users.avatarInitial,
+      avatarColor: users.avatarColor,
+      presence: users.presence,
+      lastSeenAt: users.lastSeenAt,
+    })
+    .from(users)
+    .where(and(ne(users.id, meId), or(ilike(users.username, like), ilike(users.displayName, like))))
+    .orderBy(users.username)
+    .limit(8);
 }
 
 export async function listFriendIds(db: Db, meId: string): Promise<string[]> {

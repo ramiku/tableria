@@ -19,12 +19,19 @@ import {
 
 export interface ConversationSummary {
   id: string;
+  type: 'direct' | 'group';
   otherUser: {
     id: string;
     username: string;
     displayName: string;
     avatarInitial: string | null;
     avatarColor: string | null;
+  } | null;
+  group: {
+    name: string;
+    avatarInitial: string | null;
+    avatarColor: string | null;
+    memberCount: number;
   } | null;
   lastMessage: { body: string; kind: string; createdAt: Date } | null;
   unreadCount: number;
@@ -50,13 +57,34 @@ export async function isMember(db: Db, conversationId: string, userId: string): 
   return !!row;
 }
 
-export async function otherMemberId(db: Db, conversationId: string, meId: string): Promise<string | null> {
-  const [row] = await db
+/** Miembros de una conversación (DM o grupo) — usado para el reparto de mensajes y de voz. */
+export async function getMemberIds(db: Db, conversationId: string): Promise<string[]> {
+  const rows = await db
     .select({ userId: conversationMembers.userId })
     .from(conversationMembers)
-    .where(and(eq(conversationMembers.conversationId, conversationId), ne(conversationMembers.userId, meId)))
-    .limit(1);
-  return row?.userId ?? null;
+    .where(eq(conversationMembers.conversationId, conversationId));
+  return rows.map((r) => r.userId);
+}
+
+export async function createGroup(db: Db, creatorId: string, name: string, memberIds: string[]): Promise<string> {
+  return db.transaction(async (tx) => {
+    const [conv] = await tx
+      .insert(conversations)
+      .values({ type: 'group', name, createdBy: creatorId })
+      .returning({ id: conversations.id });
+    if (!conv) throw new Error('No se pudo crear el grupo');
+    await tx.insert(conversationMembers).values([
+      { conversationId: conv.id, userId: creatorId, role: 'admin' },
+      ...memberIds.map((userId) => ({ conversationId: conv.id, userId, role: 'member' as const })),
+    ]);
+    return conv.id;
+  });
+}
+
+export async function leaveGroup(db: Db, conversationId: string, userId: string): Promise<void> {
+  await db
+    .delete(conversationMembers)
+    .where(and(eq(conversationMembers.conversationId, conversationId), eq(conversationMembers.userId, userId)));
 }
 
 export async function getOrCreateDirect(db: Db, meId: string, friendId: string): Promise<string> {
@@ -96,7 +124,14 @@ export async function getOrCreateDirect(db: Db, meId: string, friendId: string):
 
 export async function listConversations(db: Db, meId: string): Promise<ConversationSummary[]> {
   const myConvs = await db
-    .select({ id: conversations.id, lastReadAt: conversationMembers.lastReadAt })
+    .select({
+      id: conversations.id,
+      type: conversations.type,
+      name: conversations.name,
+      avatarInitial: conversations.avatarInitial,
+      avatarColor: conversations.avatarColor,
+      lastReadAt: conversationMembers.lastReadAt,
+    })
     .from(conversationMembers)
     .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
     .where(eq(conversationMembers.userId, meId))
@@ -104,20 +139,37 @@ export async function listConversations(db: Db, meId: string): Promise<Conversat
 
   if (myConvs.length === 0) return [];
   const convIds = myConvs.map((c) => c.id);
+  const directIds = myConvs.filter((c) => c.type === 'direct').map((c) => c.id);
+  const groupIds = myConvs.filter((c) => c.type === 'group').map((c) => c.id);
 
-  const others = await db
-    .select({
-      conversationId: conversationMembers.conversationId,
-      id: users.id,
-      username: users.username,
-      displayName: users.displayName,
-      avatarInitial: users.avatarInitial,
-      avatarColor: users.avatarColor,
-    })
-    .from(conversationMembers)
-    .innerJoin(users, eq(users.id, conversationMembers.userId))
-    .where(and(inArray(conversationMembers.conversationId, convIds), ne(conversationMembers.userId, meId)));
+  // En una DM, "el otro" es una única fila por conversación; en un grupo no hay "el otro"
+  // singular, por eso esta consulta se limita a las conversaciones directas.
+  const others =
+    directIds.length === 0
+      ? []
+      : await db
+          .select({
+            conversationId: conversationMembers.conversationId,
+            id: users.id,
+            username: users.username,
+            displayName: users.displayName,
+            avatarInitial: users.avatarInitial,
+            avatarColor: users.avatarColor,
+          })
+          .from(conversationMembers)
+          .innerJoin(users, eq(users.id, conversationMembers.userId))
+          .where(and(inArray(conversationMembers.conversationId, directIds), ne(conversationMembers.userId, meId)));
   const otherByConv = new Map(others.map((o) => [o.conversationId, o]));
+
+  const memberCounts =
+    groupIds.length === 0
+      ? []
+      : await db
+          .select({ conversationId: conversationMembers.conversationId, n: sql<number>`count(*)::int` })
+          .from(conversationMembers)
+          .where(inArray(conversationMembers.conversationId, groupIds))
+          .groupBy(conversationMembers.conversationId);
+  const memberCountByConv = new Map(memberCounts.map((m) => [m.conversationId, m.n]));
 
   const lastMessages = await db
     .selectDistinctOn([messages.conversationId], {
@@ -149,10 +201,27 @@ export async function listConversations(db: Db, meId: string): Promise<Conversat
   const unreadByConv = new Map(unreadCounts.map((u) => [u.conversationId, u.n]));
 
   return myConvs.map((c) => {
+    if (c.type === 'group') {
+      return {
+        id: c.id,
+        type: 'group' as const,
+        otherUser: null,
+        group: {
+          name: c.name ?? '',
+          avatarInitial: c.avatarInitial,
+          avatarColor: c.avatarColor,
+          memberCount: memberCountByConv.get(c.id) ?? 0,
+        },
+        lastMessage: lastByConv.get(c.id) ?? null,
+        unreadCount: unreadByConv.get(c.id) ?? 0,
+      };
+    }
     const other = otherByConv.get(c.id);
     return {
       id: c.id,
+      type: 'direct' as const,
       otherUser: other ? { id: other.id, username: other.username, displayName: other.displayName, avatarInitial: other.avatarInitial, avatarColor: other.avatarColor } : null,
+      group: null,
       lastMessage: lastByConv.get(c.id) ?? null,
       unreadCount: unreadByConv.get(c.id) ?? 0,
     };

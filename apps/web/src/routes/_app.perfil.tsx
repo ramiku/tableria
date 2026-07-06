@@ -538,7 +538,7 @@ function FriendsTab() {
           ))}
         </ul>
         <Link
-          to="/amigos"
+          to="/social/amigos"
           className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-tb-accent hover:text-tb-accent-strong"
         >
           {t('profile.friends.manage')} →

@@ -748,7 +748,9 @@ function GamePage() {
       ) : (
         <div className="mt-4 rounded-2xl border border-tb-border bg-tb-surface p-6">
           {rules ? (
-            <p className="max-w-2xl text-[15px] leading-relaxed text-tb-text">{rules}</p>
+            // Guardado desde el panel de admin con Tiptap: HTML de su propio esquema
+            // (sin scripts ni atributos arbitrarios), nunca contenido de usuarios.
+            <div className="tb-rich-text max-w-2xl text-[15px] text-tb-text" dangerouslySetInnerHTML={{ __html: rules }} />
           ) : (
             <p className="text-sm text-tb-muted">{t('game.rules.empty')}</p>
           )}

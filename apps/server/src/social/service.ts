@@ -87,15 +87,16 @@ export function createSocialService(db: Db): SocialService {
         payload: { ...entry, conversationId, createdAt: entry.createdAt.toISOString() },
       };
 
-      pushToUser(socket.userId, message);
-      const recipientId = await conversations.otherMemberId(db, conversationId, socket.userId);
-      if (!recipientId) return;
-      pushToUser(recipientId, message);
+      const memberIds = await conversations.getMemberIds(db, conversationId);
+      for (const memberId of memberIds) pushToUser(memberId, message);
 
       if (kind === 'invite') {
         const payload = { matchId, code: entry.inviteMatchCode };
-        await activity.record(db, socket.userId, recipientId, 'invited', payload);
-        await notify(recipientId, 'invited', payload);
+        for (const memberId of memberIds) {
+          if (memberId === socket.userId) continue;
+          await activity.record(db, socket.userId, memberId, 'invited', payload);
+          await notify(memberId, 'invited', payload);
+        }
       }
     },
   };

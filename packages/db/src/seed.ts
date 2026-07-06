@@ -94,6 +94,20 @@ const catalog = [
     isActive: true,
     options: { defaultTurnSeconds: 60 },
   },
+  {
+    id: 'timbiriche',
+    name: 'Timbiriche',
+    categorySlug: 'clasicos',
+    minPlayers: 2,
+    maxPlayers: 4,
+    durationMin: 15,
+    badge: 'Clásico',
+    coverBg: '#6e3b1f',
+    coverFg: '#fbeee3',
+    description: 'Traza líneas entre puntos y cierra casillas para hacerlas tuyas — completar una te da otro turno.',
+    isActive: true,
+    options: { defaultTurnSeconds: 30 },
+  },
 ];
 
 const content = [
@@ -121,6 +135,11 @@ const content = [
     gameId: 'pista-unica',
     sectionKey: 'rules',
     body: 'Juego cooperativo de 3 a 8 jugadores. Cada partida tiene tantas rondas como jugadores: en cada ronda, uno de vosotros es el adivinador y ve todo menos la palabra secreta; el resto la ve y, a la vez y en secreto, escribe una pista de una sola palabra para ayudar a adivinarla. Antes de mostrarlas, se anulan las pistas que coincidan entre sí (aunque sea con distinto acento o mayúsculas) — si dos personas piensan lo mismo, ninguna de las dos pistas cuenta. El adivinador ve las pistas que sobrevivieron e intenta acertar la palabra. Ganáis todos juntos si aciertan al menos la mitad de las rondas.',
+  },
+  {
+    gameId: 'timbiriche',
+    sectionKey: 'rules',
+    body: 'De 2 a 4 jugadores sobre una rejilla de puntos (8×8, 9×9 o 10×10 casillas, a elegir). Por turnos, cada jugador traza una línea entre dos puntos adyacentes libres. Si al trazarla completas el cuarto lado de una casilla, la casilla pasa a ser tuya y juegas otra vez; si no completas ninguna, el turno pasa al siguiente jugador. La partida termina cuando todas las casillas tienen dueño; gana quien más casillas ha reclamado.',
   },
 ];
 

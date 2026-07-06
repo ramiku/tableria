@@ -18,6 +18,10 @@ export const friendsRouter = router({
 
   listBlocked: protectedProcedure.query(async ({ ctx }) => (await friends.listBlocked(ctx.db, ctx.user.id)).map(serializeProfile)),
 
+  search: protectedProcedure.input(z.object({ query: z.string().trim().min(1).max(50) })).query(async ({ ctx, input }) =>
+    (await friends.searchUsers(ctx.db, ctx.user.id, input.query)).map(serializeProfile),
+  ),
+
   sendRequest: protectedProcedure.input(z.object({ username: z.string().trim().min(1) })).mutation(async ({ ctx, input }) => {
     try {
       return await ctx.socialService.sendFriendRequest(ctx.user.id, input.username);

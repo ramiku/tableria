@@ -60,6 +60,9 @@ export const users = pgTable(
     // Reputación de comportamiento (1-100, 100 = intachable) — independiente del rating de
     // nivel de juego. Ver `reputationEvents` para el ledger de eventos que la mueven.
     reputation: smallint('reputation').notNull().default(100),
+    // Acceso al panel de administración (/admin). Un único admin conocido por ahora,
+    // activado a mano en BD — no hay UI para dar de alta nuevos admins.
+    isAdmin: boolean('is_admin').notNull().default(false),
     createdAt: timestamptz('created_at').notNull().defaultNow(),
     updatedAt: timestamptz('updated_at').notNull().defaultNow(),
   },
@@ -550,6 +553,7 @@ export const reputationReasonEnum = pgEnum('reputation_reason', [
   'chat_blocked_profanity',
   'user_report',
   'passive_recovery',
+  'admin_adjustment',
 ]);
 
 // Ledger append-only (mismo espíritu que `ratingHistory`): cada evento que mueve
@@ -595,6 +599,8 @@ export const userReports = pgTable(
     reason: userReportReasonEnum('reason').notNull(),
     comment: text('comment'),
     createdAt: timestamptz('created_at').notNull().defaultNow(),
+    reviewedAt: timestamptz('reviewed_at'),
+    reviewedByAdminId: uuid('reviewed_by_admin_id').references(() => users.id, { onDelete: 'set null' }),
   },
   (t) => [
     // Un mismo reportador no puede reportar dos veces a la misma persona por la misma partida.
@@ -696,4 +702,33 @@ export const tournamentMatches = pgTable(
     unique('tournament_matches_round_slot_uq').on(t.roundId, t.slotIndex),
     index('tournament_matches_match_idx').on(t.matchId),
   ],
+);
+
+// ---------------------------------------------------------------------------
+// Administración: ajustes globales y auditoría del panel de admin
+// ---------------------------------------------------------------------------
+
+// Fila única (id fijo 'singleton') con la configuración global de la plataforma.
+export const appSettings = pgTable('app_settings', {
+  id: varchar('id', { length: 16 }).primaryKey().default('singleton'),
+  maintenanceMode: boolean('maintenance_mode').notNull().default(false),
+  maintenanceMessage: text('maintenance_message'),
+  updatedAt: timestamptz('updated_at').notNull().defaultNow(),
+});
+
+// Registro append-only de toda acción tomada desde el panel de admin (quién, qué, sobre qué).
+export const adminAuditLog = pgTable(
+  'admin_audit_log',
+  {
+    id: uuid('id').primaryKey().$defaultFn(uuidv7),
+    adminUserId: uuid('admin_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    action: varchar('action', { length: 64 }).notNull(),
+    targetType: varchar('target_type', { length: 32 }),
+    targetId: varchar('target_id', { length: 64 }),
+    detail: jsonb('detail'),
+    createdAt: timestamptz('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('admin_audit_log_created_idx').on(t.createdAt)],
 );

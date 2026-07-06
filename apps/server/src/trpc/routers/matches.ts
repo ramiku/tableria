@@ -1,8 +1,9 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { and, desc, eq, games, inArray, matchPlayers, matches, sql, users } from '@tableria/db';
+import { and, desc, eq, games, inArray, matchPlayers, matches, ne, sql, users } from '@tableria/db';
 import { insertWithUniqueCode } from '../../match/codes.js';
 import { getGameDefinition } from '../../match/games.js';
+import { loadEngineState } from '../../match/persistence.js';
 import { listFriendIds } from '../../social/friends.js';
 import { protectedProcedure, publicProcedure, router } from '../trpc.js';
 
@@ -135,6 +136,50 @@ export const matchesRouter = router({
   }),
 
   /**
+   * Partida por turnos (async) del usuario donde ahora mismo le toca mover — para el banner
+   * "Continúa donde lo dejaste" de Explorar. En tiempo real no aplica (ver `notifyTurnIfAsync`
+   * en `match/lifecycle.ts`: ahí ambos jugadores ya están delante del tablero, no hace falta
+   * avisar). No depende de que la partida tenga runtime cargado en memoria — reconstruye el
+   * estado autoritativo igual que `loadEngineState` ya hace para la reconexión/recuperación.
+   */
+  myTurn: protectedProcedure.query(async ({ ctx }) => {
+    const [row] = await ctx.db
+      .select({
+        matchId: matches.id,
+        gameId: matches.gameId,
+        gameName: games.name,
+        mySeat: matchPlayers.seat,
+        turnDeadlineAt: matches.turnDeadlineAt,
+      })
+      .from(matchPlayers)
+      .innerJoin(matches, eq(matches.id, matchPlayers.matchId))
+      .innerJoin(games, eq(games.id, matches.gameId))
+      .where(and(eq(matchPlayers.userId, ctx.user.id), eq(matches.mode, 'async'), eq(matches.state, 'in_game')))
+      .limit(1);
+    if (!row) return null;
+
+    const def = getGameDefinition(row.gameId);
+    if (!def) return null;
+    const loaded = await loadEngineState(ctx.db, def, row.matchId);
+    if (!loaded) return null;
+    if (!def.activePlayers(loaded.state).includes(row.mySeat)) return null;
+
+    const opponents = await ctx.db
+      .select({ displayName: users.displayName })
+      .from(matchPlayers)
+      .innerJoin(users, eq(users.id, matchPlayers.userId))
+      .where(and(eq(matchPlayers.matchId, row.matchId), ne(matchPlayers.seat, row.mySeat)));
+
+    return {
+      matchId: row.matchId,
+      gameId: row.gameId,
+      gameName: row.gameName,
+      opponentNames: opponents.map((o) => o.displayName),
+      turnDeadlineAt: row.turnDeadlineAt?.toISOString() ?? null,
+    };
+  }),
+
+  /**
    * Mesas en espera creadas por un amigo (aunque sean privadas — la visibilidad aquí la da la
    * amistad, no `isPrivate`) — para "Salas de amigos" en el rail: unirse en un clic desde ahí.
    */
@@ -229,11 +274,12 @@ export const matchesRouter = router({
     }));
   }),
 
-  /** Solo lo mínimo para que la página de partida sepa qué tablero renderizar. */
+  /** Lo mínimo para que la página de partida sepa qué tablero renderizar y cómo etiquetar su chat de voz. */
   getById: protectedProcedure.input(z.object({ matchId: z.uuid() })).query(async ({ ctx, input }) => {
     const [row] = await ctx.db
-      .select({ gameId: matches.gameId })
+      .select({ gameId: matches.gameId, gameName: games.name })
       .from(matches)
+      .innerJoin(games, eq(matches.gameId, games.id))
       .where(eq(matches.id, input.matchId))
       .limit(1);
     return row ?? null;

@@ -1,15 +1,16 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeftIcon, ChatIcon, ClockIcon, MedalIcon, UsersIcon } from '../components/icons';
+import { ArrowLeftIcon, ChatIcon, ClockIcon, MedalIcon } from '../components/icons';
 import { UserHoverCard } from '../components/UserHoverCard';
+import { VoiceCallBar } from '../components/VoiceCallBar';
 import { BriscaBoard } from '../games/BriscaBoard';
 import { ConnectFourBoard } from '../games/ConnectFourBoard';
 import { PistaUnicaBoard } from '../games/PistaUnicaBoard';
 import { ReversiBoard } from '../games/ReversiBoard';
 import { TicTacToeBoard } from '../games/TicTacToeBoard';
+import { TimbiricheBoard } from '../games/TimbiricheBoard';
 import { formatDuration } from '../lib/formatDuration';
-import { useFriendsList } from '../lib/friends';
 import { trpc } from '../lib/trpc';
 import { useCountdownSeconds } from '../lib/useCountdown';
 import { matchSocket } from '../lib/ws';
@@ -17,137 +18,14 @@ import { useMatchStore } from '../stores/match';
 
 export const Route = createFileRoute('/_app/partida/$id')({ component: MatchPage });
 
-function InviteFriendButton({ matchId }: { matchId: string }) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const { friends } = useFriendsList();
-  const onlineFriends = friends.filter((f) => f.presence !== 'offline');
-  const getOrCreateDirect = trpc.conversations.getOrCreateDirect.useMutation();
-
-  function invite(friendId: string) {
-    getOrCreateDirect.mutate(
-      { friendId },
-      {
-        onSuccess: ({ conversationId }) => {
-          matchSocket.send({
-            type: 'dm.send',
-            payload: { conversationId, body: t('partida.inviteMessageBody'), kind: 'invite', matchId },
-          });
-          setOpen(false);
-        },
-      },
-    );
-  }
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-lg border border-tb-border px-3 py-1.5 text-xs font-medium text-tb-text hover:bg-tb-surface-2"
-      >
-        <UsersIcon className="h-3.5 w-3.5" />
-        {t('partida.inviteFriend')}
-      </button>
-      {open && (
-        <>
-          <div role="presentation" className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-tb-border bg-tb-surface p-2 shadow-lg">
-            {onlineFriends.length === 0 ? (
-              <p className="p-2 text-xs text-tb-muted">{t('partida.noOnlineFriends')}</p>
-            ) : (
-              onlineFriends.map((f) => (
-                <button
-                  key={f.userId}
-                  type="button"
-                  onClick={() => invite(f.userId)}
-                  className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-tb-text hover:bg-tb-surface-2"
-                >
-                  {f.displayName}
-                </button>
-              ))
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 const BOARD_COMPONENTS = {
   'tres-en-raya': TicTacToeBoard,
   'conecta-cuatro': ConnectFourBoard,
   brisca: BriscaBoard,
   reversi: ReversiBoard,
   'pista-unica': PistaUnicaBoard,
+  timbiriche: TimbiricheBoard,
 } as const;
-
-const REPORT_REASONS = ['unsportsmanlike', 'abusive_language', 'cheating', 'other'] as const;
-type ReportReason = (typeof REPORT_REASONS)[number];
-
-function ReportButton({ matchId, targetUserId, targetName }: { matchId: string; targetUserId: string; targetName: string }) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState<ReportReason>('unsportsmanlike');
-  const [comment, setComment] = useState('');
-  const report = trpc.moderation.report.useMutation();
-
-  if (report.isSuccess) {
-    return <p className="text-xs font-medium text-tb-success">{t('partida.reportSent')}</p>;
-  }
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="text-xs font-semibold text-tb-muted transition-colors hover:text-tb-danger"
-      >
-        {t('partida.report', { name: targetName })}
-      </button>
-    );
-  }
-
-  return (
-    <div className="w-full rounded-xl border border-tb-border bg-tb-surface-2 p-3 text-left">
-      <p className="text-xs font-semibold text-tb-text">{t('partida.report', { name: targetName })}</p>
-      <select
-        value={reason}
-        onChange={(e) => setReason(e.target.value as ReportReason)}
-        className="mt-2 w-full rounded-lg border border-tb-border bg-tb-surface px-2 py-1.5 text-xs text-tb-text"
-      >
-        {REPORT_REASONS.map((r) => (
-          <option key={r} value={r}>
-            {t(`partida.reportReason.${r}`)}
-          </option>
-        ))}
-      </select>
-      <textarea
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        placeholder={t('partida.reportCommentPlaceholder')}
-        rows={2}
-        className="mt-2 w-full resize-none rounded-lg border border-tb-border bg-tb-surface px-2 py-1.5 text-xs text-tb-text placeholder:text-tb-muted"
-      />
-      {report.isError && <p className="mt-1 text-xs font-medium text-tb-danger">{report.error.message}</p>}
-      <div className="mt-2 flex justify-end gap-2">
-        <button type="button" onClick={() => setOpen(false)} className="text-xs text-tb-muted hover:text-tb-text">
-          {t('partida.cancel')}
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            report.mutate({ matchId, reportedUserId: targetUserId, reason, comment: comment.trim() || undefined })
-          }
-          disabled={report.isPending}
-          className="rounded-lg bg-tb-danger px-3 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          {t('partida.reportSubmit')}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function MatchPage() {
   const { t } = useTranslation();
@@ -257,7 +135,7 @@ function MatchPage() {
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
             {matchState?.players.map((p) => (
-              <UserHoverCard key={p.seat} userId={p.userId}>
+              <UserHoverCard key={p.seat} userId={p.userId} matchId={p.userId !== me.id ? matchId : undefined}>
                 <span
                   className={`tb-nums flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ${
                     matchState.activePlayers.includes(p.seat) && !ended
@@ -278,7 +156,6 @@ function MatchPage() {
                 {formatDuration(deadline)}
               </span>
             )}
-            {!isSpectator && !ended && <InviteFriendButton matchId={matchId} />}
             {!isSpectator && !ended && (
               <button
                 type="button"
@@ -299,6 +176,16 @@ function MatchPage() {
             )}
           </div>
         </div>
+
+        {!isSpectator && !ended && matchInfo && (
+          <div className="mb-3 rounded-2xl border border-tb-border">
+            <VoiceCallBar
+              room={{ kind: 'match', matchId }}
+              label={matchInfo.gameName}
+              meId={me.id}
+            />
+          </div>
+        )}
 
         {!ended && (iRequestedAbandon || othersRequestingAbandon.length > 0) && (
           <p className="mb-3 rounded-lg bg-tb-accent-tint px-3 py-2 text-center text-xs font-medium text-tb-accent">
@@ -391,15 +278,6 @@ function MatchPage() {
                       </p>
                     );
                   })()}
-                {!isSpectator && matchState && (
-                  <div className="flex w-full flex-col items-center gap-2">
-                    {matchState.players
-                      .filter((p) => p.seat !== mySeat)
-                      .map((p) => (
-                        <ReportButton key={p.seat} matchId={matchId} targetUserId={p.userId} targetName={p.username} />
-                      ))}
-                  </div>
-                )}
                 <Link
                   to="/"
                   className="mt-2 flex items-center gap-1.5 rounded-lg border border-tb-border px-3.5 py-2 text-sm font-medium text-tb-text hover:bg-tb-surface-2"

@@ -4,6 +4,8 @@ import { serverMessageSchema } from './server-messages.js';
 
 const matchId = '0198c1a0-1234-7abc-8def-1234567890ab';
 const userId = '0198c1a0-5678-7abc-8def-1234567890ab';
+const conversationId = '0198c1a0-9abc-7abc-8def-1234567890ab';
+const room = { kind: 'conversation' as const, conversationId };
 
 describe('clientMessageSchema', () => {
   it('acepta match.join', () => {
@@ -58,6 +60,48 @@ describe('clientMessageSchema', () => {
 
   it('rechaza un type desconocido', () => {
     const r = clientMessageSchema.safeParse({ type: 'match.teleport', payload: {} });
+    expect(r.success).toBe(false);
+  });
+
+  it('acepta voice.join', () => {
+    const r = clientMessageSchema.safeParse({ type: 'voice.join', payload: { room } });
+    expect(r.success).toBe(true);
+  });
+
+  it('acepta voice.leave', () => {
+    const r = clientMessageSchema.safeParse({ type: 'voice.leave', payload: { room } });
+    expect(r.success).toBe(true);
+  });
+
+  it('acepta voice.join de una partida', () => {
+    const r = clientMessageSchema.safeParse({
+      type: 'voice.join',
+      payload: { room: { kind: 'match', matchId } },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('acepta voice.signal de tipo offer', () => {
+    const r = clientMessageSchema.safeParse({
+      type: 'voice.signal',
+      payload: { room, targetUserId: userId, signal: { kind: 'offer', sdp: 'v=0...' } },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('acepta voice.signal de tipo ice-candidate', () => {
+    const r = clientMessageSchema.safeParse({
+      type: 'voice.signal',
+      payload: { room, targetUserId: userId, signal: { kind: 'ice-candidate', candidate: { candidate: 'foo' } } },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('rechaza voice.signal con kind desconocido', () => {
+    const r = clientMessageSchema.safeParse({
+      type: 'voice.signal',
+      payload: { room, targetUserId: userId, signal: { kind: 'bogus' } },
+    });
     expect(r.success).toBe(false);
   });
 });
@@ -148,5 +192,21 @@ describe('serverMessageSchema', () => {
       payload: { matchId, reason: 'timeout', ranking: [] },
     });
     expect(r.success).toBe(false);
+  });
+
+  it('acepta voice.roster', () => {
+    const r = serverMessageSchema.safeParse({
+      type: 'voice.roster',
+      payload: { room, participants: [{ userId, username: 'ramiku' }] },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('acepta voice.signal de tipo answer', () => {
+    const r = serverMessageSchema.safeParse({
+      type: 'voice.signal',
+      payload: { room, fromUserId: userId, signal: { kind: 'answer', sdp: 'v=0...' } },
+    });
+    expect(r.success).toBe(true);
   });
 });

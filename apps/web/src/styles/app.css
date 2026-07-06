@@ -211,3 +211,37 @@ a.tb-nav-active .tb-nav-dot {
     animation: none;
   }
 }
+
+/* Contenido enriquecido (reglas de juego editadas con Tiptap en el panel de admin):
+   sin plugin de tipografía de Tailwind, así que el espaciado básico se define a mano. */
+.tb-rich-text h2 {
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+  font-size: 1.25em;
+  font-weight: 700;
+}
+.tb-rich-text h3 {
+  margin-top: 1em;
+  margin-bottom: 0.4em;
+  font-size: 1.1em;
+  font-weight: 700;
+}
+.tb-rich-text p {
+  margin-bottom: 0.75em;
+  line-height: 1.6;
+}
+.tb-rich-text ul,
+.tb-rich-text ol {
+  margin-bottom: 0.75em;
+  padding-left: 1.5em;
+}
+.tb-rich-text ul {
+  list-style: disc;
+}
+.tb-rich-text ol {
+  list-style: decimal;
+}
+.tb-rich-text a {
+  color: var(--tb-accent);
+  text-decoration: underline;
+}

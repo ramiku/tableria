@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import type { ServerMessage } from '@tableria/protocol';
+import { getConversationDisplay } from '../lib/conversationDisplay';
 import { matchSocket } from '../lib/ws';
 import { trpc } from '../lib/trpc';
 import { useChatDock } from '../stores/chatDock';
 import { Avatar } from './Avatar';
 import { ChatIcon, CloseIcon, SendIcon } from './icons';
+import { VoiceCallBar } from './VoiceCallBar';
 
 type DmPayload = Extract<ServerMessage, { type: 'dm.message' }>['payload'];
 
@@ -32,9 +34,9 @@ export function ChatDock({ meId }: { meId: string }) {
       // Mantener frescas las previas (la burbuja minimizada muestra el último mensaje).
       void utils.conversations.list.invalidate();
       if (dm.userId === meId) return; // eco de un mensaje propio
-      // Si esa conversación ya vive en el dock (panel o burbuja) o en /mensajes, no hace falta burbuja nueva.
+      // Si esa conversación ya vive en el dock (panel o burbuja) o en /social/mensajes, no hace falta burbuja nueva.
       if (useChatDock.getState().conversationId === dm.conversationId) return;
-      if (window.location.pathname === `/mensajes/${dm.conversationId}`) return;
+      if (window.location.pathname === `/social/mensajes/${dm.conversationId}`) return;
       setIncoming(dm);
     });
   }, [meId, utils]);
@@ -136,8 +138,7 @@ function MinimizedBubble({
   const { t } = useTranslation();
   const { data: conversations } = trpc.conversations.list.useQuery();
   const conversation = conversations?.find((c) => c.id === conversationId);
-  const otherUser = conversation?.otherUser ?? null;
-  const name = otherUser?.displayName ?? fallbackName ?? t('messages.unknownUser');
+  const display = getConversationDisplay(conversation, fallbackName ?? t('messages.unknownUser'));
   const preview = conversation?.lastMessage
     ? conversation.lastMessage.kind === 'invite'
       ? t('messages.inviteSummary')
@@ -146,9 +147,9 @@ function MinimizedBubble({
 
   return (
     <BubbleShell
-      name={name}
-      avatarInitial={otherUser?.avatarInitial ?? name.charAt(0).toUpperCase()}
-      avatarColor={otherUser?.avatarColor ?? '#2f6fe0'}
+      name={display.name}
+      avatarInitial={display.initial}
+      avatarColor={display.color}
       preview={preview}
       hint={t('messages.bubbleOpen')}
       positionClass="bottom-6"
@@ -199,11 +200,13 @@ function DockPanel({ conversationId, meId, onMinimize }: { conversationId: strin
   const fallbackName = useChatDock((s) => s.fallbackName);
   const [body, setBody] = useState('');
   const [live, setLive] = useState<DmPayload[]>([]);
+  const [blockedError, setBlockedError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { data: history } = trpc.conversations.listMessages.useQuery({ conversationId });
   const { data: conversations } = trpc.conversations.list.useQuery();
-  const otherUser = conversations?.find((c) => c.id === conversationId)?.otherUser ?? null;
+  const conversation = conversations?.find((c) => c.id === conversationId);
+  const display = getConversationDisplay(conversation, fallbackName ?? t('messages.unknownUser'));
   const markRead = trpc.conversations.markRead.useMutation();
   const joinMatch = trpc.matches.join.useMutation();
 
@@ -213,6 +216,10 @@ function DockPanel({ conversationId, meId, onMinimize }: { conversationId: strin
 
   useEffect(() => {
     return matchSocket.onMessage((message) => {
+      if (message.type === 'match.error' && message.payload.code === 'BLOCKED_LANGUAGE') {
+        setBlockedError(message.payload.message);
+        return;
+      }
       if (message.type !== 'dm.message' || message.payload.conversationId !== conversationId) return;
       setLive((prev) => [...prev, message.payload]);
       if (message.payload.userId !== meId) {
@@ -229,6 +236,7 @@ function DockPanel({ conversationId, meId, onMinimize }: { conversationId: strin
 
   function handleSend(e: FormEvent) {
     e.preventDefault();
+    setBlockedError(null);
     const trimmed = body.trim();
     if (!trimmed) return;
     matchSocket.send({ type: 'dm.send', payload: { conversationId, body: trimmed, kind: 'text' } });
@@ -239,20 +247,19 @@ function DockPanel({ conversationId, meId, onMinimize }: { conversationId: strin
     joinMatch.mutate({ code }, { onSuccess: () => void navigate({ to: '/sala/$code', params: { code } }) });
   }
 
-  const displayName = otherUser?.displayName ?? fallbackName ?? t('messages.unknownUser');
-
   return (
     <div className="fixed bottom-6 right-6 z-50 flex h-[30rem] max-h-[70dvh] w-96 flex-col overflow-hidden rounded-2xl border border-tb-border bg-tb-surface shadow-xl">
       {/* Cabecera */}
       <div className="flex items-center gap-3 border-b border-tb-border px-4 py-3">
-        <Avatar
-          initial={otherUser?.avatarInitial ?? displayName.charAt(0).toUpperCase()}
-          color={otherUser?.avatarColor ?? '#2f6fe0'}
-          size={32}
-        />
+        <Avatar initial={display.initial} color={display.color} size={32} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-tb-text">{displayName}</p>
-          {otherUser && <p className="truncate text-xs text-tb-muted">@{otherUser.username}</p>}
+          <p className="truncate text-sm font-semibold text-tb-text">{display.name}</p>
+          {display.kind === 'direct' && display.username && (
+            <p className="truncate text-xs text-tb-muted">@{display.username}</p>
+          )}
+          {display.kind === 'group' && display.memberCount !== null && (
+            <p className="truncate text-xs text-tb-muted">{t('messages.group.memberCount', { count: display.memberCount })}</p>
+          )}
         </div>
         <button
           type="button"
@@ -263,6 +270,10 @@ function DockPanel({ conversationId, meId, onMinimize }: { conversationId: strin
           <CloseIcon />
         </button>
       </div>
+
+      {display.kind === 'group' && (
+        <VoiceCallBar room={{ kind: 'conversation', conversationId }} label={display.name} meId={meId} />
+      )}
 
       {/* Mensajes */}
       <div className="flex-1 space-y-2.5 overflow-y-auto p-3">
@@ -289,12 +300,17 @@ function DockPanel({ conversationId, meId, onMinimize }: { conversationId: strin
           }
           return (
             <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[15rem] rounded-xl px-3 py-1.5 text-sm ${
-                  mine ? 'bg-tb-accent text-tb-accent-fg' : 'bg-tb-surface-2 text-tb-text'
-                }`}
-              >
-                {m.body}
+              <div className={`max-w-[15rem] ${mine ? 'items-end' : 'items-start'} flex flex-col`}>
+                {!mine && display.kind === 'group' && (
+                  <span className="mb-0.5 px-1 text-xs font-semibold text-tb-muted">{m.username}</span>
+                )}
+                <div
+                  className={`rounded-xl px-3 py-1.5 text-sm ${
+                    mine ? 'bg-tb-accent text-tb-accent-fg' : 'bg-tb-surface-2 text-tb-text'
+                  }`}
+                >
+                  {m.body}
+                </div>
               </div>
             </div>
           );
@@ -303,6 +319,7 @@ function DockPanel({ conversationId, meId, onMinimize }: { conversationId: strin
       </div>
 
       {/* Composición */}
+      {blockedError && <p className="px-3 pt-2 text-xs font-medium text-tb-danger">{blockedError}</p>}
       <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-tb-border p-2.5">
         <input
           value={body}

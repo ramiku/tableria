@@ -277,3 +277,45 @@ export function ArrowLeftIcon(props: IconProps) {
     </svg>
   );
 }
+
+export function MicIcon(props: IconProps) {
+  return (
+    <svg {...base} width={16} height={16} {...props}>
+      <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
+      <path d="M19 11a7 7 0 0 1-14 0M12 18v3" />
+    </svg>
+  );
+}
+
+export function MicOffIcon(props: IconProps) {
+  return (
+    <svg {...base} width={16} height={16} {...props}>
+      <path d="M9 6a3 3 0 0 1 6 0v5a3 3 0 0 1-.28 1.27M15 15a3 3 0 0 1-5.6-1.5" />
+      <path d="M19 11a7 7 0 0 1-9.9 6.36M5 11a7 7 0 0 0 1.34 4.12M12 18v3" />
+      <path d="M4 4l16 16" />
+    </svg>
+  );
+}
+
+export function PhoneOffIcon(props: IconProps) {
+  return (
+    <svg {...base} width={16} height={16} {...props}>
+      <path d="M4 3l17 17" />
+      <path d="M10.6 6.9a15.6 15.6 0 0 1 3.2-.4M17.5 13.8c1 .3 2 .7 2.9 1.2a1.6 1.6 0 0 1 .6 1.9l-.9 2.1a1.6 1.6 0 0 1-1.8 1 15.6 15.6 0 0 1-11-6.6A15.6 15.6 0 0 1 4 3.3a1.6 1.6 0 0 1 1-1.8l2.1-.9a1.6 1.6 0 0 1 1.9.6c.5.9.9 1.9 1.2 2.9" />
+    </svg>
+  );
+}
+
+/** Asa de arrastre (seis puntos) — p.ej. para reposicionar `VoiceCallWidget`. */
+export function GripIcon(props: IconProps) {
+  return (
+    <svg {...base} width={14} height={14} fill="currentColor" stroke="none" {...props}>
+      <circle cx="8" cy="5" r="1.6" />
+      <circle cx="8" cy="12" r="1.6" />
+      <circle cx="8" cy="19" r="1.6" />
+      <circle cx="16" cy="5" r="1.6" />
+      <circle cx="16" cy="12" r="1.6" />
+      <circle cx="16" cy="19" r="1.6" />
+    </svg>
+  );
+}

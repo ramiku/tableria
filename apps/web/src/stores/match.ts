@@ -64,5 +64,14 @@ function handleMessage(message: ServerMessage): void {
   }
 }
 
-matchSocket.onMessage(handleMessage);
-matchSocket.onStatus((status) => useMatchStore.setState({ connectionStatus: status }));
+// Ver el comentario equivalente en `stores/presence.ts`: sin este dispose, cada HMR de este
+// archivo apila un listener más sobre el socket singleton — cada `chat.message` entrante se
+// procesaría una vez por listener acumulado, viéndose como mensajes duplicados (solo en dev).
+const unsubscribeMessage = matchSocket.onMessage(handleMessage);
+const unsubscribeStatus = matchSocket.onStatus((status) => useMatchStore.setState({ connectionStatus: status }));
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    unsubscribeMessage();
+    unsubscribeStatus();
+  });
+}

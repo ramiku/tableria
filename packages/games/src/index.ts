@@ -2,6 +2,7 @@ import { briscaDefinition } from './brisca/definition.js';
 import { connectFourDefinition } from './conecta-cuatro/definition.js';
 import { pistaUnicaDefinition } from './pista-unica/definition.js';
 import { reversiDefinition } from './reversi/definition.js';
+import { timbiricheDefinition } from './timbiriche/definition.js';
 import { ticTacToeDefinition } from './tres-en-raya/definition.js';
 
 export const gameDefinitions = {
@@ -10,6 +11,7 @@ export const gameDefinitions = {
   brisca: briscaDefinition,
   reversi: reversiDefinition,
   'pista-unica': pistaUnicaDefinition,
+  timbiriche: timbiricheDefinition,
 } as const;
 
 export type GameId = keyof typeof gameDefinitions;
@@ -36,3 +38,12 @@ export { reversiDefinition };
 
 export type { PistaUnicaMove, PistaUnicaState, PistaUnicaView, RoundHistoryEntry as PistaUnicaHistoryEntry } from './pista-unica/types.js';
 export { pistaUnicaDefinition };
+
+export type {
+  BoardPreset as TimbiricheBoardPreset,
+  TimbiricheMove,
+  TimbiricheState,
+  TimbiricheView,
+} from './timbiriche/types.js';
+export { BOARD_PRESETS as TIMBIRICHE_BOARD_PRESETS, DEFAULT_BOARD_PRESET as TIMBIRICHE_DEFAULT_PRESET } from './timbiriche/types.js';
+export { timbiricheDefinition };

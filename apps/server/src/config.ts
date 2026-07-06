@@ -19,9 +19,18 @@ export const envSchema = z.object({
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
   EMAIL_FROM: z.string().default('Tableria <no-reply@tableria.app>'),
+  // Solo se define dentro del contenedor de producción: ruta a los estáticos ya
+  // compilados de apps/web. En dev no se define nunca (Vite sirve el frontend aparte).
+  WEB_DIST_PATH: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
+
+/** Cookies `Secure` según el esquema real de `WEB_ORIGIN`, no según NODE_ENV: así funciona
+ * tanto en LAN por http:// (sin Cloudflare Tunnel todavía) como más adelante por https://. */
+export function isHttps(url: string): boolean {
+  return new URL(url).protocol === 'https:';
+}
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Env {
   const parsed = envSchema.safeParse(source);

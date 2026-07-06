@@ -7,6 +7,8 @@ import type { AuthedSocket } from '../match/registry.js';
 import type { MatchService } from '../match/service.js';
 import { attach as attachPresence, detach as detachPresence } from '../social/presence.js';
 import type { SocialService } from '../social/service.js';
+import { getMaintenanceStatus } from '../settings/service.js';
+import type { VoiceService } from '../voice/service.js';
 import { dispatchClientMessage } from './handlers.js';
 import { registerSocket, startHeartbeat, unregisterSocket } from './heartbeat.js';
 
@@ -34,6 +36,7 @@ export function registerWsGateway(
   env: Env,
   matchService: MatchService,
   socialService: SocialService,
+  voiceService: VoiceService,
 ): void {
   app.get('/api/ws', { websocket: true }, async (socket, request) => {
     const token = extractSessionToken(request);
@@ -41,6 +44,14 @@ export function registerWsGateway(
     if (!user || !token) {
       socket.close(4401, 'unauthorized');
       return;
+    }
+
+    if (!user.isAdmin) {
+      const maintenance = await getMaintenanceStatus(db);
+      if (maintenance.enabled) {
+        socket.close(4503, 'maintenance');
+        return;
+      }
     }
 
     const authed = socket as unknown as AuthedSocket;
@@ -62,7 +73,7 @@ export function registerWsGateway(
       }
       const result = clientMessageSchema.safeParse(parsed);
       if (!result.success) return;
-      void dispatchClientMessage(matchService, socialService, authed, result.data).catch((err: unknown) => {
+      void dispatchClientMessage(matchService, socialService, voiceService, authed, result.data).catch((err: unknown) => {
         app.log.error({ err }, 'Error despachando mensaje WS');
       });
     });
@@ -70,6 +81,7 @@ export function registerWsGateway(
     socket.on('close', () => {
       unregisterSocket(authed);
       matchService.detachSocket(authed);
+      voiceService.detachSocket(authed);
       detachPresence(db, authed);
     });
   });

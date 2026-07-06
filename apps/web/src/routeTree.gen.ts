@@ -16,18 +16,33 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppSocialRouteImport } from './routes/_app.social'
 import { Route as AppSalasRouteImport } from './routes/_app.salas'
 import { Route as AppRankingsRouteImport } from './routes/_app.rankings'
 import { Route as AppPerfilRouteImport } from './routes/_app.perfil'
 import { Route as AppMensajesRouteImport } from './routes/_app.mensajes'
 import { Route as AppAmigosRouteImport } from './routes/_app.amigos'
+import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as AppTorneosIndexRouteImport } from './routes/_app.torneos.index'
+import { Route as AppSocialIndexRouteImport } from './routes/_app.social.index'
 import { Route as AppMensajesIndexRouteImport } from './routes/_app.mensajes.index'
+import { Route as AppAdminIndexRouteImport } from './routes/_app.admin.index'
 import { Route as AppTorneosIdRouteImport } from './routes/_app.torneos.$id'
+import { Route as AppSocialMensajesRouteImport } from './routes/_app.social.mensajes'
+import { Route as AppSocialAmigosRouteImport } from './routes/_app.social.amigos'
 import { Route as AppSalaCodeRouteImport } from './routes/_app.sala.$code'
 import { Route as AppPartidaIdRouteImport } from './routes/_app.partida.$id'
 import { Route as AppMensajesConversationIdRouteImport } from './routes/_app.mensajes.$conversationId'
 import { Route as AppJuegosSlugRouteImport } from './routes/_app.juegos.$slug'
+import { Route as AppAdminReportesRouteImport } from './routes/_app.admin.reportes'
+import { Route as AppAdminMesasRouteImport } from './routes/_app.admin.mesas'
+import { Route as AppAdminMantenimientoRouteImport } from './routes/_app.admin.mantenimiento'
+import { Route as AppAdminJugadoresRouteImport } from './routes/_app.admin.jugadores'
+import { Route as AppAdminAuditoriaRouteImport } from './routes/_app.admin.auditoria'
+import { Route as AppSocialMensajesIndexRouteImport } from './routes/_app.social.mensajes.index'
+import { Route as AppAdminJuegosIndexRouteImport } from './routes/_app.admin.juegos.index'
+import { Route as AppSocialMensajesConversationIdRouteImport } from './routes/_app.social.mensajes.$conversationId'
+import { Route as AppAdminJuegosSlugRouteImport } from './routes/_app.admin.juegos.$slug'
 
 const RestablecerRoute = RestablecerRouteImport.update({
   id: '/restablecer',
@@ -63,6 +78,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSocialRoute = AppSocialRouteImport.update({
+  id: '/social',
+  path: '/social',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSalasRoute = AppSalasRouteImport.update({
   id: '/salas',
   path: '/salas',
@@ -88,20 +108,45 @@ const AppAmigosRoute = AppAmigosRouteImport.update({
   path: '/amigos',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppTorneosIndexRoute = AppTorneosIndexRouteImport.update({
   id: '/torneos/',
   path: '/torneos/',
   getParentRoute: () => AppRoute,
+} as any)
+const AppSocialIndexRoute = AppSocialIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppSocialRoute,
 } as any)
 const AppMensajesIndexRoute = AppMensajesIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppMensajesRoute,
 } as any)
+const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const AppTorneosIdRoute = AppTorneosIdRouteImport.update({
   id: '/torneos/$id',
   path: '/torneos/$id',
   getParentRoute: () => AppRoute,
+} as any)
+const AppSocialMensajesRoute = AppSocialMensajesRouteImport.update({
+  id: '/mensajes',
+  path: '/mensajes',
+  getParentRoute: () => AppSocialRoute,
+} as any)
+const AppSocialAmigosRoute = AppSocialAmigosRouteImport.update({
+  id: '/amigos',
+  path: '/amigos',
+  getParentRoute: () => AppSocialRoute,
 } as any)
 const AppSalaCodeRoute = AppSalaCodeRouteImport.update({
   id: '/sala/$code',
@@ -124,6 +169,52 @@ const AppJuegosSlugRoute = AppJuegosSlugRouteImport.update({
   path: '/juegos/$slug',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminReportesRoute = AppAdminReportesRouteImport.update({
+  id: '/reportes',
+  path: '/reportes',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminMesasRoute = AppAdminMesasRouteImport.update({
+  id: '/mesas',
+  path: '/mesas',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminMantenimientoRoute = AppAdminMantenimientoRouteImport.update({
+  id: '/mantenimiento',
+  path: '/mantenimiento',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminJugadoresRoute = AppAdminJugadoresRouteImport.update({
+  id: '/jugadores',
+  path: '/jugadores',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminAuditoriaRoute = AppAdminAuditoriaRouteImport.update({
+  id: '/auditoria',
+  path: '/auditoria',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppSocialMensajesIndexRoute = AppSocialMensajesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppSocialMensajesRoute,
+} as any)
+const AppAdminJuegosIndexRoute = AppAdminJuegosIndexRouteImport.update({
+  id: '/juegos/',
+  path: '/juegos/',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppSocialMensajesConversationIdRoute =
+  AppSocialMensajesConversationIdRouteImport.update({
+    id: '/$conversationId',
+    path: '/$conversationId',
+    getParentRoute: () => AppSocialMensajesRoute,
+  } as any)
+const AppAdminJuegosSlugRoute = AppAdminJuegosSlugRouteImport.update({
+  id: '/juegos/$slug',
+  path: '/juegos/$slug',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -132,18 +223,33 @@ export interface FileRoutesByFullPath {
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
   '/restablecer': typeof RestablecerRoute
+  '/admin': typeof AppAdminRouteWithChildren
   '/amigos': typeof AppAmigosRoute
   '/mensajes': typeof AppMensajesRouteWithChildren
   '/perfil': typeof AppPerfilRoute
   '/rankings': typeof AppRankingsRoute
   '/salas': typeof AppSalasRoute
+  '/social': typeof AppSocialRouteWithChildren
+  '/admin/auditoria': typeof AppAdminAuditoriaRoute
+  '/admin/jugadores': typeof AppAdminJugadoresRoute
+  '/admin/mantenimiento': typeof AppAdminMantenimientoRoute
+  '/admin/mesas': typeof AppAdminMesasRoute
+  '/admin/reportes': typeof AppAdminReportesRoute
   '/juegos/$slug': typeof AppJuegosSlugRoute
   '/mensajes/$conversationId': typeof AppMensajesConversationIdRoute
   '/partida/$id': typeof AppPartidaIdRoute
   '/sala/$code': typeof AppSalaCodeRoute
+  '/social/amigos': typeof AppSocialAmigosRoute
+  '/social/mensajes': typeof AppSocialMensajesRouteWithChildren
   '/torneos/$id': typeof AppTorneosIdRoute
+  '/admin/': typeof AppAdminIndexRoute
   '/mensajes/': typeof AppMensajesIndexRoute
+  '/social/': typeof AppSocialIndexRoute
   '/torneos/': typeof AppTorneosIndexRoute
+  '/admin/juegos/$slug': typeof AppAdminJuegosSlugRoute
+  '/social/mensajes/$conversationId': typeof AppSocialMensajesConversationIdRoute
+  '/admin/juegos/': typeof AppAdminJuegosIndexRoute
+  '/social/mensajes/': typeof AppSocialMensajesIndexRoute
 }
 export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
@@ -156,13 +262,25 @@ export interface FileRoutesByTo {
   '/rankings': typeof AppRankingsRoute
   '/salas': typeof AppSalasRoute
   '/': typeof AppIndexRoute
+  '/admin/auditoria': typeof AppAdminAuditoriaRoute
+  '/admin/jugadores': typeof AppAdminJugadoresRoute
+  '/admin/mantenimiento': typeof AppAdminMantenimientoRoute
+  '/admin/mesas': typeof AppAdminMesasRoute
+  '/admin/reportes': typeof AppAdminReportesRoute
   '/juegos/$slug': typeof AppJuegosSlugRoute
   '/mensajes/$conversationId': typeof AppMensajesConversationIdRoute
   '/partida/$id': typeof AppPartidaIdRoute
   '/sala/$code': typeof AppSalaCodeRoute
+  '/social/amigos': typeof AppSocialAmigosRoute
   '/torneos/$id': typeof AppTorneosIdRoute
+  '/admin': typeof AppAdminIndexRoute
   '/mensajes': typeof AppMensajesIndexRoute
+  '/social': typeof AppSocialIndexRoute
   '/torneos': typeof AppTorneosIndexRoute
+  '/admin/juegos/$slug': typeof AppAdminJuegosSlugRoute
+  '/social/mensajes/$conversationId': typeof AppSocialMensajesConversationIdRoute
+  '/admin/juegos': typeof AppAdminJuegosIndexRoute
+  '/social/mensajes': typeof AppSocialMensajesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -172,19 +290,34 @@ export interface FileRoutesById {
   '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRoute
   '/restablecer': typeof RestablecerRoute
+  '/_app/admin': typeof AppAdminRouteWithChildren
   '/_app/amigos': typeof AppAmigosRoute
   '/_app/mensajes': typeof AppMensajesRouteWithChildren
   '/_app/perfil': typeof AppPerfilRoute
   '/_app/rankings': typeof AppRankingsRoute
   '/_app/salas': typeof AppSalasRoute
+  '/_app/social': typeof AppSocialRouteWithChildren
   '/_app/': typeof AppIndexRoute
+  '/_app/admin/auditoria': typeof AppAdminAuditoriaRoute
+  '/_app/admin/jugadores': typeof AppAdminJugadoresRoute
+  '/_app/admin/mantenimiento': typeof AppAdminMantenimientoRoute
+  '/_app/admin/mesas': typeof AppAdminMesasRoute
+  '/_app/admin/reportes': typeof AppAdminReportesRoute
   '/_app/juegos/$slug': typeof AppJuegosSlugRoute
   '/_app/mensajes/$conversationId': typeof AppMensajesConversationIdRoute
   '/_app/partida/$id': typeof AppPartidaIdRoute
   '/_app/sala/$code': typeof AppSalaCodeRoute
+  '/_app/social/amigos': typeof AppSocialAmigosRoute
+  '/_app/social/mensajes': typeof AppSocialMensajesRouteWithChildren
   '/_app/torneos/$id': typeof AppTorneosIdRoute
+  '/_app/admin/': typeof AppAdminIndexRoute
   '/_app/mensajes/': typeof AppMensajesIndexRoute
+  '/_app/social/': typeof AppSocialIndexRoute
   '/_app/torneos/': typeof AppTorneosIndexRoute
+  '/_app/admin/juegos/$slug': typeof AppAdminJuegosSlugRoute
+  '/_app/social/mensajes/$conversationId': typeof AppSocialMensajesConversationIdRoute
+  '/_app/admin/juegos/': typeof AppAdminJuegosIndexRoute
+  '/_app/social/mensajes/': typeof AppSocialMensajesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -195,18 +328,33 @@ export interface FileRouteTypes {
     | '/recuperar'
     | '/registro'
     | '/restablecer'
+    | '/admin'
     | '/amigos'
     | '/mensajes'
     | '/perfil'
     | '/rankings'
     | '/salas'
+    | '/social'
+    | '/admin/auditoria'
+    | '/admin/jugadores'
+    | '/admin/mantenimiento'
+    | '/admin/mesas'
+    | '/admin/reportes'
     | '/juegos/$slug'
     | '/mensajes/$conversationId'
     | '/partida/$id'
     | '/sala/$code'
+    | '/social/amigos'
+    | '/social/mensajes'
     | '/torneos/$id'
+    | '/admin/'
     | '/mensajes/'
+    | '/social/'
     | '/torneos/'
+    | '/admin/juegos/$slug'
+    | '/social/mensajes/$conversationId'
+    | '/admin/juegos/'
+    | '/social/mensajes/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/entrar'
@@ -219,13 +367,25 @@ export interface FileRouteTypes {
     | '/rankings'
     | '/salas'
     | '/'
+    | '/admin/auditoria'
+    | '/admin/jugadores'
+    | '/admin/mantenimiento'
+    | '/admin/mesas'
+    | '/admin/reportes'
     | '/juegos/$slug'
     | '/mensajes/$conversationId'
     | '/partida/$id'
     | '/sala/$code'
+    | '/social/amigos'
     | '/torneos/$id'
+    | '/admin'
     | '/mensajes'
+    | '/social'
     | '/torneos'
+    | '/admin/juegos/$slug'
+    | '/social/mensajes/$conversationId'
+    | '/admin/juegos'
+    | '/social/mensajes'
   id:
     | '__root__'
     | '/_app'
@@ -234,19 +394,34 @@ export interface FileRouteTypes {
     | '/recuperar'
     | '/registro'
     | '/restablecer'
+    | '/_app/admin'
     | '/_app/amigos'
     | '/_app/mensajes'
     | '/_app/perfil'
     | '/_app/rankings'
     | '/_app/salas'
+    | '/_app/social'
     | '/_app/'
+    | '/_app/admin/auditoria'
+    | '/_app/admin/jugadores'
+    | '/_app/admin/mantenimiento'
+    | '/_app/admin/mesas'
+    | '/_app/admin/reportes'
     | '/_app/juegos/$slug'
     | '/_app/mensajes/$conversationId'
     | '/_app/partida/$id'
     | '/_app/sala/$code'
+    | '/_app/social/amigos'
+    | '/_app/social/mensajes'
     | '/_app/torneos/$id'
+    | '/_app/admin/'
     | '/_app/mensajes/'
+    | '/_app/social/'
     | '/_app/torneos/'
+    | '/_app/admin/juegos/$slug'
+    | '/_app/social/mensajes/$conversationId'
+    | '/_app/admin/juegos/'
+    | '/_app/social/mensajes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -309,6 +484,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/social': {
+      id: '/_app/social'
+      path: '/social'
+      fullPath: '/social'
+      preLoaderRoute: typeof AppSocialRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/salas': {
       id: '/_app/salas'
       path: '/salas'
@@ -344,12 +526,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAmigosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/torneos/': {
       id: '/_app/torneos/'
       path: '/torneos'
       fullPath: '/torneos/'
       preLoaderRoute: typeof AppTorneosIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/social/': {
+      id: '/_app/social/'
+      path: '/'
+      fullPath: '/social/'
+      preLoaderRoute: typeof AppSocialIndexRouteImport
+      parentRoute: typeof AppSocialRoute
     }
     '/_app/mensajes/': {
       id: '/_app/mensajes/'
@@ -358,12 +554,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMensajesIndexRouteImport
       parentRoute: typeof AppMensajesRoute
     }
+    '/_app/admin/': {
+      id: '/_app/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AppAdminIndexRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/_app/torneos/$id': {
       id: '/_app/torneos/$id'
       path: '/torneos/$id'
       fullPath: '/torneos/$id'
       preLoaderRoute: typeof AppTorneosIdRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/social/mensajes': {
+      id: '/_app/social/mensajes'
+      path: '/mensajes'
+      fullPath: '/social/mensajes'
+      preLoaderRoute: typeof AppSocialMensajesRouteImport
+      parentRoute: typeof AppSocialRoute
+    }
+    '/_app/social/amigos': {
+      id: '/_app/social/amigos'
+      path: '/amigos'
+      fullPath: '/social/amigos'
+      preLoaderRoute: typeof AppSocialAmigosRouteImport
+      parentRoute: typeof AppSocialRoute
     }
     '/_app/sala/$code': {
       id: '/_app/sala/$code'
@@ -393,8 +610,97 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppJuegosSlugRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin/reportes': {
+      id: '/_app/admin/reportes'
+      path: '/reportes'
+      fullPath: '/admin/reportes'
+      preLoaderRoute: typeof AppAdminReportesRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/mesas': {
+      id: '/_app/admin/mesas'
+      path: '/mesas'
+      fullPath: '/admin/mesas'
+      preLoaderRoute: typeof AppAdminMesasRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/mantenimiento': {
+      id: '/_app/admin/mantenimiento'
+      path: '/mantenimiento'
+      fullPath: '/admin/mantenimiento'
+      preLoaderRoute: typeof AppAdminMantenimientoRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/jugadores': {
+      id: '/_app/admin/jugadores'
+      path: '/jugadores'
+      fullPath: '/admin/jugadores'
+      preLoaderRoute: typeof AppAdminJugadoresRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/auditoria': {
+      id: '/_app/admin/auditoria'
+      path: '/auditoria'
+      fullPath: '/admin/auditoria'
+      preLoaderRoute: typeof AppAdminAuditoriaRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/social/mensajes/': {
+      id: '/_app/social/mensajes/'
+      path: '/'
+      fullPath: '/social/mensajes/'
+      preLoaderRoute: typeof AppSocialMensajesIndexRouteImport
+      parentRoute: typeof AppSocialMensajesRoute
+    }
+    '/_app/admin/juegos/': {
+      id: '/_app/admin/juegos/'
+      path: '/juegos'
+      fullPath: '/admin/juegos/'
+      preLoaderRoute: typeof AppAdminJuegosIndexRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/social/mensajes/$conversationId': {
+      id: '/_app/social/mensajes/$conversationId'
+      path: '/$conversationId'
+      fullPath: '/social/mensajes/$conversationId'
+      preLoaderRoute: typeof AppSocialMensajesConversationIdRouteImport
+      parentRoute: typeof AppSocialMensajesRoute
+    }
+    '/_app/admin/juegos/$slug': {
+      id: '/_app/admin/juegos/$slug'
+      path: '/juegos/$slug'
+      fullPath: '/admin/juegos/$slug'
+      preLoaderRoute: typeof AppAdminJuegosSlugRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
   }
 }
+
+interface AppAdminRouteChildren {
+  AppAdminAuditoriaRoute: typeof AppAdminAuditoriaRoute
+  AppAdminJugadoresRoute: typeof AppAdminJugadoresRoute
+  AppAdminMantenimientoRoute: typeof AppAdminMantenimientoRoute
+  AppAdminMesasRoute: typeof AppAdminMesasRoute
+  AppAdminReportesRoute: typeof AppAdminReportesRoute
+  AppAdminIndexRoute: typeof AppAdminIndexRoute
+  AppAdminJuegosSlugRoute: typeof AppAdminJuegosSlugRoute
+  AppAdminJuegosIndexRoute: typeof AppAdminJuegosIndexRoute
+}
+
+const AppAdminRouteChildren: AppAdminRouteChildren = {
+  AppAdminAuditoriaRoute: AppAdminAuditoriaRoute,
+  AppAdminJugadoresRoute: AppAdminJugadoresRoute,
+  AppAdminMantenimientoRoute: AppAdminMantenimientoRoute,
+  AppAdminMesasRoute: AppAdminMesasRoute,
+  AppAdminReportesRoute: AppAdminReportesRoute,
+  AppAdminIndexRoute: AppAdminIndexRoute,
+  AppAdminJuegosSlugRoute: AppAdminJuegosSlugRoute,
+  AppAdminJuegosIndexRoute: AppAdminJuegosIndexRoute,
+}
+
+const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
+  AppAdminRouteChildren,
+)
 
 interface AppMensajesRouteChildren {
   AppMensajesConversationIdRoute: typeof AppMensajesConversationIdRoute
@@ -410,12 +716,43 @@ const AppMensajesRouteWithChildren = AppMensajesRoute._addFileChildren(
   AppMensajesRouteChildren,
 )
 
+interface AppSocialMensajesRouteChildren {
+  AppSocialMensajesConversationIdRoute: typeof AppSocialMensajesConversationIdRoute
+  AppSocialMensajesIndexRoute: typeof AppSocialMensajesIndexRoute
+}
+
+const AppSocialMensajesRouteChildren: AppSocialMensajesRouteChildren = {
+  AppSocialMensajesConversationIdRoute: AppSocialMensajesConversationIdRoute,
+  AppSocialMensajesIndexRoute: AppSocialMensajesIndexRoute,
+}
+
+const AppSocialMensajesRouteWithChildren =
+  AppSocialMensajesRoute._addFileChildren(AppSocialMensajesRouteChildren)
+
+interface AppSocialRouteChildren {
+  AppSocialAmigosRoute: typeof AppSocialAmigosRoute
+  AppSocialMensajesRoute: typeof AppSocialMensajesRouteWithChildren
+  AppSocialIndexRoute: typeof AppSocialIndexRoute
+}
+
+const AppSocialRouteChildren: AppSocialRouteChildren = {
+  AppSocialAmigosRoute: AppSocialAmigosRoute,
+  AppSocialMensajesRoute: AppSocialMensajesRouteWithChildren,
+  AppSocialIndexRoute: AppSocialIndexRoute,
+}
+
+const AppSocialRouteWithChildren = AppSocialRoute._addFileChildren(
+  AppSocialRouteChildren,
+)
+
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRouteWithChildren
   AppAmigosRoute: typeof AppAmigosRoute
   AppMensajesRoute: typeof AppMensajesRouteWithChildren
   AppPerfilRoute: typeof AppPerfilRoute
   AppRankingsRoute: typeof AppRankingsRoute
   AppSalasRoute: typeof AppSalasRoute
+  AppSocialRoute: typeof AppSocialRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppJuegosSlugRoute: typeof AppJuegosSlugRoute
   AppPartidaIdRoute: typeof AppPartidaIdRoute
@@ -425,11 +762,13 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRouteWithChildren,
   AppAmigosRoute: AppAmigosRoute,
   AppMensajesRoute: AppMensajesRouteWithChildren,
   AppPerfilRoute: AppPerfilRoute,
   AppRankingsRoute: AppRankingsRoute,
   AppSalasRoute: AppSalasRoute,
+  AppSocialRoute: AppSocialRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppJuegosSlugRoute: AppJuegosSlugRoute,
   AppPartidaIdRoute: AppPartidaIdRoute,

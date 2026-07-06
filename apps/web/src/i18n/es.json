@@ -10,8 +10,10 @@
     "rooms": "Salas públicas",
     "friends": "Amigos",
     "messages": "Mensajes",
+    "social": "Social",
     "rankings": "Rankings",
-    "tournaments": "Torneos"
+    "tournaments": "Torneos",
+    "admin": "Admin"
   },
   "auth": {
     "login": {
@@ -130,7 +132,7 @@
     "cancelReady": "Cancelar listo",
     "leave": "Abandonar sala",
     "mode": { "realtime": "Tiempo real", "async": "Por turnos" },
-    "variant": { "classic": "Clásico", "moving": "Mover fichas", "6x7": "6×7", "8x8": "8×8", "9x9": "9×9" },
+    "variant": { "classic": "Clásico", "moving": "Mover fichas", "6x7": "6×7", "8x8": "8×8", "9x9": "9×9", "10x10": "10×10" },
     "connection": {
       "connecting": "Conectando…",
       "reconnecting": "Reconectando…",
@@ -176,9 +178,6 @@
     "chat": "Chat de la mesa",
     "chatEmpty": "Sin mensajes todavía",
     "chatPlaceholder": "Escribe un mensaje…",
-    "inviteFriend": "Invitar amigo",
-    "inviteMessageBody": "¡Te invito a jugar!",
-    "noOnlineFriends": "No tienes amigos conectados ahora mismo",
     "selectPiece": "Elige una ficha para moverla",
     "selectDestination": "Elige la casilla de destino",
     "mustPass": "No tienes ninguna jugada legal: debes pasar turno",
@@ -207,7 +206,9 @@
       "empty": "vacía",
       "myPiece": "tu ficha",
       "opponentPiece": "ficha rival",
-      "legalMove": "jugada legal"
+      "legalMove": "jugada legal",
+      "edge": "Línea, fila {{row}}, columna {{col}}",
+      "box": "Casilla del jugador {{owner}}"
     }
   },
   "userCard": {
@@ -215,13 +216,19 @@
     "reputation": "Reputación",
     "stats": "{{played}} partidas · {{winRate}}% victorias"
   },
+  "social": {
+    "title": "Social",
+    "tabsAria": "Secciones de Social"
+  },
   "friends": {
-    "title": "Amigos",
     "comingIn": "— llega en {{milestone}}.",
     "tabsAria": "Secciones de amigos",
     "tabs": { "friends": "Amigos", "requests": "Solicitudes", "blocked": "Bloqueados" },
     "addFriend": "Añadir amigo",
-    "usernamePlaceholder": "Nick del usuario",
+    "searchPlaceholder": "Busca por nick o nombre…",
+    "searching": "Buscando…",
+    "noResults": "No hay usuarios que coincidan",
+    "blockedStatus": "Bloqueado",
     "sendRequest": "Enviar solicitud",
     "requestSent": "Solicitud enviada",
     "alreadyFriends": "Ya sois amigos",
@@ -241,7 +248,6 @@
     "cancel": "Cancelar"
   },
   "messages": {
-    "title": "Mensajes",
     "empty": "Todavía no tienes conversaciones. Escribe a un amigo desde la página de amigos.",
     "unknownUser": "Usuario",
     "noMessages": "Sin mensajes todavía",
@@ -256,7 +262,27 @@
     "bubbleReply": "Responder",
     "bubbleOpen": "Abrir chat",
     "bubbleDismiss": "Descartar",
-    "close": "Cerrar chat"
+    "close": "Cerrar chat",
+    "group": {
+      "newGroup": "Nuevo grupo",
+      "createTitle": "Crear grupo",
+      "namePlaceholder": "Nombre del grupo",
+      "selectFriends": "Elige a tus amigos",
+      "create": "Crear",
+      "memberCount": "{{count}} miembros"
+    }
+  },
+  "voice": {
+    "joinCall": "Iniciar chat de voz",
+    "joinCallWithCount": "Unirse a la llamada · {{count}}",
+    "connecting": "Conectando…",
+    "inCall": "En llamada · {{count}}",
+    "backToSource": "Volver a la llamada",
+    "dragHandle": "Arrastrar para mover",
+    "mute": "Silenciar",
+    "unmute": "Quitar silencio",
+    "leaveCall": "Colgar",
+    "micDenied": "No se pudo acceder al micrófono. Revisa los permisos del navegador."
   },
   "notifications": {
     "title": "Notificaciones",
@@ -428,7 +454,10 @@
   "continueBanner": {
     "title": "Continúa donde lo dejaste",
     "with": "con",
+    "withTwo": "{{first}} y {{second}}",
+    "withMore": "{{first}} y {{count}} más",
     "yourTurn": "te toca a ti",
+    "timeLeft": "quedan {{time}}",
     "resume": "Reanudar"
   },
   "demo": {
@@ -440,11 +469,6 @@
       "oca": "Oca",
       "mus": "Mus",
       "settlers": "Colonos"
-    },
-    "banner": {
-      "game": "Colonos",
-      "with": "Marta y 2 más",
-      "turn": "Turno 14"
     },
     "matches": {
       "timeAgo": {
@@ -463,6 +487,117 @@
       "collector": { "name": "Coleccionista", "desc": "Juega a 3 juegos distintos" },
       "tournament": { "name": "Torneo", "desc": "Apúntate a un torneo" },
       "legend": { "name": "Leyenda", "desc": "Llega al top 10 del ranking" }
+    }
+  },
+  "maintenance": {
+    "title": "En mantenimiento",
+    "defaultMessage": "Estamos haciendo tareas de mantenimiento. Vuelve en unos minutos."
+  },
+  "admin": {
+    "title": "Panel de administración",
+    "nav": {
+      "players": "Jugadores",
+      "tables": "Mesas",
+      "reports": "Reportes",
+      "games": "Juegos",
+      "maintenance": "Mantenimiento",
+      "auditLog": "Auditoría"
+    },
+    "players": {
+      "searchPlaceholder": "Buscar por nick, correo o nombre…",
+      "search": "Buscar",
+      "noResults": "Sin resultados",
+      "status": "Estado",
+      "statusActive": "Activo",
+      "statusBanned": "Suspendido",
+      "reputation": "Reputación",
+      "joinedAt": "Alta",
+      "back": "Volver a la búsqueda",
+      "reputationSave": "Guardar reputación",
+      "reputationReasonPlaceholder": "Motivo del ajuste (obligatorio)",
+      "reputationSaved": "Reputación actualizada",
+      "ban": "Suspender cuenta",
+      "unban": "Levantar suspensión",
+      "banReasonPlaceholder": "Motivo de la suspensión (obligatorio)",
+      "bannedNotice": "Cuenta suspendida: {{reason}}",
+      "recentMatches": "Partidas recientes",
+      "noMatches": "Sin partidas todavía",
+      "chatsTitle": "Chats",
+      "tableChats": "Chats de mesa",
+      "directChats": "Mensajes directos",
+      "noChats": "Sin chats registrados",
+      "viewChat": "Ver chat",
+      "messages": "{{count}} mensajes"
+    },
+    "tables": {
+      "empty": "No hay mesas pendientes ahora mismo.",
+      "code": "Código",
+      "game": "Juego",
+      "players": "Jugadores",
+      "created": "Creada",
+      "cancel": "Cancelar mesa",
+      "cancelConfirm": "¿Seguro que quieres cancelar esta mesa? Se avisará a los jugadores."
+    },
+    "reports": {
+      "empty": "No hay reportes.",
+      "reporter": "Reportado por",
+      "reported": "Jugador reportado",
+      "reason": "Motivo",
+      "comment": "Comentario",
+      "date": "Fecha",
+      "viewChat": "Ver chat de la partida",
+      "markReviewed": "Marcar revisado",
+      "reviewed": "Revisado"
+    },
+    "matchChat": {
+      "title": "Chat de la partida",
+      "empty": "Sin mensajes en esta partida.",
+      "close": "Cerrar"
+    },
+    "directChat": {
+      "title": "Conversación directa",
+      "empty": "Sin mensajes en esta conversación.",
+      "close": "Cerrar"
+    },
+    "games": {
+      "name": "Nombre",
+      "category": "Categoría",
+      "players": "Jugadores",
+      "active": "Activo",
+      "edit": "Editar",
+      "form": {
+        "name": "Nombre",
+        "description": "Descripción",
+        "badge": "Insignia",
+        "coverBg": "Color de fondo del banner",
+        "coverFg": "Color de texto del banner",
+        "minPlayers": "Jugadores mín.",
+        "maxPlayers": "Jugadores máx.",
+        "durationMin": "Duración (min)",
+        "isActive": "Publicado en el catálogo",
+        "save": "Guardar cambios",
+        "saved": "Cambios guardados"
+      },
+      "rules": {
+        "title": "Reglas del juego",
+        "save": "Guardar reglas",
+        "saved": "Reglas guardadas"
+      }
+    },
+    "maintenance": {
+      "enabledLabel": "Modo mantenimiento activo",
+      "messageLabel": "Mensaje para los jugadores",
+      "messagePlaceholder": "Estamos haciendo tareas de mantenimiento…",
+      "save": "Guardar",
+      "saved": "Guardado",
+      "warning": "Bloquea el acceso a toda la plataforma salvo a ti."
+    },
+    "auditLog": {
+      "empty": "Todavía no hay acciones registradas.",
+      "admin": "Admin",
+      "action": "Acción",
+      "target": "Objetivo",
+      "date": "Fecha"
     }
   },
   "profile": {

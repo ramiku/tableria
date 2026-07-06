@@ -51,7 +51,7 @@ export function Logo({ variant = 'inline', size: sizeProp }: LogoProps) {
             className="font-semibold uppercase tracking-[0.2em] text-tb-sidebar-muted"
             style={{ fontSize: size * 0.07 }}
           >
-            — Tu plataforma de juegos de mesa —
+            — Tu plataforma para jugar —
           </span>
         </span>
       </span>

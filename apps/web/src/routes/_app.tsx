@@ -6,9 +6,11 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { Avatar, type Presence } from '../components/Avatar';
 import { FriendRow, type Friend } from '../components/FriendRow';
 import { ChatDock } from '../components/ChatDock';
+import { VoiceCallWidget } from '../components/VoiceCallWidget';
 import { NotificationBell } from '../components/NotificationBell';
-import { GridIcon, DoorIcon, UsersIcon, TrophyIcon, BarsIcon, GearIcon, LogoutIcon, ChatIcon } from '../components/icons';
-import { fetchMe, logout } from '../lib/auth';
+import { GridIcon, DoorIcon, TrophyIcon, BarsIcon, GearIcon, LogoutIcon, ChatIcon, ShieldIcon } from '../components/icons';
+import { MaintenancePage } from '../components/MaintenancePage';
+import { fetchMaintenanceStatus, fetchMe, logout } from '../lib/auth';
 import { useFriendsList, type FriendWithPresence } from '../lib/friends';
 import { trpc } from '../lib/trpc';
 import { matchSocket } from '../lib/ws';
@@ -18,7 +20,8 @@ export const Route = createFileRoute('/_app')({
   beforeLoad: async () => {
     const me = await fetchMe();
     if (!me) throw redirect({ to: '/login' });
-    return { me };
+    const maintenance = me.isAdmin ? { enabled: false, maintenanceMessage: null } : await fetchMaintenanceStatus();
+    return { me, maintenance };
   },
   component: AppLayout,
 });
@@ -26,8 +29,7 @@ export const Route = createFileRoute('/_app')({
 const navItems = [
   { to: '/', key: 'nav.explore', Icon: GridIcon },
   { to: '/salas', key: 'nav.rooms', Icon: DoorIcon },
-  { to: '/amigos', key: 'nav.friends', Icon: UsersIcon },
-  { to: '/mensajes', key: 'nav.messages', Icon: ChatIcon },
+  { to: '/social', key: 'nav.social', Icon: ChatIcon },
   { to: '/rankings', key: 'nav.rankings', Icon: BarsIcon },
   { to: '/torneos', key: 'nav.tournaments', Icon: TrophyIcon },
 ] as const;
@@ -45,11 +47,13 @@ function toFriendRow(f: FriendWithPresence, statusOnline: string, statusInGame: 
 
 function AppLayout() {
   const { t } = useTranslation();
-  const { me } = Route.useRouteContext();
+  const { me, maintenance } = Route.useRouteContext();
   const navigate = useNavigate();
   const { friends } = useFriendsList();
   const { data: activity } = trpc.activity.listForMe.useQuery();
   const { data: friendsRooms } = trpc.matches.friendsWaiting.useQuery(undefined, { refetchInterval: 5000 });
+  const { data: pendingFriendRequests } = trpc.friends.listPending.useQuery();
+  const { data: conversationsList } = trpc.conversations.list.useQuery();
   const utils = trpc.useUtils();
   const openChat = useChatDock((s) => s.openChat);
   const getOrCreateDirect = trpc.conversations.getOrCreateDirect.useMutation({
@@ -67,11 +71,15 @@ function AppLayout() {
   }, []);
 
   const onlineFriends = friends.filter((f) => f.presence !== 'offline');
+  const socialBadgeCount =
+    (pendingFriendRequests?.incoming.length ?? 0) + (conversationsList?.reduce((sum, c) => sum + c.unreadCount, 0) ?? 0);
 
   async function handleLogout() {
     await logout();
     await navigate({ to: '/login' });
   }
+
+  if (maintenance.enabled) return <MaintenancePage message={maintenance.maintenanceMessage} />;
 
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-tb-bg">
@@ -93,8 +101,24 @@ function AppLayout() {
               <span className="tb-hex tb-nav-dot h-2 w-2 shrink-0 bg-tb-sidebar-border transition-colors" />
               <item.Icon className="shrink-0" />
               {t(item.key)}
+              {item.to === '/social' && socialBadgeCount > 0 && (
+                <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-tb-danger px-1 text-[10px] font-bold text-white">
+                  {socialBadgeCount}
+                </span>
+              )}
             </Link>
           ))}
+          {me.isAdmin && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-tb-sidebar-muted transition-colors hover:text-tb-sidebar-text"
+              activeProps={{ className: 'tb-nav-active' }}
+            >
+              <span className="tb-hex tb-nav-dot h-2 w-2 shrink-0 bg-tb-sidebar-border transition-colors" />
+              <ShieldIcon className="shrink-0" />
+              {t('nav.admin')}
+            </Link>
+          )}
         </nav>
 
         <button
@@ -229,6 +253,7 @@ function AppLayout() {
       </aside>
 
       <ChatDock meId={me.id} />
+      <VoiceCallWidget />
     </div>
   );
 }

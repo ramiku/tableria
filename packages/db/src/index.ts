@@ -4,7 +4,7 @@ import * as schema from './schema.js';
 
 export * from './schema.js';
 export { schema };
-export { sql, eq, ne, and, or, desc, asc, isNull, gt, lt, inArray } from 'drizzle-orm';
+export { sql, eq, ne, and, or, desc, asc, isNull, gt, lt, inArray, ilike } from 'drizzle-orm';
 
 export type Db = ReturnType<typeof createDb>;
 /** Tipo del `tx` recibido dentro de `db.transaction(async (tx) => ...)` — para helpers compartidos que reciben la transacción en curso. */

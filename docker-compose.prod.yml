@@ -1,0 +1,39 @@
+# Despliegue de producción (sin Cloudflare Tunnel todavía — ver docs/deploy.md).
+# Uso: docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: tableria-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tableria
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: tableria
+    volumes:
+      - tableria_pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tableria"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    container_name: tableria-app
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    # Aplica migraciones y siembra el catálogo de juegos (ambos idempotentes:
+    # seguros de repetir en cada arranque) antes de levantar el servidor. El
+    # catálogo es contenido de la propia app, no un dato de usuario — sembrarlo
+    # solo, sin la cuenta de admin, es intencional (esa la eliges tú a mano,
+    # ver docs/deploy.md).
+    command: sh -c "pnpm --filter @tableria/db migrate && pnpm --filter @tableria/db seed && node apps/server/dist/index.js"
+
+volumes:
+  tableria_pgdata_prod:
