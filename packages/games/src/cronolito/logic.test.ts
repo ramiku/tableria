@@ -151,13 +151,14 @@ describe('eliminación y fin de partida', () => {
     expect(checkEnd(next)).toEqual({ ranking: [{ seat: 0, placement: 1, result: 'lose' }] });
   });
 
-  it('agotar el mazo con al menos un superviviente es un final de éxito compartido', () => {
+  it('agotar el mazo con más de un superviviente es un final de éxito compartido', () => {
     const state: CronolitoState = {
-      ...setupState(2),
+      ...setupState(3),
       timeline: [event(1, 1000)],
       currentCard: event(2, 2000),
       deck: [],
-      lives: [3, 1],
+      lives: [3, 1, 0],
+      eliminationOrder: [2],
     };
     const next = applyMove(state, { position: 1 }, ctx(0)); // correcta, y ya no queda mazo
     expect(next.currentCard).toBeNull();
@@ -166,26 +167,50 @@ describe('eliminación y fin de partida', () => {
       ranking: [
         { seat: 0, placement: 1, result: 'win' },
         { seat: 1, placement: 1, result: 'win' },
+        { seat: 2, placement: 2, result: 'lose' },
       ],
     });
   });
 
-  it('si caen todos, gana puesto quien resistió más (cayó más tarde)', () => {
+  it('en partidas de 2, perder la última vida termina la partida ya mismo y gana el otro (sin agotar el mazo)', () => {
     const state: CronolitoState = {
       ...setupState(2),
       timeline: [event(1, 1000)],
       currentCard: event(2, 500),
-      deck: [],
-      lives: [1, 0],
-      eliminationOrder: [1], // el asiento 1 ya cayó antes
+      deck: [event(3, 1200), event(4, 1300)], // quedan cartas de sobra — no debería hacer falta jugarlas
+      lives: [1, 3],
       turn: 0,
     };
-    const next = applyMove(state, { position: 1 }, ctx(0)); // incorrecta: el asiento 0 cae ahora, el último
-    expect(next.lives).toEqual([0, 0]);
+    const next = applyMove(state, { position: 1 }, ctx(0)); // incorrecta: el asiento 0 cae, el 1 gana ya
+    expect(next.lives).toEqual([0, 3]);
+    expect(next.currentCard).not.toBeNull(); // el mazo sigue lleno — el fin no depende de agotarlo
+    expect(activePlayers(next)).toEqual([]);
     expect(checkEnd(next)).toEqual({
       ranking: [
-        { seat: 0, placement: 1, result: 'lose' }, // cayó el último → mejor puesto
-        { seat: 1, placement: 2, result: 'lose' },
+        { seat: 0, placement: 2, result: 'lose' },
+        { seat: 1, placement: 1, result: 'win' },
+      ],
+    });
+  });
+
+  it('en partidas de 3+, sigue hasta que solo queda uno con vidas, y quien resistió más rankea mejor', () => {
+    const state: CronolitoState = {
+      ...setupState(3),
+      timeline: [event(1, 1000)],
+      currentCard: event(2, 500),
+      deck: [event(3, 1200)],
+      lives: [3, 0, 1], // el asiento 1 ya cayó antes
+      eliminationOrder: [1],
+      turn: 2,
+    };
+    const next = applyMove(state, { position: 1 }, ctx(2)); // incorrecta: el asiento 2 cae ahora, el último
+    expect(next.lives).toEqual([3, 0, 0]);
+    expect(activePlayers(next)).toEqual([]);
+    expect(checkEnd(next)).toEqual({
+      ranking: [
+        { seat: 0, placement: 1, result: 'win' },
+        { seat: 1, placement: 3, result: 'lose' }, // cayó antes → peor puesto
+        { seat: 2, placement: 2, result: 'lose' }, // resistió más → mejor puesto que el 1
       ],
     });
   });

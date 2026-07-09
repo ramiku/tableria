@@ -4,10 +4,6 @@ import type { CronolitoEvent, CronolitoMove, CronolitoPlayerView, CronolitoState
 
 const STARTING_LIVES = 3;
 
-/** Cartas en juego por partida — una muestra del catálogo completo (más de 300 hitos) para que
- * cada partida sea distinta y de duración razonable, no toda la historia de la humanidad de golpe. */
-const DECK_SIZE = 25;
-
 function shuffle<T>(deck: T[], rng: Rng): T[] {
   const arr = [...deck];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -19,7 +15,10 @@ function shuffle<T>(deck: T[], rng: Rng): T[] {
 
 export function setup(ctx: SetupCtx): CronolitoState {
   const numPlayers = ctx.numPlayers;
-  const deck = shuffle(CRONOLITO_EVENTS, ctx.rng).slice(0, DECK_SIZE);
+  // El mazo entero (todo el catálogo, +500 hitos) se baraja y se juega sin recortar — en
+  // solitario da para una partida larga de verdad; en grupo casi nunca llega a agotarse, porque
+  // la eliminación decide antes (ver `isMatchOver`).
+  const deck = shuffle(CRONOLITO_EVENTS, ctx.rng);
 
   // La primera carta robada arranca la Línea del Tiempo ya con el año visible; la segunda es la
   // primera carta "en juego" del turno 1.
@@ -39,8 +38,22 @@ export function setup(ctx: SetupCtx): CronolitoState {
   };
 }
 
+function aliveCount(lives: number[]): number {
+  return lives.filter((l) => l > 0).length;
+}
+
+/**
+ * En solitario la partida solo la decide el propio jugador: se acaba al agotar el mazo (éxito)
+ * o al quedarse sin vidas (derrota) — con un único asiento, "queda 1 con vidas" es cierto desde
+ * el primer turno, así que ahí el umbral es 0, no 1. Con más de un jugador es una eliminación:
+ * en cuanto solo queda uno con vidas, la partida termina ya mismo y ese es el ganador — no hace
+ * falta que complete el resto del mazo en solitario. Agotar el mazo con 2+ supervivientes sigue
+ * siendo un final de éxito compartido, aunque con +500 cartas es un desenlace raro.
+ */
 function isMatchOver(state: CronolitoState): boolean {
-  return state.currentCard === null || !state.lives.some((l) => l > 0);
+  if (state.currentCard === null) return true;
+  const alive = aliveCount(state.lives);
+  return state.numPlayers === 1 ? alive === 0 : alive <= 1;
 }
 
 export function activePlayers(state: CronolitoState): number[] {
@@ -115,16 +128,24 @@ function rankingFromState(state: CronolitoState): PlayerRank[] {
   const anyAlive = alive.some(Boolean);
 
   if (anyAlive) {
-    // Éxito: la Línea del Tiempo se ha completado con al menos un Arquitecto en pie — todos los
-    // supervivientes ganan juntos; los eliminados por el camino quedan detrás, peor cuanto antes cayeran.
+    // Con más de un jugador, este es el caso normal de fin de partida: en cuanto solo queda un
+    // Arquitecto en pie, gana ahí mismo (ver `isMatchOver`) — con 2+ supervivientes solo pasa si
+    // se agota el mazo entero antes de que la eliminación decida. El/los superviviente(s) ganan
+    // juntos; los eliminados por el camino quedan detrás, peor cuanto antes cayeran.
     return state.lives.map((_, seat) => {
       if (alive[seat]) return { seat, placement: 1, result: 'win' as const };
-      const placement = 2 + state.eliminationOrder.indexOf(seat);
+      // `eliminationOrder` lista antes a quien cayó antes — el índice hay que invertirlo para
+      // que caer antes dé un puesto peor (número más alto), no mejor.
+      const placement = 1 + (state.eliminationOrder.length - state.eliminationOrder.indexOf(seat));
       return { seat, placement, result: 'lose' as const };
     });
   }
 
-  // Bucle Temporal: cayeron todos. Mejor puesto para quien resistió más tiempo (cayó más tarde).
+  // Bucle Temporal: cayeron todos — con más de un jugador ya no es alcanzable (la partida termina
+  // en cuanto queda uno solo en pie, antes de que ese también pueda caer); sigue viva para el
+  // solitario, cuyo único asiento cae sin que haya nadie más a quien ceder el turno. Mejor puesto
+  // para quien resistió más tiempo (cayó más tarde) — solo relevante si esta rama alguna vez
+  // vuelve a ser alcanzable con varios asientos.
   return state.lives.map((_, seat) => {
     const fellAt = state.eliminationOrder.indexOf(seat);
     const placement = state.eliminationOrder.length - fellAt;
