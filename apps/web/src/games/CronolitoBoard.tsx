@@ -44,7 +44,7 @@ function EnergyCores({ lives, max = 3 }: { lives: number; max?: number }) {
   );
 }
 
-export function CronolitoBoard({ matchId, mySeat, myTurn, view: rawView }: BoardProps) {
+export function CronolitoBoard({ matchId, mySeat, myTurn, view: rawView, players }: BoardProps) {
   const { t } = useTranslation();
   const view = rawView as CronolitoPlayerView | undefined;
   const [showBriefing, setShowBriefing] = useState(true);
@@ -133,7 +133,7 @@ export function CronolitoBoard({ matchId, mySeat, myTurn, view: rawView }: Board
             }}
           >
             <span className="text-xs font-semibold uppercase tracking-wide">
-              {seat === mySeat ? t('cronolito.you') : t('cronolito.seat', { n: seat + 1 })}
+              {seat === mySeat ? t('cronolito.you') : (players.find((p) => p.seat === seat)?.username ?? t('cronolito.seat', { n: seat + 1 }))}
             </span>
             <EnergyCores lives={lives} />
           </div>

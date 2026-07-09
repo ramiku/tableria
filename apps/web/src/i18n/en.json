@@ -192,6 +192,7 @@
     "matchSummary": { "title": "Pieces" }
   },
   "timbiriche": {
+    "you": "You",
     "matchSummary": { "title": "Boxes claimed" }
   },
   "roundEnd": {

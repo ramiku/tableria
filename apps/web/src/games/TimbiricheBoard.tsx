@@ -14,7 +14,7 @@ function track(count: number): string {
   return Array.from({ length: 2 * count + 1 }, (_, i) => (i % 2 === 0 ? `${DOT}px` : `${LINE}px`)).join(' ');
 }
 
-export function TimbiricheBoard({ matchId, mySeat, myTurn, view: rawView }: BoardProps) {
+export function TimbiricheBoard({ matchId, mySeat, myTurn, view: rawView, players }: BoardProps) {
   const { t } = useTranslation();
   const view = rawView as TimbiricheView | undefined;
   const rows = view?.rows ?? DEFAULT_SIZE.rows;
@@ -23,6 +23,8 @@ export function TimbiricheBoard({ matchId, mySeat, myTurn, view: rawView }: Boar
   const vEdges = view?.vEdges ?? Array.from({ length: rows }, () => Array(cols + 1).fill(null));
   const boxOwner = view?.boxOwner ?? Array.from({ length: rows }, () => Array(cols).fill(null));
   const scores = view?.scores ?? [];
+  const seatName = (seat: number) =>
+    seat === mySeat ? t('timbiriche.you') : (players.find((p) => p.seat === seat)?.username ?? '');
 
   function handleEdge(orientation: 'h' | 'v', row: number, col: number, taken: boolean) {
     if (!myTurn || taken) return;
@@ -40,7 +42,7 @@ export function TimbiricheBoard({ matchId, mySeat, myTurn, view: rawView }: Boar
             }`}
           >
             <span className={`h-2.5 w-2.5 rounded-full ${SEAT_BG[seat % SEAT_BG.length]}`} />
-            {score}
+            {seatName(seat)} · {score}
           </span>
         ))}
       </div>

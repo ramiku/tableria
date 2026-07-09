@@ -13,7 +13,7 @@ function cardLabel(rank: number): string {
   return RANK_LABEL[rank] ?? String(rank);
 }
 
-export function BriscaBoard({ matchId, mySeat, myTurn, view: rawView }: BoardProps) {
+export function BriscaBoard({ matchId, mySeat, myTurn, view: rawView, players }: BoardProps) {
   const { t } = useTranslation();
   const view = rawView as BriscaPlayerView | undefined;
   if (!view) return null;
@@ -27,7 +27,8 @@ export function BriscaBoard({ matchId, mySeat, myTurn, view: rawView }: BoardPro
     matchSocket.send({ type: 'match.move', payload: { matchId, move: { type: 'continue' } } });
   }
 
-  const seatLabel = (seat: number) => (seat === mySeat ? t('brisca.you') : t('brisca.seat', { n: seat + 1 }));
+  const seatLabel = (seat: number) =>
+    seat === mySeat ? t('brisca.you') : (players.find((p) => p.seat === seat)?.username ?? t('brisca.seat', { n: seat + 1 }));
   const showModal = view.phase === 'roundEnd' && view.lastRoundSummary !== null;
   const confirmed = mySeat !== null && !view.pendingConfirm.includes(mySeat);
 

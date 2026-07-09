@@ -18,7 +18,7 @@ function cardLabel(rank: number): string {
 /** Compartido por Tute (4, por parejas) y Tute Cabrón (3, cada uno a la suya) — la única
  * diferencia real ya vive en el motor (`tuteGroupOf`); aquí solo cambia cómo se etiquetan los
  * marcadores según haya parejas o no. */
-export function TuteBoard({ matchId, seq, mySeat, myTurn, view: rawView }: BoardProps) {
+export function TuteBoard({ matchId, seq, mySeat, myTurn, view: rawView, players }: BoardProps) {
   const { t } = useTranslation();
   const view = rawView as TutePlayerView | undefined;
   const [armedCante, setArmedCante] = useState<TuteSuit | null>(null);
@@ -60,14 +60,11 @@ export function TuteBoard({ matchId, seq, mySeat, myTurn, view: rawView }: Board
         )
       : [];
 
+  const seatName = (seat: number) =>
+    seat === mySeat ? t('tute.you') : (players.find((p) => p.seat === seat)?.username ?? t('tute.seat', { n: seat + 1 }));
+
   const groupLabel = (group: number) =>
-    isTeams
-      ? group === myGroup
-        ? t('tute.yourTeam')
-        : t('tute.rivalTeam')
-      : group === myGroup
-        ? t('tute.you')
-        : t('tute.seat', { n: group + 1 });
+    isTeams ? (group === myGroup ? t('tute.yourTeam') : t('tute.rivalTeam')) : seatName(group);
 
   const showModal = view.phase === 'roundEnd' && view.lastRoundSummary !== null;
   const confirmed = mySeat !== null && !view.pendingConfirm.includes(mySeat);
@@ -146,7 +143,7 @@ export function TuteBoard({ matchId, seq, mySeat, myTurn, view: rawView }: Board
             points,
             won: view.lastRoundSummary!.winnerGroups.includes(group),
           }))}
-          waitingFor={view.pendingConfirm.filter((s) => s !== mySeat).map((s) => t('tute.seat', { n: s + 1 }))}
+          waitingFor={view.pendingConfirm.filter((s) => s !== mySeat).map((s) => seatName(s))}
           confirmed={confirmed}
           onContinue={handleContinue}
         />

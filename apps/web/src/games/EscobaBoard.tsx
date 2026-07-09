@@ -18,7 +18,7 @@ function cardLabel(rank: number): string {
   return RANK_LABEL[rank] ?? String(rank);
 }
 
-export function EscobaBoard({ matchId, seq, mySeat, myTurn, view: rawView }: BoardProps) {
+export function EscobaBoard({ matchId, seq, mySeat, myTurn, view: rawView, players }: BoardProps) {
   const { t } = useTranslation();
   const view = rawView as EscobaPlayerView | undefined;
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
@@ -72,7 +72,8 @@ export function EscobaBoard({ matchId, seq, mySeat, myTurn, view: rawView }: Boa
     matchSocket.send({ type: 'match.move', payload: { matchId, move: { type: 'continue' } } });
   }
 
-  const seatLabel = (seat: number) => (seat === mySeat ? t('escoba.you') : t('escoba.seat', { n: seat + 1 }));
+  const seatLabel = (seat: number) =>
+    seat === mySeat ? t('escoba.you') : (players.find((p) => p.seat === seat)?.username ?? t('escoba.seat', { n: seat + 1 }));
 
   // `?.` de más: aunque el reset de arriba ya cubre el caso real, un `Set`/índice que apunte
   // fuera de la mano o la mesa actuales no debería nunca poder tirar el render entero.

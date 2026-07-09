@@ -328,6 +328,7 @@ function MatchPage() {
                   mySeat={mySeat}
                   myTurn={myTurn}
                   view={matchState.view}
+                  players={matchState.players}
                 />
               )}
 

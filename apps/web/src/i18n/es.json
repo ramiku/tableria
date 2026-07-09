@@ -192,6 +192,7 @@
     "matchSummary": { "title": "Fichas" }
   },
   "timbiriche": {
+    "you": "Tú",
     "matchSummary": { "title": "Casillas conseguidas" }
   },
   "roundEnd": {

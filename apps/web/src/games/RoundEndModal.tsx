@@ -27,8 +27,8 @@ interface RoundEndModalProps {
 /**
  * Overlay compartido por Brisca/Tute/Escoba entre rondas o manos: desglose de puntos + botón
  * "Continuar" que todos los asientos deben pulsar antes de repartir la siguiente. Presentacional
- * puro — cada tablero decide qué filas mostrar y cómo etiquetar los asientos (nombres reales no
- * llegan a `BoardProps`, solo asiento/equipo, igual que ya hace el resto del marcador).
+ * puro — cada tablero decide qué filas mostrar y cómo etiquetar los asientos (nombre real vía
+ * `BoardProps.players`, con "Vosotros"/"Rivales" para los equipos de Tute).
  */
 export function RoundEndModal({ title, subtitle, rows, footer, tie, waitingFor, confirmed, onContinue }: RoundEndModalProps) {
   const { t } = useTranslation();
