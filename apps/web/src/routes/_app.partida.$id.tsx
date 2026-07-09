@@ -317,9 +317,16 @@ function MatchPage() {
                   quién es el turno con más matiz ("eres quien adivina" / pistas pendientes, etc.) —
                   el genérico "turno del rival" no encaja y sobra aquí. */}
               {!isSpectator && !ended && matchInfo?.gameId !== 'pista-unica' && (
-                <p className="mb-1 text-center text-sm font-medium text-tb-text">
+                <div
+                  className={`mb-3 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold sm:text-base ${
+                    myTurn ? 'tb-gradient-cta text-white shadow-md shadow-tb-accent/25' : 'border border-tb-border bg-tb-surface-2 text-tb-muted'
+                  }`}
+                >
+                  <span
+                    className={`h-2 w-2 shrink-0 rounded-full ${myTurn ? 'bg-white motion-safe:animate-pulse' : 'bg-tb-muted'}`}
+                  />
                   {myTurn ? t('partida.yourTurn') : t('partida.opponentTurn')}
-                </p>
+                </div>
               )}
               {BoardComponent && matchState && (
                 <BoardComponent
