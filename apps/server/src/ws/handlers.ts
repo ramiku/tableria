@@ -34,6 +34,9 @@ export async function dispatchClientMessage(
     case 'match.forfeit':
       await service.handleForfeit(socket, message.payload.matchId);
       return;
+    case 'match.claimTimeoutVictory':
+      await service.handleClaimTimeoutVictory(socket, message.payload.matchId);
+      return;
     case 'match.abandonRequest':
       await service.handleAbandonRequest(socket, message.payload.matchId);
       return;

@@ -131,6 +131,7 @@ describe('serverMessageSchema', () => {
         turnDeadlineAt: new Date().toISOString(),
         activePlayers: [0],
         players: [{ seat: 0, userId, username: 'ramiku', connected: true }],
+        timeoutPendingSeat: null,
       },
     });
     expect(r.success).toBe(true);

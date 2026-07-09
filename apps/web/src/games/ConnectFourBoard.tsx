@@ -104,7 +104,7 @@ export function ConnectFourBoard({ matchId, seq, mySeat, myTurn, view: rawView }
   const canGhost = myTurn && hoverColumn !== null && board[hoverColumn] === null && mySeat !== null;
 
   return (
-    <div className="mx-auto w-full max-w-md">
+    <div className="mx-auto w-full max-w-2xl">
       <div
         className="relative w-full overflow-hidden rounded-2xl border border-tb-border bg-tb-surface-2"
         style={{ aspectRatio: `${boardW} / ${boardH}` }}

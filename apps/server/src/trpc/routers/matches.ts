@@ -383,6 +383,80 @@ export const matchesRouter = router({
       );
     }),
 
+  /**
+   * Clona la configuración de una partida ya acabada en una mesa nueva, con quien la pide de
+   * anfitrión en el asiento 0 — botón "revancha"/"jugar otra vez" del panel de fin de partida.
+   * Con `invite: true` avisa al resto de jugadores de la partida original (campana `'invited'`,
+   * ya usada por `dm.send kind:'invite'`); sin invitación, la mesa queda pública/privada tal
+   * cual era la original para que cualquiera pueda unirse.
+   */
+  rematch: protectedProcedure
+    .input(z.object({ matchId: z.uuid(), invite: z.boolean().default(false) }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      const [original] = await ctx.db.select().from(matches).where(eq(matches.id, input.matchId)).limit(1);
+      if (!original) throw new TRPCError({ code: 'NOT_FOUND' });
+      if (original.state !== 'finished' && original.state !== 'abandoned') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Solo se puede proponer revancha de una partida ya acabada' });
+      }
+
+      const players = await ctx.db
+        .select({ userId: matchPlayers.userId })
+        .from(matchPlayers)
+        .where(eq(matchPlayers.matchId, input.matchId));
+      if (!players.some((p) => p.userId === userId)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'No jugaste esta partida' });
+      }
+
+      const [game] = await ctx.db.select({ isActive: games.isActive }).from(games).where(eq(games.id, original.gameId)).limit(1);
+      if (!game || !game.isActive) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Ese juego no está disponible todavía' });
+      }
+
+      // Ya está sentado en otra mesa activa (p.ej. otra revancha propuesta primero): se le
+      // devuelve esa misma mesa, igual que `create`.
+      const [active] = await ctx.db
+        .select({ matchId: matches.id, code: matches.code })
+        .from(matchPlayers)
+        .innerJoin(matches, eq(matches.id, matchPlayers.matchId))
+        .where(and(eq(matchPlayers.userId, userId), inArray(matches.state, ['waiting', 'starting', 'in_game'])))
+        .limit(1);
+      if (active) return active;
+
+      const created = await insertWithUniqueCode((code) =>
+        ctx.db.transaction(async (tx) => {
+          const [match] = await tx
+            .insert(matches)
+            .values({
+              code,
+              gameId: original.gameId,
+              hostUserId: userId,
+              maxPlayers: original.maxPlayers,
+              isPrivate: original.isPrivate,
+              mode: original.mode,
+              turnDurationS: original.turnDurationS,
+              options: original.options,
+              rated: original.rated,
+            })
+            .returning({ id: matches.id, code: matches.code });
+          if (!match) throw new Error('No se pudo crear la sala');
+
+          await tx.insert(matchPlayers).values({ matchId: match.id, userId, seat: 0 });
+          return { matchId: match.id, code: match.code };
+        }),
+      );
+
+      if (input.invite) {
+        for (const other of players) {
+          if (other.userId === userId) continue;
+          await ctx.socialService.notifyMatchInvite(userId, other.userId, created.matchId, created.code);
+        }
+      }
+
+      return created;
+    }),
+
   join: protectedProcedure.input(z.object({ code: z.string().min(1) })).mutation(async ({ ctx, input }) => {
     const userId = ctx.user.id;
     const result = await ctx.db.transaction(async (tx) => {

@@ -212,6 +212,10 @@ export const matchStateEnum = pgEnum('match_state', [
 
 export const matchModeEnum = pgEnum('match_mode', ['realtime', 'async']);
 
+/** Cómo terminó una partida ya cerrada — permite reconstruir el `match.ended` original al
+ * reconectar (el `state` solo distingue finished/abandoned; forfeit quedaría irrecuperable). */
+export const matchEndReasonEnum = pgEnum('match_end_reason', ['completed', 'forfeit', 'abandoned']);
+
 export const matches = pgTable(
   'matches',
   {
@@ -238,6 +242,9 @@ export const matches = pgTable(
     createdAt: timestamptz('created_at').notNull().defaultNow(),
     startedAt: timestamptz('started_at'),
     finishedAt: timestamptz('finished_at'),
+    // Null en partidas cerradas antes de esta columna: se interpreta como 'completed'
+    // (salvo state='abandoned', que ya es inequívoco por sí mismo).
+    endReason: matchEndReasonEnum('end_reason'),
   },
   (t) => [
     index('matches_game_state_idx').on(t.gameId, t.state),

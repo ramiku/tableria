@@ -66,6 +66,9 @@ export const serverMessageSchema = z.discriminatedUnion('type', [
       turnDeadlineAt: z.iso.datetime().nullable(),
       activePlayers: z.array(z.number().int()),
       players: z.array(playerSchema),
+      // Asiento que agotó su turno y aún no se resolvió — null si nadie está en esa situación.
+      // El resto de asientos puede reclamar la victoria (`match.claimTimeoutVictory`) o esperar.
+      timeoutPendingSeat: z.number().int().nullable(),
     }),
   }),
   z.object({

@@ -1,11 +1,12 @@
 import { and, eq, matchChatMessages, matchPlayers, matchSpectators, matches, type Db } from '@tableria/db';
 import { containsProfanity } from '../moderation/profanity.js';
 import * as reputation from '../reputation/service.js';
-import { broadcastChat, broadcastLobby, broadcastState, sendChatHistory, sendError } from './broadcast.js';
+import { broadcastChat, broadcastLobby, broadcastState, sendChatHistory, sendEndedTo, sendError } from './broadcast.js';
 import { getGameDefinition } from './games.js';
 import {
   applyPlayerMove,
   cancelMutualAbandon,
+  claimTimeoutVictory,
   forfeitMatch,
   handleTurnTimeout,
   requestMutualAbandon,
@@ -48,6 +49,8 @@ export interface MatchService {
   handleChat(socket: AuthedSocket, matchId: string, body: string): Promise<void>;
   /** Abandono unilateral: derrota real e inmediata para quien lo manda. */
   handleForfeit(socket: AuthedSocket, matchId: string): Promise<void>;
+  /** Un rival del asiento que agotó su turno reclama la victoria ya en vez de esperar a que mueva. */
+  handleClaimTimeoutVictory(socket: AuthedSocket, matchId: string): Promise<void>;
   /** Abandono mutuo: propone cortar sin que cuente para nadie; se efectúa cuando todos piden. */
   handleAbandonRequest(socket: AuthedSocket, matchId: string): Promise<void>;
   handleAbandonCancel(socket: AuthedSocket, matchId: string): Promise<void>;
@@ -80,7 +83,10 @@ export function createMatchService(db: Db): MatchService {
     );
     runtimes.set(matchId, runtime);
 
-    if (def && (row.state === 'in_game' || row.state === 'finished')) {
+    // 'abandoned' también se rehidrata: un abandono mutuo siempre pasó por `in_game` (requiere
+    // `runtime.engine` truthy), así que `startMatch` ya dejó un snapshot inicial que reproducir
+    // — sin esto, reconectar a una partida abandonada dejaba la página en blanco para siempre.
+    if (def && (row.state === 'in_game' || row.state === 'finished' || row.state === 'abandoned')) {
       const loaded = await loadEngineState(db, def, matchId);
       if (loaded) runtime.engine = { def, state: loaded.state, seq: loaded.seq };
     }
@@ -92,6 +98,10 @@ export function createMatchService(db: Db): MatchService {
     if (runtime.engine) {
       await sendChatHistory(db, runtime.matchId, socket);
       await broadcastState(db, runtime);
+      // Fin de partida ya ocurrido en el pasado (el broadcast en vivo de `broadcastEnded` no
+      // llega a quien se conecta después) — se reconstruye desde lo persistido y se manda solo
+      // a este socket, no al resto de la mesa (que ya lo recibió cuando pasó de verdad).
+      await sendEndedTo(db, runtime.matchId, socket);
     } else {
       await broadcastLobby(db, runtime);
     }
@@ -198,6 +208,17 @@ export function createMatchService(db: Db): MatchService {
       if (seat === null) return sendError(socket, 'SEAT_NOT_FOUND', 'No estás sentado en esta partida');
 
       await forfeitMatch(db, runtime, seat, 'quit');
+    },
+
+    async handleClaimTimeoutVictory(socket, matchId) {
+      const runtime = await ensureRuntime(matchId);
+      if (!runtime) return sendError(socket, 'MATCH_NOT_FOUND', 'La partida no existe');
+      if (!runtime.engine) return sendError(socket, 'MATCH_NOT_IN_GAME', 'La partida no está en curso');
+
+      const seat = await getSeat(db, matchId, socket.userId);
+      if (seat === null) return sendError(socket, 'SEAT_NOT_FOUND', 'No estás sentado en esta partida');
+
+      await claimTimeoutVictory(db, runtime, seat);
     },
 
     async handleAbandonRequest(socket, matchId) {

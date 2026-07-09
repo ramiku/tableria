@@ -132,7 +132,20 @@
     "cancelReady": "Cancelar listo",
     "leave": "Abandonar sala",
     "mode": { "realtime": "Tiempo real", "async": "Por turnos" },
-    "variant": { "classic": "Clásico", "moving": "Mover fichas", "6x7": "6×7", "8x8": "8×8", "9x9": "9×9", "10x10": "10×10" },
+    "variant": {
+      "classic": "Clásico",
+      "moving": "Mover fichas",
+      "6x7": "6×7",
+      "8x8": "8×8",
+      "9x9": "9×9",
+      "10x10": "10×10",
+      "1": "1 ronda",
+      "3": "3 rondas",
+      "5": "5 rondas",
+      "11": "11 puntos",
+      "21": "21 puntos",
+      "31": "31 puntos"
+    },
     "connection": {
       "connecting": "Conectando…",
       "reconnecting": "Reconectando…",
@@ -143,7 +156,76 @@
     "trump": "Triunfo",
     "deck": "Mazo",
     "you": "Tú",
-    "seat": "Asiento {{n}}"
+    "seat": "Asiento {{n}}",
+    "roundSummary": { "title": "Resumen de la ronda" },
+    "matchSummary": { "title": "Rondas ganadas", "lastRoundTitle": "Puntos de la última ronda" }
+  },
+  "escoba": {
+    "deck": "Mazo",
+    "you": "Tú",
+    "seat": "Asiento {{n}}",
+    "table": "Mesa",
+    "tableEmpty": "Mesa vacía",
+    "sum": "Suma: {{sum}}/15",
+    "play": "Jugar",
+    "target": "Objetivo: {{n}} puntos",
+    "handSummary": {
+      "title": "Resumen de la mano",
+      "cards": "Más cartas",
+      "oros": "Más oros",
+      "velo": "7 de oros (el velo)",
+      "nobody": "Nadie"
+    },
+    "matchSummary": { "title": "Marcador final", "lastHandTitle": "Desglose de la última mano" }
+  },
+  "tute": {
+    "trump": "Triunfo",
+    "you": "Tú",
+    "seat": "Asiento {{n}}",
+    "yourTeam": "Vosotros",
+    "rivalTeam": "Rivales",
+    "cante": "Cantar {{suit}} (+{{points}})",
+    "roundSummary": { "title": "Resumen de la ronda" },
+    "matchSummary": { "title": "Rondas ganadas", "lastRoundTitle": "Puntos de la última ronda" }
+  },
+  "reversi": {
+    "matchSummary": { "title": "Fichas" }
+  },
+  "timbiriche": {
+    "matchSummary": { "title": "Casillas conseguidas" }
+  },
+  "roundEnd": {
+    "roundOf": "Ronda {{round}} · primero a {{roundsToWin}}",
+    "roundsWon": "{{n}} ganadas",
+    "continue": "Continuar",
+    "confirmed": "Esperando a los demás…",
+    "waitingFor": "Esperando: {{names}}",
+    "tieNote": "Empate — se juega otra ronda para desempatar"
+  },
+  "cronolito": {
+    "title": "Arquitectos del Tiempo",
+    "hideBriefing": "Ocultar historia",
+    "showBriefing": "Ver historia y reglas",
+    "story1": "Somos los «Arquitectos del Tiempo», una orden de élite encargada de mantener la coherencia del espacio-tiempo. Todo iba perfecto hasta que el becario (o tú, no miremos a nadie…) tropezó con el cable de la aspiradora y tiró al suelo el Cronolito: el artefacto sagrado que guarda ordenada toda la historia de la humanidad.",
+    "story2": "Las cartas de los eventos históricos han salido volando y se han desordenado por completo. Si no las colocamos de nuevo en orden cronológico en la Línea del Tiempo, la realidad colapsará, los dinosaurios inventarán TikTok y la humanidad desaparecerá.",
+    "story3": "Tienes 3 vidas (tus «estabilizadores temporales») antes de provocar una paradoja irreversible. ¡A trabajar!",
+    "you": "Tú",
+    "seat": "Asiento {{n}}",
+    "deckCount": "Mazo: {{n}}",
+    "currentCard": "Carta en juego",
+    "yourTurnHint": "Elige dónde encaja en la Línea del Tiempo",
+    "waitingHint": "Esperando a que otro Arquitecto decida…",
+    "resultCorrect": "¡Correcto! Año {{anio}} — la Línea del Tiempo se mantiene estable.",
+    "resultParadox": "¡PARADOJA! Era el año {{anio}} — pierdes un estabilizador temporal.",
+    "resultTimeout": "⏱ Se te agotó el tiempo (año {{anio}}) — Paradoja automática, pierdes un estabilizador.",
+    "slotStart": "Colocar al principio de la Línea del Tiempo",
+    "slotEnd": "Colocar al final de la Línea del Tiempo",
+    "slotBetween": "Colocar entre «{{before}}» y «{{after}}»",
+    "endedSuccess": "¡Universo Salvado!",
+    "endedFailure": "¡Bucle Temporal!",
+    "resultSurvived": "Te has ganado un ascenso en la Orden de los Arquitectos del Tiempo.",
+    "resultEliminated": "Se te han agotado los estabilizadores — la humanidad ha dejado de existir (para ti, al menos).",
+    "matchSummary": { "title": "Resumen de la partida", "correct": "Aciertos", "livesLeft": "Vidas restantes" }
   },
   "partida": {
     "yourTurn": "Te toca a ti",
@@ -157,6 +239,22 @@
     "resultDraw": "Empate",
     "resultSpectator": "La partida ha terminado",
     "resultAbandoned": "Ambos jugadores habéis acordado terminar la partida — no cuenta para nadie",
+    "matchEnd": {
+      "tabResult": "Resultado",
+      "tabBoard": "Situación final",
+      "rankingTitle": "Clasificación",
+      "you": "Tú",
+      "resultBadge": { "win": "Victoria", "lose": "Derrota", "draw": "Empate" },
+      "playAgain": "Jugar otra vez",
+      "and": " y ",
+      "yourHistoryTitle": "Vuestro historial en {{game}}",
+      "historyPlayed": "{{n}} jugadas",
+      "historyRatingPeak": "{{rating}} (pico {{peak}})",
+      "historyNoRating": "Sin rating",
+      "proposeRematch": "Proponer revancha",
+      "rematchPending": "Esperando a los rivales…",
+      "rematchError": "No se pudo proponer la revancha. Inténtalo de nuevo."
+    },
     "abandon": "Abandonar partida",
     "abandonConfirm": "¿Seguro que quieres abandonar? Contará como derrota.",
     "abandonPropose": "Proponer terminar",
@@ -164,6 +262,13 @@
     "abandonAccept": "Aceptar",
     "abandonStatusMineWaiting": "Esperando a que el resto acepte terminar la partida…",
     "abandonStatusOthersPending": "{{names}} propone terminar la partida sin que cuente para nadie.",
+    "timeoutPendingSelf": "Se te ha agotado el tiempo de tu turno. El resto puede terminar la partida ahora o esperar a que juegues.",
+    "timeoutPendingOpponent": "{{name}} ha agotado el tiempo de su turno.",
+    "timeoutClaimVictory": "Terminar y reclamar victoria",
+    "zoomOut": "Alejar",
+    "zoomIn": "Acercar",
+    "chatMinimize": "Minimizar chat",
+    "chatReopen": "Chat",
     "report": "Reportar a {{name}}",
     "reportSent": "Reporte enviado",
     "reportSubmit": "Enviar reporte",
@@ -396,6 +501,8 @@
     "async": { "title": "Por turnos", "desc": "Partidas tranquilas a lo largo de horas o días. Te avisamos cuando te toque." },
     "speed": "Tiempo por turno",
     "variant": "Variante",
+    "roundsToWin": "Rondas para ganar",
+    "targetScore": "Puntos para ganar",
     "seatCount": "Número de jugadores",
     "private": "Sala privada",
     "privateHint": "Solo tus amigos podrán unirse",
@@ -425,6 +532,10 @@
     "goToTable": "Ir a mi mesa",
     "cancelledByHost": "El anfitrión ha cancelado esta mesa.",
     "cancelledDismiss": "Entendido"
+  },
+  "shell": {
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú"
   },
   "sidebar": {
     "status": {

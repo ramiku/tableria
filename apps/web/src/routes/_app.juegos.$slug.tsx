@@ -116,6 +116,17 @@ function EmptySeat({
 // Config: tarjetas de modo + chips de ritmo/variante
 // ---------------------------------------------------------------------------
 
+const ROUNDS_TO_WIN_GAMES = new Set(['brisca', 'tute', 'tute-cabron']);
+
+/** El selector de "variante" es genérico (`ui.variants` en el motor de cada juego), pero el rótulo
+ * que lo presenta en el lobby sí conviene que hable el idioma de cada juego: en Brisca/Tute no es
+ * una variante de reglas, es a cuántas rondas se juega; en Escoba, la puntuación objetivo. */
+function variantLabelKey(gameId: string): string {
+  if (ROUNDS_TO_WIN_GAMES.has(gameId)) return 'lobby.roundsToWin';
+  if (gameId === 'escoba') return 'lobby.targetScore';
+  return 'lobby.variant';
+}
+
 function Eyebrow({ children }: { children: string }) {
   return <p className="text-xs font-bold uppercase tracking-wide text-tb-muted">{children}</p>;
 }
@@ -500,7 +511,7 @@ function GameLobby({ gameId, minPlayers, maxPlayers, variants, defaultTurnSecond
 
           {variants.length > 1 && (
             <div>
-              <Eyebrow>{t('lobby.variant')}</Eyebrow>
+              <Eyebrow>{t(variantLabelKey(gameId))}</Eyebrow>
               <div className="mt-2 flex flex-wrap gap-2">
                 {variants.map((v) => (
                   <Chip key={v.id} selected={displayVariant === v.id} onSelect={() => setVariant(v.id)}>
@@ -646,7 +657,7 @@ function GamePage() {
 
       {/* Hero: misma técnica de gradiente + motivo de categoría que la GameCard, a mayor escala */}
       <div
-        className="relative overflow-hidden rounded-2xl p-8"
+        className="relative overflow-hidden rounded-2xl p-5 sm:p-8"
         style={{
           background: `linear-gradient(135deg, color-mix(in srgb, ${cover} 100%, white 12%) 0%, ${cover} 55%, color-mix(in srgb, ${cover} 100%, black 25%) 100%)`,
         }}
@@ -662,7 +673,7 @@ function GamePage() {
                 {game.badge}
               </span>
             )}
-            <h1 className="font-display text-3xl font-extrabold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
+            <h1 className="font-display text-2xl font-extrabold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.35)] sm:text-3xl">
               {game.name}
             </h1>
             {game.description && <p className="mt-2 max-w-md text-sm text-white/85">{game.description}</p>}

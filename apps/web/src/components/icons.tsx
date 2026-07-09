@@ -26,6 +26,16 @@ export function GridIcon(props: IconProps) {
   );
 }
 
+export function MenuIcon(props: IconProps) {
+  return (
+    <svg {...base} width={20} height={20} {...props}>
+      <line x1="4" y1="6.5" x2="20" y2="6.5" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <line x1="4" y1="17.5" x2="20" y2="17.5" />
+    </svg>
+  );
+}
+
 export function DoorIcon(props: IconProps) {
   return (
     <svg {...base} width={20} height={20} {...props}>

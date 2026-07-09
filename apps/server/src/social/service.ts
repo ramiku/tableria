@@ -25,6 +25,9 @@ export interface SocialService {
     kind: 'text' | 'invite',
     matchId?: string,
   ): Promise<void>;
+  /** Notificación `'invited'` fuera del flujo de chat — usada por `matches.rematch` para avisar
+   * a los rivales de la partida original sin pasar por una conversación de DM. */
+  notifyMatchInvite(fromUserId: string, toUserId: string, matchId: string, code: string): Promise<void>;
 }
 
 function pushToUser(userId: string, message: ServerMessage): void {
@@ -98,6 +101,12 @@ export function createSocialService(db: Db): SocialService {
           await notify(memberId, 'invited', payload);
         }
       }
+    },
+
+    async notifyMatchInvite(fromUserId, toUserId, matchId, code) {
+      const payload = { matchId, code };
+      await activity.record(db, fromUserId, toUserId, 'invited', payload);
+      await notify(toUserId, 'invited', payload);
     },
   };
 }

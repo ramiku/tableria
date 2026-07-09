@@ -97,7 +97,9 @@ interface BubbleShellProps {
 
 function BubbleShell({ name, avatarInitial, avatarColor, preview, hint, positionClass, onOpen, onDismiss, dismissLabel }: BubbleShellProps) {
   return (
-    <div className={`fixed right-6 z-50 w-80 rounded-2xl border border-tb-border bg-tb-surface p-4 shadow-xl ${positionClass}`}>
+    <div
+      className={`fixed right-4 z-50 w-[calc(100vw-2rem)] max-w-80 rounded-2xl border border-tb-border bg-tb-surface p-4 shadow-xl sm:right-6 sm:w-80 ${positionClass}`}
+    >
       <div className="flex items-start gap-3">
         <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-start gap-3 text-left">
           <Avatar initial={avatarInitial} color={avatarColor} size={40} />
@@ -152,7 +154,7 @@ function MinimizedBubble({
       avatarColor={display.color}
       preview={preview}
       hint={t('messages.bubbleOpen')}
-      positionClass="bottom-6"
+      positionClass="bottom-[calc(4.25rem+env(safe-area-inset-bottom))] lg:bottom-6"
       onOpen={onOpen}
       onDismiss={onDismiss}
       dismissLabel={t('messages.bubbleDismiss')}
@@ -173,7 +175,13 @@ function IncomingBubble({
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
-  const positionClass = raise === 'panel' ? 'bottom-[33rem]' : raise === 'bubble' ? 'bottom-[8.5rem]' : 'bottom-6';
+  // Cada variante define su altura en móvil (sobre la hoja/burbuja/bottom nav) y en escritorio.
+  const positionClass =
+    raise === 'panel'
+      ? 'bottom-[calc(70dvh+0.75rem)] sm:bottom-[33rem]'
+      : raise === 'bubble'
+        ? 'bottom-[calc(11rem+env(safe-area-inset-bottom))] lg:bottom-[8.5rem]'
+        : 'bottom-[calc(4.25rem+env(safe-area-inset-bottom))] lg:bottom-6';
   return (
     <BubbleShell
       name={dm.username ?? '?'}
@@ -248,7 +256,8 @@ function DockPanel({ conversationId, meId, onMinimize }: { conversationId: strin
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex h-[30rem] max-h-[70dvh] w-96 flex-col overflow-hidden rounded-2xl border border-tb-border bg-tb-surface shadow-xl">
+    // Móvil: hoja anclada al borde inferior a todo el ancho; ≥sm: panel flotante clásico.
+    <div className="fixed inset-x-0 bottom-0 z-50 flex h-[70dvh] max-h-[32rem] flex-col overflow-hidden rounded-t-2xl border border-tb-border bg-tb-surface pb-[env(safe-area-inset-bottom)] shadow-xl sm:inset-x-auto sm:bottom-6 sm:right-6 sm:h-[30rem] sm:max-h-[70dvh] sm:w-96 sm:rounded-2xl sm:pb-0">
       {/* Cabecera */}
       <div className="flex items-center gap-3 border-b border-tb-border px-4 py-3">
         <Avatar initial={display.initial} color={display.color} size={32} />

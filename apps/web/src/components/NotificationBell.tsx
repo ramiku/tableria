@@ -90,7 +90,7 @@ export function NotificationBell() {
       {open && (
         <>
           <div role="presentation" className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="tb-card absolute right-0 z-20 mt-2 w-80 rounded-xl border border-tb-border bg-tb-surface p-2 shadow-lg">
+          <div className="tb-card absolute -right-12 z-20 mt-2 w-80 max-w-[calc(100vw-1.5rem)] rounded-xl border border-tb-border bg-tb-surface p-2 shadow-lg sm:right-0">
             <div className="flex items-center justify-between px-2 py-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-tb-muted">{t('notifications.title')}</p>
               {unreadCount > 0 && (

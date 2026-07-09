@@ -39,7 +39,7 @@ function PlayersPage() {
       </form>
 
       {search.data && (
-        <div className="mt-4 overflow-hidden rounded-xl border border-tb-border">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-tb-border">
           {search.data.length === 0 ? (
             <p className="p-4 text-sm text-tb-muted">{t('admin.players.noResults')}</p>
           ) : (

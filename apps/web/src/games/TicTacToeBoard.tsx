@@ -24,7 +24,7 @@ function Cell({
       disabled={disabled}
       aria-label={label}
       aria-pressed={selected}
-      className={`flex aspect-square items-center justify-center rounded-xl border bg-tb-surface-2 font-display text-4xl font-extrabold transition-colors enabled:hover:bg-tb-accent-tint disabled:cursor-default ${
+      className={`flex aspect-square items-center justify-center rounded-xl border bg-tb-surface-2 font-display text-6xl font-extrabold transition-colors enabled:hover:bg-tb-accent-tint disabled:cursor-default sm:text-7xl ${
         selected ? 'border-tb-accent ring-2 ring-tb-accent' : 'border-tb-border'
       }`}
     >
@@ -78,7 +78,7 @@ export function TicTacToeBoard({ matchId, seq, mySeat, myTurn, view: rawView }: 
           {selectedCell === null ? t('partida.selectPiece') : t('partida.selectDestination')}
         </p>
       )}
-      <div role="grid" aria-label={t('partida.a11y.board')} className="grid grid-cols-3 gap-2">
+      <div role="grid" aria-label={t('partida.a11y.board')} className="mx-auto grid max-w-md grid-cols-3 gap-3 sm:max-w-lg">
         {(view?.board ?? Array(9).fill(null)).map((cell, i) => {
           const clickable =
             myTurn && (!inMovePhase ? cell === null : cell === mySeat || (selectedCell !== null && cell === null));

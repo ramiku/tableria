@@ -112,7 +112,7 @@ export function VoiceCallWidget() {
   return (
     <div
       ref={widgetRef}
-      className={`fixed z-50 flex items-center gap-2 rounded-2xl border border-tb-border bg-tb-surface px-3 py-3 shadow-xl ${dragging ? 'cursor-grabbing' : ''} ${position ? '' : 'bottom-6 left-6'}`}
+      className={`fixed z-50 flex max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-2xl border border-tb-border bg-tb-surface px-3 py-3 shadow-xl ${dragging ? 'cursor-grabbing' : ''} ${position ? '' : 'bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-3 lg:bottom-6 lg:left-6'}`}
       style={position ? { left: position.x, top: position.y } : undefined}
     >
       <button

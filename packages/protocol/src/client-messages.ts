@@ -40,6 +40,9 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
   }),
   // Abandono unilateral: derrota real e inmediata para quien lo manda.
   z.object({ type: z.literal('match.forfeit'), payload: z.object({ matchId: z.uuid() }) }),
+  // Un rival del asiento que agotó su turno reclama la victoria ya en vez de esperar a que
+  // mueva — ver `match.state.timeoutPendingSeat`.
+  z.object({ type: z.literal('match.claimTimeoutVictory'), payload: z.object({ matchId: z.uuid() }) }),
   // Abandono mutuo: propone cortar la partida sin que cuente para nadie; solo se
   // efectúa cuando todos los asientos activos lo han pedido (ver `match.abandonStatus`).
   z.object({ type: z.literal('match.abandonRequest'), payload: z.object({ matchId: z.uuid() }) }),

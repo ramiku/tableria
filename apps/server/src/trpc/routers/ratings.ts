@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { and, desc, eq, games, seasons, userGameRatings, userGameStats, users } from '@tableria/db';
+import { and, desc, eq, games, inArray, seasons, userGameRatings, userGameStats, users } from '@tableria/db';
 import { protectedProcedure, publicProcedure, router } from '../trpc.js';
 
 export const ratingsRouter = router({
@@ -64,4 +64,45 @@ export const ratingsRouter = router({
       };
     });
   }),
+
+  /** Historial en un juego para un grupo de jugadores (los de una mesa) — panel de fin de partida. */
+  gameStats: protectedProcedure
+    .input(z.object({ gameId: z.string(), userIds: z.array(z.uuid()).min(1).max(8) }))
+    .query(async ({ ctx, input }) => {
+      const [season] = await ctx.db.select().from(seasons).where(eq(seasons.isActive, true)).limit(1);
+
+      const stats = await ctx.db
+        .select()
+        .from(userGameStats)
+        .where(and(eq(userGameStats.gameId, input.gameId), inArray(userGameStats.userId, input.userIds)));
+      const statsMap = new Map(stats.map((s) => [s.userId, s]));
+
+      const ratings = season
+        ? await ctx.db
+            .select()
+            .from(userGameRatings)
+            .where(
+              and(
+                eq(userGameRatings.gameId, input.gameId),
+                eq(userGameRatings.seasonId, season.id),
+                inArray(userGameRatings.userId, input.userIds),
+              ),
+            )
+        : [];
+      const ratingsMap = new Map(ratings.map((r) => [r.userId, r]));
+
+      return input.userIds.map((userId) => {
+        const stat = statsMap.get(userId);
+        const rating = ratingsMap.get(userId);
+        return {
+          userId,
+          played: stat?.played ?? 0,
+          wins: stat?.wins ?? 0,
+          losses: stat?.losses ?? 0,
+          draws: stat?.draws ?? 0,
+          rating: rating?.rating ?? null,
+          peakRating: rating?.peakRating ?? null,
+        };
+      });
+    }),
 });

@@ -87,11 +87,20 @@ export async function broadcastState(db: Db, runtime: MatchRuntime): Promise<voi
     .limit(1);
   const turnDeadlineAt = matchRow?.turnDeadlineAt ? matchRow.turnDeadlineAt.toISOString() : null;
   const activePlayers = def.activePlayers(state);
+  const timeoutPendingSeat = runtime.timeoutPending?.seat ?? null;
 
   for (const [seat, sockets] of runtime.sockets.players) {
     const message: ServerMessage = {
       type: 'match.state',
-      payload: { matchId: runtime.matchId, seq, view: def.playerView(state, seat), turnDeadlineAt, activePlayers, players },
+      payload: {
+        matchId: runtime.matchId,
+        seq,
+        view: def.playerView(state, seat),
+        turnDeadlineAt,
+        activePlayers,
+        players,
+        timeoutPendingSeat,
+      },
     };
     for (const socket of sockets) send(socket, message);
   }
@@ -99,7 +108,15 @@ export async function broadcastState(db: Db, runtime: MatchRuntime): Promise<voi
   if (runtime.sockets.spectators.size > 0) {
     const message: ServerMessage = {
       type: 'match.state',
-      payload: { matchId: runtime.matchId, seq, view: def.playerView(state, null), turnDeadlineAt, activePlayers, players },
+      payload: {
+        matchId: runtime.matchId,
+        seq,
+        view: def.playerView(state, null),
+        turnDeadlineAt,
+        activePlayers,
+        players,
+        timeoutPendingSeat,
+      },
     };
     for (const socket of runtime.sockets.spectators) send(socket, message);
   }
@@ -118,6 +135,60 @@ export function broadcastEnded(
     payload: { matchId: runtime.matchId, reason, ranking, ratingDeltas: ratingDeltasPayload },
   };
   for (const socket of allSockets(runtime)) send(socket, message);
+}
+
+/**
+ * Reconstruye el `match.ended` de una partida ya cerrada a partir de lo persistido
+ * (`matchPlayers.placement/ratingBefore/ratingAfter` + `matches.endReason`) y se lo envía SOLO al
+ * socket que acaba de adjuntarse — sin esto, un F5 sobre una partida acabada perdía el resultado
+ * para siempre (el broadcast en vivo de `broadcastEnded` ya había pasado).
+ */
+export async function sendEndedTo(db: Db, matchId: string, socket: AuthedSocket): Promise<void> {
+  const [row] = await db
+    .select({ state: matches.state, endReason: matches.endReason, rated: matches.rated })
+    .from(matches)
+    .where(eq(matches.id, matchId))
+    .limit(1);
+  if (!row || (row.state !== 'finished' && row.state !== 'abandoned')) return;
+
+  // Partidas cerradas antes de existir `endReason`: el propio state distingue el abandono mutuo;
+  // el resto se asume final normal (forfeit histórico irrecuperable, asumido y documentado).
+  const reason = row.endReason ?? (row.state === 'abandoned' ? 'abandoned' : 'completed');
+
+  let ranking: PlayerRank[] = [];
+  let ratingDeltas: { seat: number; ratingBefore: number; ratingAfter: number }[] | null = null;
+
+  if (reason !== 'abandoned') {
+    const players = await db
+      .select({
+        seat: matchPlayers.seat,
+        placement: matchPlayers.placement,
+        ratingBefore: matchPlayers.ratingBefore,
+        ratingAfter: matchPlayers.ratingAfter,
+      })
+      .from(matchPlayers)
+      .where(eq(matchPlayers.matchId, matchId))
+      .orderBy(asc(matchPlayers.seat));
+
+    const placed = players.filter((p) => p.placement != null);
+    const topsCount = placed.filter((p) => p.placement === 1).length;
+    ranking = placed.map((p) => ({
+      seat: p.seat,
+      placement: p.placement!,
+      // Mismas reglas que los caminos en vivo: en forfeit todos los no-abandonantes comparten
+      // placement 1 con result 'win'; en final natural un empate arriba es 'draw' para ambos.
+      result: p.placement !== 1 ? 'lose' : reason === 'forfeit' || topsCount === 1 ? 'win' : 'draw',
+    }));
+
+    if (row.rated) {
+      const deltas = players
+        .filter((p) => p.ratingBefore != null && p.ratingAfter != null)
+        .map((p) => ({ seat: p.seat, ratingBefore: p.ratingBefore!, ratingAfter: p.ratingAfter! }));
+      ratingDeltas = deltas.length > 0 ? deltas : null;
+    }
+  }
+
+  send(socket, { type: 'match.ended', payload: { matchId, reason, ranking, ratingDeltas } });
 }
 
 /** Estado en vivo de quién ha pedido cortar la partida por abandono mutuo. */

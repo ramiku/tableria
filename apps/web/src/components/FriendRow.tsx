@@ -34,7 +34,7 @@ export function FriendRow({ friend, onChat }: { friend: Friend; onChat?: () => v
           type="button"
           onClick={onChat}
           aria-label={t('friendRow.chatWith', { name: friend.name })}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-tb-sidebar-muted opacity-0 transition-opacity hover:text-tb-sidebar-accent group-hover:opacity-100 focus-visible:opacity-100"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-tb-sidebar-muted transition-opacity hover:text-tb-sidebar-accent focus-visible:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
         >
           <ChatIcon />
         </button>

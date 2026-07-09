@@ -52,6 +52,7 @@ async function finishRuntimeAndNotify(
   ratingDeltas: RatingDeltas,
 ): Promise<void> {
   disarmTurnTimer(runtime);
+  runtime.timeoutPending = null;
   broadcastEnded(runtime, reason, ranking, ratingDeltas);
   await setInGameForMatch(db, runtime.matchId, false);
   await emitMatchFinished(db, runtime.matchId).catch((err: unknown) => console.error('emitMatchFinished falló', err));
@@ -168,7 +169,7 @@ export async function applyPlayerMove(
 
         await tx
           .update(matches)
-          .set({ state: 'finished', finishedAt: new Date(), turnDeadlineAt: null, ...snapshotFields })
+          .set({ state: 'finished', endReason: 'completed', finishedAt: new Date(), turnDeadlineAt: null, ...snapshotFields })
           .where(eq(matches.id, runtime.matchId));
       } else {
         // En juegos con turnos simultáneos (varios asientos activos a la vez, p.ej. todos
@@ -212,6 +213,12 @@ export async function applyPlayerMove(
   if (runtime.abandonRequests.size > 0) {
     runtime.abandonRequests.clear();
     broadcastAbandonStatus(runtime);
+  }
+
+  // El asiento que había agotado su turno por fin movió — se resuelve solo, sin que nadie
+  // tuviera que reclamar la victoria.
+  if (runtime.timeoutPending?.seat === seat) {
+    runtime.timeoutPending = null;
   }
 
   if (endResult) {
@@ -291,12 +298,28 @@ export async function handleTurnTimeout(db: Db, runtime: MatchRuntime): Promise<
     const action = def.onTurnTimeout ? def.onTurnTimeout(state, seat) : ({ type: 'forfeit' } as const);
 
     if (action.type === 'forfeit') {
-      await forfeitMatch(db, runtime, seat, 'timeout');
-      return; // el forfeit termina la partida entera para todos los asientos
+      // Ya no se hace forfeit automático: se ofrece la decisión al resto de asientos, que pueden
+      // reclamar la victoria ya mismo (`claimTimeoutVictory`) o esperar a que este asiento mueva —
+      // un movimiento real de este mismo asiento limpia `timeoutPending` solo (ver `applyPlayerMove`).
+      runtime.timeoutPending = { seat };
+      await broadcastState(db, runtime);
+      return;
     } else {
       await applyPlayerMove(db, runtime, seat, action.move);
     }
   }
+}
+
+/**
+ * Resuelve un aviso de tiempo agotado pendiente: un asiento distinto del rezagado decide
+ * cortar la partida ya mismo y reclamar la victoria, en vez de seguir esperando su turno.
+ * Reutiliza `forfeitMatch` con `reason:'timeout'` — mismo cierre que el forfeit automático de antes.
+ */
+export async function claimTimeoutVictory(db: Db, runtime: MatchRuntime, claimingSeat: number): Promise<void> {
+  if (!runtime.timeoutPending || runtime.timeoutPending.seat === claimingSeat) return;
+  const { seat } = runtime.timeoutPending;
+  runtime.timeoutPending = null;
+  await forfeitMatch(db, runtime, seat, 'timeout');
 }
 
 /**
@@ -331,7 +354,7 @@ export async function forfeitMatch(
     const deltas = await finishMatchTx(tx, runtime, ranking, rated, seatToUserId);
     await tx
       .update(matches)
-      .set({ state: 'finished', finishedAt: new Date(), turnDeadlineAt: null })
+      .set({ state: 'finished', endReason: 'forfeit', finishedAt: new Date(), turnDeadlineAt: null })
       .where(eq(matches.id, runtime.matchId));
 
     for (const [seat, userId] of seatToUserId) {
@@ -361,13 +384,18 @@ export async function requestMutualAbandon(db: Db, runtime: MatchRuntime, seat: 
   }
 
   disarmTurnTimer(runtime);
+  runtime.timeoutPending = null;
   await db
     .update(matches)
-    .set({ state: 'abandoned', finishedAt: new Date(), turnDeadlineAt: null })
+    .set({ state: 'abandoned', endReason: 'abandoned', finishedAt: new Date(), turnDeadlineAt: null })
     .where(eq(matches.id, runtime.matchId));
   await db.update(matchPlayers).set({ leftAt: new Date() }).where(eq(matchPlayers.matchId, runtime.matchId));
 
-  runtime.engine = null;
+  // Se conserva `runtime.engine` (a diferencia de antes, que lo ponía a null): con `state` ya en
+  // 'abandoned' en BD, `applyPlayerMove` rechaza cualquier movimiento posterior igual que en un
+  // cierre normal — y mantenerlo poblado es lo que permite que quien reconecte en el mismo
+  // proceso (sin reinicio del server) siga viendo el tablero final y el resultado, igual que ya
+  // pasa en `finishRuntimeAndNotify`.
   runtime.abandonRequests.clear();
 
   broadcastEnded(runtime, 'abandoned', [], new Map());

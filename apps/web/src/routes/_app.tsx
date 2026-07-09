@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Outlet, createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Logo } from '../components/Logo';
@@ -8,7 +8,7 @@ import { FriendRow, type Friend } from '../components/FriendRow';
 import { ChatDock } from '../components/ChatDock';
 import { VoiceCallWidget } from '../components/VoiceCallWidget';
 import { NotificationBell } from '../components/NotificationBell';
-import { GridIcon, DoorIcon, TrophyIcon, BarsIcon, GearIcon, LogoutIcon, ChatIcon, ShieldIcon } from '../components/icons';
+import { GridIcon, DoorIcon, TrophyIcon, BarsIcon, GearIcon, LogoutIcon, ChatIcon, ShieldIcon, MenuIcon, CloseIcon } from '../components/icons';
 import { MaintenancePage } from '../components/MaintenancePage';
 import { fetchMaintenanceStatus, fetchMe, logout } from '../lib/auth';
 import { useFriendsList, type FriendWithPresence } from '../lib/friends';
@@ -49,6 +49,9 @@ function AppLayout() {
   const { t } = useTranslation();
   const { me, maintenance } = Route.useRouteContext();
   const navigate = useNavigate();
+  // En <lg la sidebar vive como drawer off-canvas; este estado solo existe ahí
+  // (en escritorio la sidebar es estática y el estado simplemente no se usa).
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const { friends } = useFriendsList();
   const { data: activity } = trpc.activity.listForMe.useQuery();
   const { data: friendsRooms } = trpc.matches.friendsWaiting.useQuery(undefined, { refetchInterval: 5000 });
@@ -70,6 +73,16 @@ function AppLayout() {
     matchSocket.connect();
   }, []);
 
+  // Escape cierra el drawer móvil (ruta de escape estándar, igual que el scrim).
+  useEffect(() => {
+    if (!drawerOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [drawerOpen]);
+
   const onlineFriends = friends.filter((f) => f.presence !== 'offline');
   const socialBadgeCount =
     (pendingFriendRequests?.incoming.length ?? 0) + (conversationsList?.reduce((sum, c) => sum + c.unreadCount, 0) ?? 0);
@@ -83,9 +96,31 @@ function AppLayout() {
 
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-tb-bg">
-      {/* Sidebar: franja de marca fija (siempre oscura), full-height, full-bleed */}
-      <aside className="flex w-[280px] shrink-0 flex-col gap-6 overflow-y-auto border-r border-tb-sidebar-border bg-tb-sidebar-bg p-6">
-        <Link to="/" className="mt-2">
+      {/* Scrim del drawer móvil */}
+      {drawerOpen && (
+        <div
+          role="presentation"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {/* Sidebar: franja de marca fija (siempre oscura). En escritorio es una columna
+          estática; en <lg se convierte en drawer off-canvas (mismo contenido). */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] max-w-[85vw] shrink-0 -translate-x-full flex-col gap-6 overflow-y-auto border-r border-tb-sidebar-border bg-tb-sidebar-bg p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] transition-transform duration-200 ease-out motion-reduce:transition-none lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:pb-6 ${
+          drawerOpen ? 'translate-x-0' : ''
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(false)}
+          aria-label={t('shell.closeMenu')}
+          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-tb-sidebar-muted transition-colors hover:text-tb-sidebar-text lg:hidden"
+        >
+          <CloseIcon />
+        </button>
+        <Link to="/" className="mt-2" onClick={() => setDrawerOpen(false)}>
           <Logo variant="stacked" />
         </Link>
 
@@ -94,6 +129,7 @@ function AppLayout() {
             <Link
               key={item.to}
               to={item.to}
+              onClick={() => setDrawerOpen(false)}
               className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-tb-sidebar-muted transition-colors hover:text-tb-sidebar-text"
               activeProps={{ className: 'tb-nav-active' }}
               activeOptions={{ exact: item.to === '/' }}
@@ -111,6 +147,7 @@ function AppLayout() {
           {me.isAdmin && (
             <Link
               to="/admin"
+              onClick={() => setDrawerOpen(false)}
               className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-tb-sidebar-muted transition-colors hover:text-tb-sidebar-text"
               activeProps={{ className: 'tb-nav-active' }}
             >
@@ -141,7 +178,12 @@ function AppLayout() {
                 onChat={() =>
                   getOrCreateDirect.mutate(
                     { friendId: friend.userId },
-                    { onSuccess: ({ conversationId }) => openChat(conversationId, friend.displayName) },
+                    {
+                      onSuccess: ({ conversationId }) => {
+                        openChat(conversationId, friend.displayName);
+                        setDrawerOpen(false);
+                      },
+                    },
                   )
                 }
               />
@@ -162,6 +204,7 @@ function AppLayout() {
           </div>
           <Link
             to="/perfil"
+            onClick={() => setDrawerOpen(false)}
             aria-label={t('sidebar.aria.profile')}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-tb-sidebar-muted transition-colors hover:text-tb-sidebar-accent"
           >
@@ -180,11 +223,22 @@ function AppLayout() {
 
       {/* Columna central: barra superior persistente + contenido de la página */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center justify-end gap-2 border-b border-tb-border px-8 py-3">
+        <div className="flex h-14 items-center gap-1 border-b border-tb-border px-3 sm:px-4 lg:justify-end lg:gap-2 lg:px-8">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label={t('shell.openMenu')}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-tb-muted transition-colors hover:bg-tb-surface-2 hover:text-tb-text lg:hidden"
+          >
+            <MenuIcon />
+          </button>
+          <Link to="/" className="mr-auto flex items-center lg:hidden">
+            <Logo variant="inline" size={26} />
+          </Link>
           <NotificationBell />
           <ThemeToggle />
         </div>
-        <main className="flex-1 overflow-y-auto px-8 py-8">
+        <main className="flex-1 overflow-y-auto px-4 py-5 pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:py-8 lg:pb-8">
           <div className="mx-auto max-w-6xl">
             <Outlet />
           </div>
@@ -251,6 +305,35 @@ function AppLayout() {
           {joinFriendRoom.isError && <p className="mt-1.5 text-xs font-medium text-tb-danger">{joinFriendRoom.error.message}</p>}
         </div>
       </aside>
+
+      {/* Bottom nav móvil: los 5 destinos principales, sobre la franja de marca oscura
+          (misma identidad que la sidebar). El resto (admin, perfil, amigos…) vive en el drawer. */}
+      <nav
+        aria-label={t('sidebar.aria.mainNav')}
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-tb-sidebar-border bg-tb-sidebar-bg pb-[env(safe-area-inset-bottom)] lg:hidden"
+      >
+        <div className="flex h-14 items-stretch">
+          {navItems.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold text-tb-sidebar-muted transition-colors"
+              activeProps={{ className: 'tb-bottomnav-active' }}
+              activeOptions={{ exact: item.to === '/' }}
+            >
+              <span className="relative">
+                <item.Icon className="h-5 w-5" />
+                {item.to === '/social' && socialBadgeCount > 0 && (
+                  <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-tb-danger px-1 text-[10px] font-bold text-white">
+                    {socialBadgeCount}
+                  </span>
+                )}
+              </span>
+              <span className="max-w-full truncate px-1">{t(item.key)}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
 
       <ChatDock meId={me.id} />
       <VoiceCallWidget />

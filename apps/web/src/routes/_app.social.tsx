@@ -29,7 +29,9 @@ function SocialLayout() {
   const onAmigos = !!matchRoute({ to: '/social/amigos', fuzzy: true });
 
   return (
-    <section className="flex h-[calc(100dvh-7.5rem)] flex-col">
+    // Altura = viewport menos el chrome del shell: móvil = topbar 3.5rem + padding superior
+    // 1.25rem + hueco de la bottom nav 4.5rem (+safe area); escritorio = 7.5rem como siempre.
+    <section className="flex h-[calc(100dvh-9.25rem-env(safe-area-inset-bottom))] flex-col lg:h-[calc(100dvh-7.5rem)]">
       <h1 className="font-display text-2xl font-extrabold text-tb-text">{t('social.title')}</h1>
 
       <nav

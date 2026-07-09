@@ -57,7 +57,8 @@ function RankingsPage() {
             ) : !data || data.entries.length === 0 ? (
               <p className="mt-4 text-sm text-tb-muted">{t('rankings.empty')}</p>
             ) : (
-              <table className="mt-4 w-full border-collapse">
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full border-collapse">
                 <thead>
                   <tr className="text-left text-xs font-semibold uppercase tracking-wide text-tb-muted">
                     <th className="w-10 pb-2">{t('rankings.rank')}</th>
@@ -91,7 +92,8 @@ function RankingsPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             )}
           </article>
         </>

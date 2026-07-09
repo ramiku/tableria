@@ -1,15 +1,19 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, createFileRoute } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeftIcon, ChatIcon, ClockIcon, MedalIcon } from '../components/icons';
+import { ChatIcon, ClockIcon, CloseIcon } from '../components/icons';
+import { MatchEndPanel } from '../components/MatchEndPanel';
 import { UserHoverCard } from '../components/UserHoverCard';
 import { VoiceCallBar } from '../components/VoiceCallBar';
 import { BriscaBoard } from '../games/BriscaBoard';
 import { ConnectFourBoard } from '../games/ConnectFourBoard';
+import { CronolitoBoard } from '../games/CronolitoBoard';
+import { EscobaBoard } from '../games/EscobaBoard';
 import { PistaUnicaBoard } from '../games/PistaUnicaBoard';
 import { ReversiBoard } from '../games/ReversiBoard';
 import { TicTacToeBoard } from '../games/TicTacToeBoard';
 import { TimbiricheBoard } from '../games/TimbiricheBoard';
+import { TuteBoard } from '../games/TuteBoard';
 import { formatDuration } from '../lib/formatDuration';
 import { trpc } from '../lib/trpc';
 import { useCountdownSeconds } from '../lib/useCountdown';
@@ -25,13 +29,34 @@ const BOARD_COMPONENTS = {
   reversi: ReversiBoard,
   'pista-unica': PistaUnicaBoard,
   timbiriche: TimbiricheBoard,
+  escoba: EscobaBoard,
+  tute: TuteBoard,
+  'tute-cabron': TuteBoard,
+  cronolito: CronolitoBoard,
 } as const;
+
+// Preferencia personal de zoom del tablero — una sola vez por usuario (no por partida ni por
+// juego): "cada uno ajusta a su gusto" es una preferencia estable, no una configuración puntual.
+const ZOOM_STORAGE_KEY = 'tableria:boardZoom';
+const ZOOM_MIN = 0.7;
+const ZOOM_MAX = 1.6;
+const ZOOM_STEP = 0.1;
+
+function readInitialZoom(): number {
+  const raw = window.localStorage.getItem(ZOOM_STORAGE_KEY);
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isFinite(parsed) ? Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, parsed)) : 1;
+}
 
 function MatchPage() {
   const { t } = useTranslation();
   const { id: matchId } = Route.useParams();
   const { me } = Route.useRouteContext();
   const [chatInput, setChatInput] = useState('');
+  // Minimizar el chat de mesa a una burbuja libera su columna entera para el tablero — se
+  // reabre con el botón "Chat" que aparece en su lugar en la cabecera.
+  const [chatMinimized, setChatMinimized] = useState(false);
+  const [zoom, setZoom] = useState(readInitialZoom);
   const utils = trpc.useUtils();
 
   const matchState = useMatchStore((s) => s.matchState);
@@ -92,9 +117,26 @@ function MatchPage() {
     (p) => p.seat !== mySeat && abandonRequestedSeats.includes(p.seat),
   );
 
+  const timeoutPendingSeat = matchState?.timeoutPendingSeat ?? null;
+  const isTimedOutSeat = mySeat !== null && timeoutPendingSeat === mySeat;
+  const timedOutPlayer = timeoutPendingSeat !== null ? matchState?.players.find((p) => p.seat === timeoutPendingSeat) : undefined;
+  const canClaimTimeoutVictory = !isSpectator && timeoutPendingSeat !== null && !isTimedOutSeat;
+
   function handleForfeit() {
     if (!window.confirm(t('partida.abandonConfirm'))) return;
     matchSocket.send({ type: 'match.forfeit', payload: { matchId } });
+  }
+
+  function handleClaimTimeoutVictory() {
+    matchSocket.send({ type: 'match.claimTimeoutVictory', payload: { matchId } });
+  }
+
+  function adjustZoom(delta: number) {
+    setZoom((z) => {
+      const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round((z + delta) * 100) / 100));
+      window.localStorage.setItem(ZOOM_STORAGE_KEY, String(next));
+      return next;
+    });
   }
 
   function handleToggleAbandonRequest() {
@@ -127,13 +169,13 @@ function MatchPage() {
   }
 
   return (
-    <section className="mx-auto grid max-w-3xl gap-6 md:grid-cols-[1fr_260px]">
+    <section className="flex flex-col gap-4">
       <div role="status" aria-live="polite" className="sr-only">
         {liveMessage}
       </div>
       <div>
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm">
+        <div className="mb-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
             {matchState?.players.map((p) => (
               <UserHoverCard key={p.seat} userId={p.userId} matchId={p.userId !== me.id ? matchId : undefined}>
                 <span
@@ -149,7 +191,38 @@ function MatchPage() {
               </UserHoverCard>
             ))}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 rounded-lg border border-tb-border p-1">
+              <button
+                type="button"
+                onClick={() => adjustZoom(-ZOOM_STEP)}
+                disabled={zoom <= ZOOM_MIN}
+                aria-label={t('partida.zoomOut')}
+                className="flex h-6 w-6 items-center justify-center rounded-md text-sm font-bold text-tb-text hover:bg-tb-surface-2 disabled:opacity-30"
+              >
+                −
+              </button>
+              <span className="tb-nums w-9 text-center text-xs font-semibold text-tb-muted">{Math.round(zoom * 100)}%</span>
+              <button
+                type="button"
+                onClick={() => adjustZoom(ZOOM_STEP)}
+                disabled={zoom >= ZOOM_MAX}
+                aria-label={t('partida.zoomIn')}
+                className="flex h-6 w-6 items-center justify-center rounded-md text-sm font-bold text-tb-text hover:bg-tb-surface-2 disabled:opacity-30"
+              >
+                +
+              </button>
+            </div>
+            {chatMinimized && (
+              <button
+                type="button"
+                onClick={() => setChatMinimized(false)}
+                className="flex items-center gap-1.5 rounded-lg border border-tb-border px-3 py-1.5 text-xs font-medium text-tb-text hover:bg-tb-surface-2"
+              >
+                <ChatIcon className="h-3.5 w-3.5" />
+                {t('partida.chatReopen')}
+              </button>
+            )}
             {deadline !== null && !ended && (
               <span className="tb-nums flex items-center gap-1.5 text-sm font-semibold text-tb-text">
                 <ClockIcon className="h-4 w-4" />
@@ -177,14 +250,21 @@ function MatchPage() {
           </div>
         </div>
 
-        {!isSpectator && !ended && matchInfo && (
-          <div className="mb-3 rounded-2xl border border-tb-border">
-            <VoiceCallBar
-              room={{ kind: 'match', matchId }}
-              label={matchInfo.gameName}
-              meId={me.id}
-            />
-          </div>
+        {!ended && timeoutPendingSeat !== null && (
+          <p className="mb-3 rounded-lg bg-tb-warn-tint px-3 py-2 text-center text-xs font-medium text-tb-warn">
+            {isTimedOutSeat
+              ? t('partida.timeoutPendingSelf')
+              : t('partida.timeoutPendingOpponent', { name: timedOutPlayer?.username ?? '' })}
+            {canClaimTimeoutVictory && (
+              <button
+                type="button"
+                onClick={handleClaimTimeoutVictory}
+                className="ml-2 font-semibold underline hover:no-underline"
+              >
+                {t('partida.timeoutClaimVictory')}
+              </button>
+            )}
+          </p>
         )}
 
         {!ended && (iRequestedAbandon || othersRequestingAbandon.length > 0) && (
@@ -211,111 +291,103 @@ function MatchPage() {
             {t(`sala.connection.${connectionStatus}`)}
           </p>
         )}
-
-        {/* El tablero se queda montado incluso tras el fin de partida (controles ya inertes
-            porque activePlayers queda vacío) — así el resultado puede mostrarse como una capa
-            semitransparente por encima, sin ocultar la posición final por detrás. */}
-        <div className="relative">
-          {isSpectator && !ended && <p className="mb-3 text-center text-xs text-tb-muted">{t('partida.spectating')}</p>}
-          {/* Pista Única es cooperativo entre 3-8 jugadores y su propio tablero ya explica de
-              quién es el turno con más matiz ("eres quien adivina" / pistas pendientes, etc.) —
-              el genérico "turno del rival" no encaja y sobra aquí. */}
-          {!isSpectator && !ended && matchInfo?.gameId !== 'pista-unica' && (
-            <p className="mb-1 text-center text-sm font-medium text-tb-text">
-              {myTurn ? t('partida.yourTurn') : t('partida.opponentTurn')}
-            </p>
-          )}
-          {BoardComponent && matchState && (
-            <BoardComponent
-              matchId={matchId}
-              seq={matchState.seq}
-              mySeat={mySeat}
-              myTurn={myTurn}
-              view={matchState.view}
-            />
-          )}
-
-          {ended && (
-            <div className="tb-modal-in absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-tb-surface/25 p-4">
-              <div className="flex w-full max-w-xs flex-col items-center gap-3 rounded-2xl border border-tb-border bg-tb-surface/95 p-7 text-center shadow-2xl backdrop-blur-md">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-tb-accent-tint text-tb-accent">
-                  <MedalIcon className="h-6 w-6" />
-                </span>
-                <h1 className="font-display text-xl font-bold">
-                  {t(
-                    ended.reason === 'abandoned'
-                      ? 'partida.endedAbandoned'
-                      : ended.reason === 'forfeit'
-                        ? 'partida.endedForfeit'
-                        : 'partida.endedCompleted',
-                  )}
-                </h1>
-                <p className="text-sm text-tb-muted">
-                  {ended.reason === 'abandoned'
-                    ? t('partida.resultAbandoned')
-                    : isSpectator
-                      ? t('partida.resultSpectator')
-                      : t(
-                          ended.ranking.find((r) => r.seat === mySeat)?.result === 'win'
-                            ? 'partida.resultWin'
-                            : ended.ranking.find((r) => r.seat === mySeat)?.result === 'draw'
-                              ? 'partida.resultDraw'
-                              : 'partida.resultLoss',
-                        )}
-                </p>
-                {!isSpectator &&
-                  (() => {
-                    const delta = ended.ratingDeltas?.find((d) => d.seat === mySeat);
-                    if (!delta) return null;
-                    const change = Math.round(delta.ratingAfter - delta.ratingBefore);
-                    return (
-                      <p className="tb-nums text-sm font-semibold">
-                        {Math.round(delta.ratingBefore)} → {Math.round(delta.ratingAfter)}{' '}
-                        <span className={change >= 0 ? 'text-tb-success' : 'text-tb-danger'}>
-                          ({change >= 0 ? '+' : ''}
-                          {change})
-                        </span>
-                      </p>
-                    );
-                  })()}
-                <Link
-                  to="/"
-                  className="mt-2 flex items-center gap-1.5 rounded-lg border border-tb-border px-3.5 py-2 text-sm font-medium text-tb-text hover:bg-tb-surface-2"
-                >
-                  <ArrowLeftIcon />
-                  {t('game.backToCatalog')}
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
-      <div className="flex flex-col rounded-2xl border border-tb-border bg-tb-surface p-4">
-        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-tb-muted">
-          <ChatIcon className="h-3.5 w-3.5" />
-          {t('partida.chat')}
-        </p>
-        <div className="flex-1 space-y-2 overflow-y-auto text-sm">
-          {chat.length === 0 && <p className="text-xs text-tb-muted">{t('partida.chatEmpty')}</p>}
-          {chat.map((m) => (
-            <p key={m.id}>
-              <span className="font-semibold text-tb-text">{m.username}: </span>
-              <span className="text-tb-muted">{m.body}</span>
-            </p>
-          ))}
+      {/* El tapete enmarca tablero y chat como objetos físicos sobre la mesa — cada uno en su
+          propia tarjeta `--tb-surface` con marco/sombra, para que se separen del fondo en vez
+          de fundirse con él. */}
+      <div className={`tb-table-felt grid gap-6 rounded-3xl p-3 sm:p-5 lg:p-7 ${chatMinimized ? '' : 'md:grid-cols-[minmax(0,1fr)_320px]'}`}>
+        <div className="rounded-2xl border border-tb-border/60 bg-tb-surface/95 p-3 shadow-xl backdrop-blur-sm sm:p-5">
+          {/* `overflow-x-auto` es la red de seguridad: a zoom alto, un tablero intrínsecamente
+              ancho (p.ej. Timbiriche 10x10) puede pedir más sitio del que da la columna — mejor un
+              scroll horizontal contenido aquí que forzar el ancho de toda la página. */}
+          <div className="overflow-x-auto">
+            {/* El tablero se queda montado incluso tras el fin de partida (controles ya inertes
+                porque activePlayers queda vacío) — así el resultado puede mostrarse como una capa
+                semitransparente por encima, sin ocultar la posición final por detrás. `zoom` (no
+                `transform: scale`) porque reordena el layout de verdad — el resto de la columna
+                reacciona al nuevo tamaño en vez de que el tablero quede flotando por encima. */}
+            <div className="relative" style={{ zoom }}>
+              {isSpectator && !ended && <p className="mb-3 text-center text-xs text-tb-muted">{t('partida.spectating')}</p>}
+              {/* Pista Única es cooperativo entre 3-8 jugadores y su propio tablero ya explica de
+                  quién es el turno con más matiz ("eres quien adivina" / pistas pendientes, etc.) —
+                  el genérico "turno del rival" no encaja y sobra aquí. */}
+              {!isSpectator && !ended && matchInfo?.gameId !== 'pista-unica' && (
+                <p className="mb-1 text-center text-sm font-medium text-tb-text">
+                  {myTurn ? t('partida.yourTurn') : t('partida.opponentTurn')}
+                </p>
+              )}
+              {BoardComponent && matchState && (
+                <BoardComponent
+                  matchId={matchId}
+                  seq={matchState.seq}
+                  mySeat={mySeat}
+                  myTurn={myTurn}
+                  view={matchState.view}
+                />
+              )}
+
+              {ended && matchInfo && matchState && (
+                <MatchEndPanel
+                  matchId={matchId}
+                  gameId={matchInfo.gameId}
+                  gameName={matchInfo.gameName}
+                  ended={ended}
+                  players={matchState.players}
+                  mySeat={mySeat}
+                  isSpectator={isSpectator}
+                  view={matchState.view}
+                />
+              )}
+            </div>
+          </div>
         </div>
-        {chatBlockedError && <p className="mt-2 text-xs font-medium text-tb-danger">{chatBlockedError}</p>}
-        <form onSubmit={handleSendChat} className="mt-3 flex gap-2">
-          <input
-            type="text"
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            placeholder={t('partida.chatPlaceholder')}
-            aria-label={t('partida.chatPlaceholder')}
-            className="w-full rounded-lg border border-tb-border bg-tb-surface-2 px-3 py-1.5 text-sm text-tb-text placeholder:text-tb-muted"
-          />
-        </form>
+
+        {!chatMinimized && (
+          // En <md el chat se apila bajo el tablero: sin una altura propia acotada, la lista de
+          // mensajes (overflow-y-auto) nunca scrollearía y la tarjeta crecería sin límite.
+          <div className="flex h-[24rem] max-h-[60dvh] flex-col overflow-hidden rounded-2xl border border-tb-border/60 bg-tb-surface/95 shadow-xl backdrop-blur-sm md:h-auto md:max-h-none">
+            <div className="flex items-center justify-between gap-2 border-b border-tb-border px-4 py-3">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-tb-muted">
+                <ChatIcon className="h-3.5 w-3.5" />
+                {t('partida.chat')}
+              </p>
+              <button
+                type="button"
+                onClick={() => setChatMinimized(true)}
+                aria-label={t('partida.chatMinimize')}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-tb-muted hover:bg-tb-surface-2 hover:text-tb-text"
+              >
+                <CloseIcon className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {!isSpectator && !ended && matchInfo && (
+              <VoiceCallBar room={{ kind: 'match', matchId }} label={matchInfo.gameName} meId={me.id} />
+            )}
+
+            <div className="flex-1 space-y-2 overflow-y-auto p-4 text-sm">
+              {chat.length === 0 && <p className="text-xs text-tb-muted">{t('partida.chatEmpty')}</p>}
+              {chat.map((m) => (
+                <p key={m.id}>
+                  <span className="font-semibold text-tb-text">{m.username}: </span>
+                  <span className="text-tb-muted">{m.body}</span>
+                </p>
+              ))}
+            </div>
+            {chatBlockedError && <p className="px-4 text-xs font-medium text-tb-danger">{chatBlockedError}</p>}
+            <form onSubmit={handleSendChat} className="flex gap-2 p-4 pt-0">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder={t('partida.chatPlaceholder')}
+                aria-label={t('partida.chatPlaceholder')}
+                className="w-full rounded-lg border border-tb-border bg-tb-surface-2 px-3 py-1.5 text-sm text-tb-text placeholder:text-tb-muted"
+              />
+            </form>
+          </div>
+        )}
       </div>
     </section>
   );

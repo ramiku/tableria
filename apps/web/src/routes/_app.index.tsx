@@ -74,20 +74,20 @@ function ExplorePage() {
           <p className="text-sm text-tb-muted">{greeting}</p>
           <h1 className="font-display text-2xl font-extrabold">{t('explore.headline')}</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <div className="relative min-w-0 flex-1 sm:flex-none">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-tb-muted" />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('explore.searchPlaceholder')}
-              className="w-56 rounded-lg border border-tb-border bg-tb-surface-2 py-2 pl-9 pr-3 text-sm text-tb-text placeholder:text-tb-muted"
+              className="w-full rounded-lg border border-tb-border bg-tb-surface-2 py-2 pl-9 pr-3 text-sm text-tb-text placeholder:text-tb-muted sm:w-56"
             />
           </div>
           <button
             type="button"
-            className="tb-gradient-cta flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className="tb-gradient-cta flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
             <PlusIcon />
             {t('explore.createRoom')}

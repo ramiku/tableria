@@ -30,6 +30,7 @@
 
   --tb-success: #16a34a;
   --tb-warn: #b45309;
+  --tb-warn-tint: #fdf0e1;
   --tb-danger: #dc2626;
 
   --tb-gradient-cta: linear-gradient(135deg, #2f6fe0 0%, #1a4fc4 100%);
@@ -46,6 +47,14 @@
   --tb-sidebar-success: #34c973;
   --tb-sidebar-danger: #f0645c;
   --tb-gradient-sidebar: linear-gradient(135deg, #2f6fe0 0%, #7ecbff 100%);
+
+  /* Tapete de la mesa de partida: mismo azul de marca, no un verde de casino genérico —
+     la ficha/tesela hexagonal ya es la firma visual de Tableria (ver .tb-hex), así que el
+     patrón del tapete la reutiliza en vez de introducir un motivo nuevo. */
+  --tb-table-bg: #0e2f52;
+  --tb-table-bg-2: #1c4d80;
+  --tb-table-line: rgba(255, 255, 255, 0.055);
+  --tb-table-vignette: rgba(3, 10, 20, 0.4);
 }
 
 :root[data-theme='dark'] {
@@ -63,10 +72,16 @@
 
   --tb-success: #34c973;
   --tb-warn: #e2a93d;
+  --tb-warn-tint: #2e2210;
   --tb-danger: #f0645c;
 
   --tb-gradient-cta: linear-gradient(135deg, #3d8bff 0%, #2f6fe0 100%);
   --tb-shadow-card: none;
+
+  --tb-table-bg: #071a2e;
+  --tb-table-bg-2: #0f2c4a;
+  --tb-table-line: rgba(255, 255, 255, 0.045);
+  --tb-table-vignette: rgba(0, 0, 0, 0.5);
 }
 
 /* Habilita el prefijo dark: de Tailwind en base a data-theme (no prefers-color-scheme) */
@@ -90,6 +105,7 @@
   --color-tb-accent-fg: var(--tb-accent-fg);
   --color-tb-success: var(--tb-success);
   --color-tb-warn: var(--tb-warn);
+  --color-tb-warn-tint: var(--tb-warn-tint);
   --color-tb-danger: var(--tb-danger);
 
   --color-tb-sidebar-bg: var(--tb-sidebar-bg);
@@ -109,6 +125,27 @@ body {
 
 button {
   cursor: pointer;
+}
+
+/* Táctil: sin flash azul de WebKit al tocar, y sin los 300ms de retardo del doble-tap */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+a,
+input,
+label {
+  touch-action: manipulation;
+}
+
+/* En pantallas táctiles pequeñas los campos deben medir ≥16px:
+   por debajo, iOS hace zoom automático al enfocar y descoloca todo el layout. */
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: max(1rem, 1em);
+  }
 }
 
 /* Foco visible consistente (accesibilidad) */
@@ -170,6 +207,61 @@ a.tb-nav-active {
 }
 a.tb-nav-active .tb-nav-dot {
   background: var(--color-tb-sidebar-accent);
+}
+
+/* Pestaña activa de la bottom nav móvil (franja oscura, como el sidebar) */
+a.tb-bottomnav-active {
+  color: var(--color-tb-sidebar-accent);
+}
+
+/* Cronolito: scrollbar fina en tono neón (en vez de la barra gris del sistema) para el
+   historial de eventos — las variables --cro-* las define el propio tablero, más arriba
+   en el árbol, así que aquí solo se referencian. */
+.tb-cro-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cro-accent-dim, #2a6e66) transparent;
+}
+.tb-cro-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+.tb-cro-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tb-cro-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--cro-accent-dim, #2a6e66);
+  border-radius: 999px;
+}
+.tb-cro-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--cro-accent, #5ef4e0);
+}
+
+/*
+ * Tapete de la página de partida: gradiente de marca + patrón dieciseisavo de fichas
+ * hexagonales (mismo perfil que `.tb-hex`) a muy baja opacidad, más viñeta interior para que
+ * el tablero (siempre en una tarjeta `--tb-surface` con su propio marco/sombra) quede lo más
+ * llamativo del cuadro. El SVG va embebido — sin asset externo, como pide el patrón de este
+ * fichero — y se repite en un tile generoso para que se lea como textura, no como ruido.
+ */
+.tb-table-felt {
+  position: relative;
+  background-color: var(--tb-table-bg);
+  background-image:
+    radial-gradient(120% 85% at 50% -12%, var(--tb-table-bg-2) 0%, transparent 62%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='100' viewBox='0 0 88 100'%3E%3Cpath d='M22 3 L43 15.5 L43 40.5 L22 53 L1 40.5 L1 15.5 Z' fill='none' stroke='white' stroke-opacity='0.055' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, repeat;
+  box-shadow: inset 0 0 8rem var(--tb-table-vignette);
+}
+
+/* Medallero: barra de acento a la izquierda de la fila, independiente del resaltado de
+   "eres tú" (que usa el acento de marca) — así ambas señales conviven sin pisarse. */
+.tb-medal-1 {
+  box-shadow: inset 3px 0 0 #d4af37;
+}
+.tb-medal-2 {
+  box-shadow: inset 3px 0 0 #9aa5b1;
+}
+.tb-medal-3 {
+  box-shadow: inset 3px 0 0 #b8763e;
 }
 
 /* Entrada de la capa de resultado al terminar una partida (todos los tableros) */

@@ -11,7 +11,7 @@ function AdminGamesList() {
   if (!data) return null;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-tb-border">
+    <div className="overflow-x-auto rounded-xl border border-tb-border">
       <table className="w-full text-left text-sm">
         <thead className="bg-tb-surface-2 text-xs uppercase tracking-wide text-tb-muted">
           <tr>

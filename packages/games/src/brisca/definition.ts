@@ -14,9 +14,16 @@ export const briscaDefinition: GameDefinition<BriscaState, BriscaMove> = {
   applyMove,
   checkEnd,
   playerView,
-  onTurnTimeout: () => ({ type: 'forfeit' }),
+  // En la pausa entre rondas, quien tarde en confirmar se auto-confirma en vez de perder la
+  // partida entera por no leer a tiempo el resumen de puntos.
+  onTurnTimeout: (state) => (state.phase === 'roundEnd' ? { type: 'move', move: { type: 'continue' } } : { type: 'forfeit' }),
   ui: {
     defaultTurnSeconds: 30,
     supportsRealtime: true,
+    variants: [
+      { id: '1', name: 'A 1 ronda' },
+      { id: '3', name: 'A 3 rondas' },
+      { id: '5', name: 'A 5 rondas' },
+    ],
   },
 };

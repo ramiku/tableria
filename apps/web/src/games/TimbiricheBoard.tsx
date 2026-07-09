@@ -3,8 +3,8 @@ import { TIMBIRICHE_BOARD_PRESETS, TIMBIRICHE_DEFAULT_PRESET, type TimbiricheVie
 import { matchSocket } from '../lib/ws';
 import type { BoardProps } from './BoardProps';
 
-const DOT = 10;
-const LINE = 28;
+const DOT = 14;
+const LINE = 40;
 /** Un color por asiento (hasta 4) — tokens del tema, no hex fijos, porque aquí no hay "ficha física". */
 const SEAT_BG = ['bg-tb-accent', 'bg-tb-warn', 'bg-tb-danger', 'bg-tb-success'] as const;
 
@@ -48,14 +48,14 @@ export function TimbiricheBoard({ matchId, mySeat, myTurn, view: rawView }: Boar
       <div
         role="grid"
         aria-label={t('partida.a11y.board')}
-        className="grid rounded-2xl border border-tb-border bg-tb-surface-2 p-3"
+        className="grid rounded-2xl border border-tb-border bg-tb-surface-2 p-4"
         style={{ gridTemplateColumns: track(cols), gridTemplateRows: track(rows) }}
       >
         {Array.from({ length: rows + 1 }, (_, r) =>
           Array.from({ length: cols + 1 }, (_, c) => (
             <span
               key={`dot-${r}-${c}`}
-              className="h-2.5 w-2.5 justify-self-center self-center rounded-full bg-tb-muted"
+              className="h-3.5 w-3.5 justify-self-center self-center rounded-full bg-tb-muted"
               style={{ gridColumn: 2 * c + 1, gridRow: 2 * r + 1 }}
             />
           )),
@@ -70,7 +70,7 @@ export function TimbiricheBoard({ matchId, mySeat, myTurn, view: rawView }: Boar
               disabled={!myTurn || owner !== null}
               aria-label={t('partida.a11y.edge', { row: r + 1, col: c + 1 })}
               style={{ gridColumn: 2 * c + 2, gridRow: 2 * r + 1 }}
-              className={`h-2 justify-self-stretch self-center rounded-full transition-colors ${
+              className={`h-3 justify-self-stretch self-center rounded-full transition-colors ${
                 owner !== null ? SEAT_BG[owner % SEAT_BG.length] : 'bg-tb-border enabled:hover:bg-tb-accent/50'
               } disabled:cursor-default`}
             />
@@ -86,7 +86,7 @@ export function TimbiricheBoard({ matchId, mySeat, myTurn, view: rawView }: Boar
               disabled={!myTurn || owner !== null}
               aria-label={t('partida.a11y.edge', { row: r + 1, col: c + 1 })}
               style={{ gridColumn: 2 * c + 1, gridRow: 2 * r + 2 }}
-              className={`w-2 justify-self-center self-stretch rounded-full transition-colors ${
+              className={`w-3 justify-self-center self-stretch rounded-full transition-colors ${
                 owner !== null ? SEAT_BG[owner % SEAT_BG.length] : 'bg-tb-border enabled:hover:bg-tb-accent/50'
               } disabled:cursor-default`}
             />

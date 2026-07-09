@@ -132,7 +132,20 @@
     "cancelReady": "Cancel ready",
     "leave": "Leave room",
     "mode": { "realtime": "Real time", "async": "Turn-based" },
-    "variant": { "classic": "Classic", "moving": "Moving pieces", "6x7": "6×7", "8x8": "8×8", "9x9": "9×9", "10x10": "10×10" },
+    "variant": {
+      "classic": "Classic",
+      "moving": "Moving pieces",
+      "6x7": "6×7",
+      "8x8": "8×8",
+      "9x9": "9×9",
+      "10x10": "10×10",
+      "1": "1 round",
+      "3": "3 rounds",
+      "5": "5 rounds",
+      "11": "11 points",
+      "21": "21 points",
+      "31": "31 points"
+    },
     "connection": {
       "connecting": "Connecting…",
       "reconnecting": "Reconnecting…",
@@ -143,7 +156,76 @@
     "trump": "Trump",
     "deck": "Deck",
     "you": "You",
-    "seat": "Seat {{n}}"
+    "seat": "Seat {{n}}",
+    "roundSummary": { "title": "Round summary" },
+    "matchSummary": { "title": "Rounds won", "lastRoundTitle": "Last round points" }
+  },
+  "escoba": {
+    "deck": "Deck",
+    "you": "You",
+    "seat": "Seat {{n}}",
+    "table": "Table",
+    "tableEmpty": "Empty table",
+    "sum": "Sum: {{sum}}/15",
+    "play": "Play",
+    "target": "Target: {{n}} points",
+    "handSummary": {
+      "title": "Hand summary",
+      "cards": "Most cards",
+      "oros": "Most coins",
+      "velo": "7 of coins (the veil)",
+      "nobody": "Nobody"
+    },
+    "matchSummary": { "title": "Final score", "lastHandTitle": "Last hand breakdown" }
+  },
+  "tute": {
+    "trump": "Trump",
+    "you": "You",
+    "seat": "Seat {{n}}",
+    "yourTeam": "Your team",
+    "rivalTeam": "Rivals",
+    "cante": "Declare {{suit}} (+{{points}})",
+    "roundSummary": { "title": "Round summary" },
+    "matchSummary": { "title": "Rounds won", "lastRoundTitle": "Last round points" }
+  },
+  "reversi": {
+    "matchSummary": { "title": "Pieces" }
+  },
+  "timbiriche": {
+    "matchSummary": { "title": "Boxes claimed" }
+  },
+  "roundEnd": {
+    "roundOf": "Round {{round}} · first to {{roundsToWin}}",
+    "roundsWon": "{{n}} won",
+    "continue": "Continue",
+    "confirmed": "Waiting for the others…",
+    "waitingFor": "Waiting for: {{names}}",
+    "tieNote": "Tie — playing another round to break it"
+  },
+  "cronolito": {
+    "title": "Time Architects",
+    "hideBriefing": "Hide story",
+    "showBriefing": "Show story & rules",
+    "story1": "We are the \"Time Architects\", an elite order tasked with keeping the fabric of space-time coherent. Everything was fine until the intern (or you, no judgment...) tripped over the vacuum cleaner cord and knocked the Chronolith to the floor: the sacred artifact that keeps all of humanity's history neatly in order.",
+    "story2": "The historical event cards have flown everywhere and are now completely out of order. If we don't put them back in chronological order on the Timeline, reality will collapse, dinosaurs will invent TikTok, and humanity will cease to exist.",
+    "story3": "You have 3 lives (your \"temporal stabilizers\") before you cause an irreversible paradox. Get to work!",
+    "you": "You",
+    "seat": "Seat {{n}}",
+    "deckCount": "Deck: {{n}}",
+    "currentCard": "Card in play",
+    "yourTurnHint": "Choose where it fits on the Timeline",
+    "waitingHint": "Waiting for another Architect to decide…",
+    "resultCorrect": "Correct! Year {{anio}} — the Timeline remains stable.",
+    "resultParadox": "PARADOX! It was the year {{anio}} — you lose a temporal stabilizer.",
+    "resultTimeout": "⏱ Time ran out (year {{anio}}) — automatic Paradox, you lose a stabilizer.",
+    "slotStart": "Place at the start of the Timeline",
+    "slotEnd": "Place at the end of the Timeline",
+    "slotBetween": "Place between \"{{before}}\" and \"{{after}}\"",
+    "endedSuccess": "Universe Saved!",
+    "endedFailure": "Time Loop!",
+    "resultSurvived": "You've earned a promotion in the Order of Time Architects.",
+    "resultEliminated": "You're out of stabilizers — humanity has ceased to exist (for you, at least).",
+    "matchSummary": { "title": "Match summary", "correct": "Correct", "livesLeft": "Lives left" }
   },
   "partida": {
     "yourTurn": "Your turn",
@@ -157,6 +239,22 @@
     "resultDraw": "Draw",
     "resultSpectator": "The match has ended",
     "resultAbandoned": "Both players agreed to end the match — it doesn't count for anyone",
+    "matchEnd": {
+      "tabResult": "Result",
+      "tabBoard": "Final position",
+      "rankingTitle": "Standings",
+      "you": "You",
+      "resultBadge": { "win": "Win", "lose": "Loss", "draw": "Draw" },
+      "playAgain": "Play again",
+      "and": " & ",
+      "yourHistoryTitle": "Your history in {{game}}",
+      "historyPlayed": "{{n}} played",
+      "historyRatingPeak": "{{rating}} (peak {{peak}})",
+      "historyNoRating": "No rating",
+      "proposeRematch": "Propose rematch",
+      "rematchPending": "Waiting for rivals…",
+      "rematchError": "Couldn't propose the rematch. Try again."
+    },
     "abandon": "Abandon match",
     "abandonConfirm": "Are you sure you want to abandon? It will count as a loss.",
     "abandonPropose": "Propose ending",
@@ -164,6 +262,13 @@
     "abandonAccept": "Accept",
     "abandonStatusMineWaiting": "Waiting for the rest to accept ending the match…",
     "abandonStatusOthersPending": "{{names}} proposes ending the match without it counting for anyone.",
+    "timeoutPendingSelf": "Your turn timer ran out. The rest can end the match now or wait for you to play.",
+    "timeoutPendingOpponent": "{{name}}'s turn timer ran out.",
+    "timeoutClaimVictory": "End match and claim victory",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "chatMinimize": "Minimize chat",
+    "chatReopen": "Chat",
     "report": "Report {{name}}",
     "reportSent": "Report sent",
     "reportSubmit": "Send report",
@@ -396,6 +501,8 @@
     "async": { "title": "Turn-based", "desc": "Relaxed games over hours or days. We'll notify you when it's your move." },
     "speed": "Time per turn",
     "variant": "Variant",
+    "roundsToWin": "Rounds to win",
+    "targetScore": "Points to win",
     "seatCount": "Number of players",
     "private": "Private table",
     "privateHint": "Only your friends can join",
@@ -425,6 +532,10 @@
     "goToTable": "Go to my table",
     "cancelledByHost": "The host has cancelled this table.",
     "cancelledDismiss": "Got it"
+  },
+  "shell": {
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "sidebar": {
     "status": {

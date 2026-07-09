@@ -42,6 +42,10 @@ export interface MatchRuntime {
   /** Asientos que han pedido cortar la partida por abandono mutuo (transitorio, no persistido) —
    * se efectúa en cuanto coincide con todos los asientos sentados. */
   abandonRequests: Set<number>;
+  /** Asiento que agotó su turno y aún no se resolvió (transitorio, no persistido): en vez de forfeit
+   * automático, el resto de asientos puede reclamar la victoria ya (`match.claimTimeoutVictory`) o
+   * simplemente esperar a que este asiento mueva, lo que lo limpia solo. */
+  timeoutPending: { seat: number } | null;
 }
 
 export function createEmptyRuntime(
@@ -67,6 +71,7 @@ export function createEmptyRuntime(
     readyTimer: null,
     readyCheckEndsAt: null,
     abandonRequests: new Set(),
+    timeoutPending: null,
   };
 }
 

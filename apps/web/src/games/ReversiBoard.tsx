@@ -37,7 +37,7 @@ export function ReversiBoard({ matchId, mySeat, myTurn, view: rawView }: BoardPr
       <div
         role="grid"
         aria-label={t('partida.a11y.board')}
-        className="mx-auto grid w-fit gap-1 rounded-2xl border border-tb-border bg-tb-surface-2 p-3"
+        className="mx-auto grid w-fit gap-1.5 rounded-2xl border border-tb-border bg-tb-surface-2 p-4"
         style={{ gridTemplateColumns: `repeat(${REVERSI_SIZE}, minmax(0, 1fr))` }}
       >
         {board.map((cell, i) => {
@@ -59,7 +59,7 @@ export function ReversiBoard({ matchId, mySeat, myTurn, view: rawView }: BoardPr
               onClick={() => handlePlace(i)}
               disabled={!legal}
               aria-label={t('partida.a11y.cell', { row: row + 1, col: col + 1, content })}
-              className={`flex h-8 w-8 items-center justify-center rounded-md bg-tb-surface transition-colors enabled:hover:bg-tb-accent-tint disabled:cursor-default sm:h-10 sm:w-10 ${
+              className={`flex h-11 w-11 items-center justify-center rounded-md bg-tb-surface transition-colors enabled:hover:bg-tb-accent-tint disabled:cursor-default sm:h-13 sm:w-13 lg:h-15 lg:w-15 ${
                 legal ? 'ring-1 ring-inset ring-tb-accent/50' : ''
               }`}
             >
