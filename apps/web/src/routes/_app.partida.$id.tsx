@@ -296,8 +296,12 @@ function MatchPage() {
       {/* El tapete enmarca tablero y chat como objetos físicos sobre la mesa — cada uno en su
           propia tarjeta `--tb-surface` con marco/sombra, para que se separen del fondo en vez
           de fundirse con él. */}
-      <div className={`tb-table-felt grid gap-6 rounded-3xl p-3 sm:p-5 lg:p-7 ${chatMinimized ? '' : 'md:grid-cols-[minmax(0,1fr)_320px]'}`}>
-        <div className="rounded-2xl border border-tb-border/60 bg-tb-surface/95 p-3 shadow-xl backdrop-blur-sm sm:p-5">
+      <div className={`tb-table-felt grid min-w-0 gap-6 rounded-3xl p-3 sm:p-5 lg:p-7 ${chatMinimized ? '' : 'md:grid-cols-[minmax(0,1fr)_320px]'}`}>
+        {/* `min-w-0`: elemento directo de un grid — sin esto, `min-width: auto` implícito le
+            impide encoger por debajo del contenido más ancho de dentro (p.ej. la fila de eventos
+            de Cronolito), y el `overflow-x-auto` de más abajo deja de contener nada: el scroll
+            horizontal se escapa a la página entera en vez de quedarse en esta tarjeta. */}
+        <div className="min-w-0 rounded-2xl border border-tb-border/60 bg-tb-surface/95 p-3 shadow-xl backdrop-blur-sm sm:p-5">
           {/* `overflow-x-auto` es la red de seguridad: a zoom alto, un tablero intrínsecamente
               ancho (p.ej. Timbiriche 10x10) puede pedir más sitio del que da la columna — mejor un
               scroll horizontal contenido aquí que forzar el ancho de toda la página. */}
