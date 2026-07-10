@@ -22,12 +22,21 @@ export function ImpostorBoard({ matchId, mySeat, myTurn, view: rawView, players 
     matchSocket.send({ type: 'match.move', payload: { matchId, move: { type: 'continue' } } });
   }
 
-  const votedCount = view.submitted.filter(Boolean).length;
+  const votedCount = view.votes.filter((v) => v !== null).length;
+  const totalCast = votedCount; // cada voto emitido cuenta 1, aunque se haya cambiado después
+  const voteCounts = Array.from({ length: view.numPlayers }, (_, seat) => view.votes.filter((v) => v === seat).length);
+  const maxVotes = Math.max(0, ...voteCounts);
+  // Clasificación en vivo, ordenada de más a menos votos — empates conservan el orden de asiento.
+  const leaderboard = Array.from({ length: view.numPlayers }, (_, seat) => seat)
+    .filter((seat) => seat !== mySeat)
+    .sort((a, b) => voteCounts[b]! - voteCounts[a]!);
+  const myVote = mySeat !== null ? view.votes[mySeat] : null;
+
   const showModal = view.phase === 'roundEnd' && view.lastRoundSummary !== null;
   const confirmed = mySeat !== null && !view.pendingConfirm.includes(mySeat);
 
   return (
-    <div className="relative flex flex-col items-center gap-5">
+    <div className="relative flex min-h-[30rem] flex-col items-center gap-5">
       <p className="tb-nums text-xs font-semibold uppercase tracking-wide text-tb-muted">
         {t('impostor.roundOf', { round: view.round + 1, total: view.totalRounds })}
       </p>
@@ -56,7 +65,7 @@ export function ImpostorBoard({ matchId, mySeat, myTurn, view: rawView, players 
         )}
       </div>
 
-      {view.revoteCount > 0 && view.phase === 'voting' && (
+      {view.tied && view.phase === 'voting' && (
         <p className="rounded-lg bg-tb-warn-tint px-3 py-2 text-center text-xs font-medium text-tb-warn">{t('impostor.tieNote')}</p>
       )}
 
@@ -66,29 +75,39 @@ export function ImpostorBoard({ matchId, mySeat, myTurn, view: rawView, players 
       {!isSpectator && (
         <div className="w-full max-w-sm">
           {view.phase === 'voting' && (
-            <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-tb-muted">
-              {myTurn ? t('impostor.chooseVote') : t('impostor.voteCast')}
-            </p>
+            <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-tb-muted">{t('impostor.leaderboardTitle')}</p>
           )}
-          <div className="grid grid-cols-2 gap-2">
-            {Array.from({ length: view.numPlayers }, (_, seat) => seat)
-              .filter((seat) => seat !== mySeat)
-              .map((seat) => (
+          <div className="flex flex-col gap-1.5">
+            {leaderboard.map((seat) => {
+              const count = voteCounts[seat]!;
+              const isLeader = count > 0 && count === maxVotes;
+              const isMyVote = myVote === seat;
+              return (
                 <button
                   key={seat}
                   type="button"
                   onClick={() => handleVote(seat)}
                   disabled={!myTurn}
-                  aria-pressed={view.myVote === seat}
-                  className={`rounded-lg border px-3 py-2 text-sm font-semibold transition-colors disabled:cursor-default ${
-                    view.myVote === seat
-                      ? 'border-tb-accent bg-tb-accent-tint text-tb-accent'
-                      : 'border-tb-border text-tb-text hover:enabled:bg-tb-surface-2 disabled:opacity-50'
+                  aria-pressed={isMyVote}
+                  className={`relative w-full overflow-hidden rounded-lg border px-3 py-2 text-left text-sm font-semibold transition-colors disabled:cursor-default ${
+                    isMyVote ? 'border-tb-accent ring-1 ring-tb-accent text-tb-accent' : 'border-tb-border text-tb-text hover:enabled:bg-tb-surface-2'
                   }`}
                 >
-                  {seatLabel(seat)}
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-0 left-0 bg-tb-accent-tint transition-all"
+                    style={{ width: totalCast > 0 ? `${(count / totalCast) * 100}%` : 0 }}
+                  />
+                  <span className="relative flex items-center justify-between gap-2">
+                    <span className="truncate">
+                      {seatLabel(seat)}
+                      {isLeader && ' 🏆'}
+                    </span>
+                    <span className="tb-nums shrink-0">{count}</span>
+                  </span>
                 </button>
-              ))}
+              );
+            })}
           </div>
           {view.phase === 'voting' && (
             <p className="tb-nums mt-3 text-center text-xs text-tb-muted">

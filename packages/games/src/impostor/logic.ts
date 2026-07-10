@@ -36,7 +36,7 @@ export function setup(ctx: SetupCtx): ImpostorState {
     secretWord: words[0]!,
     phase: 'voting',
     votes: Array(numPlayers).fill(null),
-    revoteCount: 0,
+    tied: false,
     scores: Array(numPlayers).fill(0),
     pendingConfirm: [],
     lastRoundSummary: null,
@@ -50,7 +50,9 @@ function isMatchOver(state: ImpostorState): boolean {
 export function activePlayers(state: ImpostorState): number[] {
   if (isMatchOver(state)) return [];
   if (state.phase === 'roundEnd') return state.pendingConfirm;
-  return state.votes.reduce<number[]>((seats, v, seat) => (v === null ? [...seats, seat] : seats), []);
+  // Todos pueden votar y cambiar de voto en cualquier momento mientras se vota — no hay "ronda"
+  // de votación que deje inactivo a quien ya votó.
+  return Array.from({ length: state.numPlayers }, (_, i) => i);
 }
 
 export function validateMove(state: ImpostorState, move: ImpostorMove, ctx: MoveCtx): { ok: true } | { ok: false; code: string } {
@@ -89,23 +91,25 @@ export function applyMove(state: ImpostorState, move: ImpostorMove, ctx: MoveCtx
       secretWord: state.words[round] ?? state.secretWord,
       phase: 'voting',
       votes: Array(state.numPlayers).fill(null),
-      revoteCount: 0,
+      tied: false,
       pendingConfirm: [],
       lastRoundSummary: null,
     };
   }
 
-  // move.type === 'vote'
+  // move.type === 'vote' — se puede votar y cambiar de voto libremente; no hay "ronda" que
+  // bloquee un asiento ya votado ni que resetee todo al detectar un empate.
   const votes = [...state.votes];
   votes[ctx.seat] = move.target;
-  if (votes.some((v) => v === null)) return { ...state, votes };
+  if (votes.some((v) => v === null)) return { ...state, votes, tied: false };
 
   const resolvedVotes = votes as number[];
   const topSeats = mostVotedSeats(resolvedVotes, state.numPlayers);
 
   if (topSeats.length > 1) {
-    // Empate: se repite la votación entera desde cero (no solo entre los empatados).
-    return { ...state, votes: Array(state.numPlayers).fill(null), revoteCount: state.revoteCount + 1 };
+    // Empate: la clasificación se queda tal cual, a la vista — cualquiera puede cambiar su voto
+    // para desempatar, en vez de reiniciar la votación entera a ciegas.
+    return { ...state, votes, tied: true };
   }
 
   const accused = topSeats[0]!;
@@ -129,7 +133,7 @@ export function applyMove(state: ImpostorState, move: ImpostorMove, ctx: MoveCtx
     pointsAwarded,
   };
 
-  const base: ImpostorState = { ...state, votes: resolvedVotes, scores, lastRoundSummary };
+  const base: ImpostorState = { ...state, votes: resolvedVotes, tied: false, scores, lastRoundSummary };
 
   // Última ronda: no hay pausa, el estado queda listo para que `checkEnd` cierre la partida ya
   // (igual que Brisca/Tute/Escoba en su ronda decisiva).
@@ -155,11 +159,10 @@ export function checkEnd(state: ImpostorState): GameEndResult | null {
 
 export function playerView(state: ImpostorState, playerIndex: number | null): ImpostorPlayerView {
   const amITheImpostor = playerIndex !== null && playerIndex === state.impostor;
-  const submitted = state.votes.map((v) => v !== null);
-  const myVote = playerIndex !== null ? (state.votes[playerIndex] ?? null) : null;
 
   // La palabra nunca llega a quien es el impostor, ni a espectadores (podrían estar compartiendo
-  // pantalla con él) — mismo criterio que Pista Única con las pistas anuladas.
+  // pantalla con él) — mismo criterio que Pista Única con las pistas anuladas. Los votos, en
+  // cambio, son la clasificación pública en vivo que pide el juego: nada que ocultar ahí.
   const secretWord = !amITheImpostor && playerIndex !== null ? state.secretWord : null;
 
   return {
@@ -170,9 +173,8 @@ export function playerView(state: ImpostorState, playerIndex: number | null): Im
     phase: state.phase,
     amITheImpostor,
     secretWord,
-    submitted,
-    myVote,
-    revoteCount: state.revoteCount,
+    votes: state.votes,
+    tied: state.tied,
     pendingConfirm: state.pendingConfirm,
     lastRoundSummary: state.lastRoundSummary,
   };

@@ -33,11 +33,13 @@ describe('setup', () => {
 });
 
 describe('activePlayers / validateMove', () => {
-  it('en fase de voto, todos los que no han votado aún', () => {
+  it('en fase de voto, todos los asientos están activos siempre — se puede votar y cambiar de voto en cualquier momento', () => {
     const state = setupState(4);
     expect(activePlayers(state).sort()).toEqual([0, 1, 2, 3]);
     const afterOne = applyMove(state, { type: 'vote', target: 1 }, ctx(0));
-    expect(activePlayers(afterOne).sort()).toEqual([1, 2, 3]);
+    // A diferencia de un juego por rondas, quien ya votó sigue activo: puede cambiar de voto.
+    expect(activePlayers(afterOne).sort()).toEqual([0, 1, 2, 3]);
+    expect(validateMove(afterOne, { type: 'vote', target: 2 }, ctx(0))).toEqual({ ok: true });
   });
 
   it('rechaza votarse a uno mismo', () => {
@@ -69,7 +71,7 @@ describe('applyMove — votación', () => {
     expect(state.lastRoundSummary).not.toBeNull();
   });
 
-  it('empate: se resetean todos los votos y se repite la votación entera', () => {
+  it('empate: la clasificación se queda tal cual (no se resetea), marcada como empatada', () => {
     let state = setupState(4);
     // 4 jugadores, votos 1-1-1-1 (cada uno a un asiento distinto): empate a 1.
     state = applyMove(state, { type: 'vote', target: 1 }, ctx(0));
@@ -77,8 +79,23 @@ describe('applyMove — votación', () => {
     state = applyMove(state, { type: 'vote', target: 3 }, ctx(2));
     state = applyMove(state, { type: 'vote', target: 0 }, ctx(3));
     expect(state.phase).toBe('voting');
-    expect(state.votes).toEqual([null, null, null, null]);
-    expect(state.revoteCount).toBe(1);
+    expect(state.votes).toEqual([1, 2, 3, 0]);
+    expect(state.tied).toBe(true);
+  });
+
+  it('tras un empate, cambiar un solo voto puede desempatar sin resetear nada más', () => {
+    let state = setupState(4);
+    state = applyMove(state, { type: 'vote', target: 1 }, ctx(0));
+    state = applyMove(state, { type: 'vote', target: 2 }, ctx(1));
+    state = applyMove(state, { type: 'vote', target: 3 }, ctx(2));
+    state = applyMove(state, { type: 'vote', target: 0 }, ctx(3));
+    expect(state.tied).toBe(true);
+
+    // El asiento 3 cambia su voto de 0 a 1: ahora el 1 tiene 2 votos (0 y 3), sin empate.
+    state = applyMove(state, { type: 'vote', target: 1 }, ctx(3));
+    expect(state.tied).toBe(false);
+    expect(state.phase).toBe('roundEnd');
+    expect(state.lastRoundSummary!.accused).toBe(1);
   });
 
   it('si aciertan al impostor, cada NO impostor suma 1 punto y el impostor no suma nada', () => {
@@ -177,11 +194,16 @@ describe('playerView', () => {
     expect(spectatorView.amITheImpostor).toBe(false);
   });
 
-  it('muestra el progreso de la votación sin revelar a quién ha votado cada uno', () => {
+  it('los votos son públicos en tiempo real para cualquiera, jugador o espectador', () => {
     let state = setupState(3);
-    state = applyMove(state, { type: 'vote', target: (state.impostor + 1) % 3 }, ctx(state.impostor));
-    const view = playerView(state, (state.impostor + 1) % 3);
-    expect(view.submitted[state.impostor]).toBe(true);
-    expect(view.myVote).toBeNull(); // ese asiento aún no ha votado
+    const target = (state.impostor + 1) % 3;
+    state = applyMove(state, { type: 'vote', target }, ctx(state.impostor));
+
+    const otherView = playerView(state, target);
+    expect(otherView.votes[state.impostor]).toBe(target);
+    expect(otherView.votes[target]).toBeNull(); // ese asiento aún no ha votado
+
+    const spectatorView = playerView(state, null);
+    expect(spectatorView.votes[state.impostor]).toBe(target);
   });
 });

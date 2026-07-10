@@ -26,15 +26,18 @@ export interface ImpostorState {
   impostor: number;
   /** = `words[round]`. */
   secretWord: string;
-  /** `voting`: se puede votar (y revotar tras un empate). `roundEnd`: pausa de resumen, hay que
-   * confirmar para repartir la siguiente ronda — igual que Brisca/Tute/Escoba entre rondas. */
+  /** `voting`: clasificación en vivo, se puede votar y cambiar de voto en cualquier momento.
+   * `roundEnd`: pausa de resumen, hay que confirmar para repartir la siguiente ronda — igual que
+   * Brisca/Tute/Escoba entre rondas. */
   phase: 'voting' | 'roundEnd';
-  /** Voto de cada asiento en la votación en curso; `null` = todavía no ha votado. Se resetea a
-   * todo `null` en cada revote tras un empate y al repartir cada ronda nueva. */
+  /** Voto EN CURSO de cada asiento — visible en tiempo real para todos según se vota, y se puede
+   * cambiar libremente mientras se siga en `voting` (no hay "ronda de votación" que resetee esto:
+   * solo se limpia al repartir la siguiente ronda). `null` = todavía no ha votado nunca esta ronda. */
   votes: (number | null)[];
-  /** Empates consecutivos en la votación de esta ronda — solo informativo, para avisar en el
-   * cliente de que toca repetir. */
-  revoteCount: number;
+  /** Todos han votado al menos una vez y el más votado está empatado — la clasificación se queda
+   * a la vista tal cual y cualquiera puede cambiar su voto para desempatar (en vez de resetear la
+   * votación entera). */
+  tied: boolean;
   /** Puntuación acumulada entre rondas — decide el ranking final de la partida. */
   scores: number[];
   /** Asientos que aún no han confirmado seguir a la siguiente ronda — solo relevante en `roundEnd`. */
@@ -50,6 +53,8 @@ export type ImpostorMove = { type: 'vote'; target: number } | { type: 'continue'
  * Vista por asiento: cada uno solo sabe si ÉL es el impostor, nunca quién es el resto hasta que
  * la ronda se resuelve (`lastRoundSummary`) — ni siquiera espectadores, que podrían estar
  * compartiendo pantalla con el impostor. La palabra secreta solo llega a quien no es el impostor.
+ * Los votos, en cambio, son públicos en tiempo real para todos — es la clasificación en vivo que
+ * pide el juego, no hay nada que ocultar ahí.
  */
 export interface ImpostorPlayerView {
   numPlayers: number;
@@ -60,11 +65,9 @@ export interface ImpostorPlayerView {
   amITheImpostor: boolean;
   /** `null` para el impostor y para espectadores mientras se vota. */
   secretWord: string | null;
-  /** Quién ha votado ya en esta ronda de votación, sin revelar a quién — para ver progreso en vivo. */
-  submitted: boolean[];
-  /** Tu propio voto ya mandado en la votación en curso; `null` si aún no has votado o tras un revote. */
-  myVote: number | null;
-  revoteCount: number;
+  /** Voto en curso de cada asiento, igual que en el estado — público, en tiempo real. */
+  votes: (number | null)[];
+  tied: boolean;
   pendingConfirm: number[];
   lastRoundSummary: ImpostorRoundSummary | null;
 }

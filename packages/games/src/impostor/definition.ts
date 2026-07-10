@@ -14,12 +14,15 @@ export const impostorDefinition: GameDefinition<ImpostorState, ImpostorMove> = {
   applyMove,
   checkEnd,
   playerView,
+  // Como se puede votar y cambiar de voto en cualquier momento (ver `activePlayers`), TODOS los
+  // asientos siguen "activos" durante toda la votación, hayan votado ya o no — así que el aviso
+  // de tiempo agotado le llega también a quien ya votó. Para esos, reafirmar su propio voto es
+  // un no-op (no le pisa la decisión); solo a quien nunca ha votado se le asigna uno por defecto,
+  // para que un desconectado no bloquee la ronda para siempre.
   onTurnTimeout: (state, playerIndex) =>
     state.phase === 'roundEnd'
       ? { type: 'move', move: { type: 'continue' } }
-      : // Voto en blanco determinista (nunca hacia uno mismo) para no bloquear la partida a
-        // quien se despiste — la charla de voz sigue siendo la que de verdad decide.
-        { type: 'move', move: { type: 'vote', target: (playerIndex + 1) % state.numPlayers } },
+      : { type: 'move', move: { type: 'vote', target: state.votes[playerIndex] ?? (playerIndex + 1) % state.numPlayers } },
   ui: {
     // Generoso a propósito: la ronda se decide hablando por voz, no escribiendo — hace falta
     // tiempo de sobra para discutir antes de que alguien tenga que votar a ciegas.
