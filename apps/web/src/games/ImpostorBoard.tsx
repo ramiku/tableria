@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ImpostorPlayerView } from '@tableria/games';
+import { ArrowRightIcon, EyeIcon, EyeOffIcon } from '../components/icons';
 import { matchSocket } from '../lib/ws';
 import type { BoardProps } from './BoardProps';
 import { RoundEndModal } from './RoundEndModal';
@@ -7,6 +9,14 @@ import { RoundEndModal } from './RoundEndModal';
 export function ImpostorBoard({ matchId, mySeat, myTurn, view: rawView, players }: BoardProps) {
   const { t } = useTranslation();
   const view = rawView as ImpostorPlayerView | undefined;
+  const [revealed, setRevealed] = useState(false);
+
+  // Cada ronda nueva empieza oculta otra vez — nadie debería heredar el volteo de la ronda
+  // anterior por descuido.
+  useEffect(() => {
+    setRevealed(false);
+  }, [view?.round]);
+
   if (!view) return null;
 
   const isSpectator = mySeat === null;
@@ -32,38 +42,82 @@ export function ImpostorBoard({ matchId, mySeat, myTurn, view: rawView, players 
     .sort((a, b) => voteCounts[b]! - voteCounts[a]!);
   const myVote = mySeat !== null ? view.votes[mySeat] : null;
 
+  // Orden para ir diciendo pistas de la palabra en voz alta, sentido horario desde un asiento que
+  // rota cada ronda (así no siempre empieza ni acaba el mismo) — puramente informativo, el motor
+  // no fuerza turnos de verdad para esto (se decide hablando por voz).
+  const speakingOrder = Array.from({ length: view.numPlayers }, (_, i) => (view.round + i) % view.numPlayers);
+
   const showModal = view.phase === 'roundEnd' && view.lastRoundSummary !== null;
   const confirmed = mySeat !== null && !view.pendingConfirm.includes(mySeat);
 
   return (
     <div className="relative flex min-h-[30rem] flex-col items-center gap-5">
+      {view.phase === 'voting' && (
+        <div className="w-full max-w-sm rounded-xl border border-tb-border bg-tb-surface-2 px-3 py-2.5 text-center">
+          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-tb-muted">{t('impostor.speakingOrderTitle')}</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-1">
+            {speakingOrder.map((seat, i) => (
+              <span key={seat} className="flex items-center gap-1">
+                <span className={`text-xs font-bold ${seat === mySeat ? 'text-tb-accent' : 'text-tb-text'}`}>{seatLabel(seat)}</span>
+                {i < speakingOrder.length - 1 && <ArrowRightIcon className="h-3 w-3 shrink-0 text-tb-muted" />}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className="tb-nums text-xs font-semibold uppercase tracking-wide text-tb-muted">
         {t('impostor.roundOf', { round: view.round + 1, total: view.totalRounds })}
       </p>
 
-      <div
-        className={`w-full max-w-sm rounded-2xl border-2 p-6 text-center ${
-          isSpectator
-            ? 'border-tb-border bg-tb-surface-2'
-            : view.amITheImpostor
-              ? 'border-tb-danger bg-tb-danger/10'
-              : 'border-tb-accent bg-tb-accent-tint'
-        }`}
-      >
-        {isSpectator ? (
+      {isSpectator ? (
+        <div className="flex w-full max-w-sm items-center justify-center rounded-2xl border-2 border-tb-border bg-tb-surface-2 p-6 text-center">
           <p className="text-sm text-tb-muted">{t('impostor.spectatorHint')}</p>
-        ) : view.amITheImpostor ? (
-          <>
-            <p className="font-display text-lg font-extrabold text-tb-danger">{t('impostor.youAreImpostor')}</p>
-            <p className="mt-2 text-sm text-tb-muted">{t('impostor.impostorHint')}</p>
-          </>
-        ) : (
-          <>
-            <p className="text-xs font-semibold uppercase tracking-wide text-tb-muted">{t('impostor.secretWordLabel')}</p>
-            <p className="font-display text-2xl font-extrabold text-tb-accent">{view.secretWord}</p>
-          </>
-        )}
-      </div>
+        </div>
+      ) : (
+        // `tb-flip-card` (perspectiva) y `tb-flipped` viven en el mismo contenedor exterior a
+        // propósito: el CSS solo gira `.tb-flip-card-inner` cuando su ANCESTRO directo tiene
+        // ambas clases a la vez — ver `app.css`.
+        <div className={`tb-flip-card h-40 w-full max-w-sm ${revealed ? 'tb-flipped' : ''}`}>
+          {/* Oculta por defecto a propósito: en persona, alguien podría ver de reojo la pantalla
+              de otro jugador — el rol/palabra solo se descubre con un toque deliberado, y con un
+              giro real en 3D (no un simple fundido) para que quede claro que hay algo "al dorso"
+              que se puede volver a ocultar en cualquier momento. */}
+          <button
+            type="button"
+            onClick={() => setRevealed((r) => !r)}
+            aria-pressed={revealed}
+            aria-label={revealed ? t('impostor.hideRole') : t('impostor.revealRole')}
+            className="tb-flip-card-inner h-full w-full text-left"
+          >
+            <div className="tb-flip-card-face flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-tb-border bg-tb-surface-2 p-6 text-center">
+              <EyeIcon className="h-7 w-7 text-tb-muted" />
+              <p className="text-sm font-semibold text-tb-muted">{t('impostor.revealRole')}</p>
+            </div>
+            <div
+              className={`tb-flip-card-face tb-flip-card-back flex flex-col items-center justify-center gap-2 rounded-2xl border-2 p-6 text-center ${
+                view.amITheImpostor ? 'border-tb-danger bg-tb-danger/10' : 'border-tb-accent bg-tb-accent-tint'
+              }`}
+            >
+              {view.amITheImpostor ? (
+                <>
+                  <p className="font-display text-lg font-extrabold text-tb-danger">{t('impostor.youAreImpostor')}</p>
+                  <p className="text-sm text-tb-muted">{t('impostor.impostorHint')}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-tb-muted">{t('impostor.secretWordLabel')}</p>
+                  <p className="font-display text-2xl font-extrabold text-tb-accent">{view.secretWord}</p>
+                </>
+              )}
+              <span className="mt-1 flex items-center gap-1 text-[11px] font-medium text-tb-muted">
+                <EyeOffIcon className="h-3.5 w-3.5" />
+                {t('impostor.hideRole')}
+              </span>
+            </div>
+          </button>
+        </div>
+      )}
 
       {view.tied && view.phase === 'voting' && (
         <p className="rounded-lg bg-tb-warn-tint px-3 py-2 text-center text-xs font-medium text-tb-warn">{t('impostor.tieNote')}</p>
