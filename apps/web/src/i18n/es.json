@@ -228,6 +228,28 @@
     "resultEliminated": "Se te han agotado los estabilizadores — la humanidad ha dejado de existir (para ti, al menos).",
     "matchSummary": { "title": "Resumen de la partida", "correct": "Aciertos", "livesLeft": "Vidas restantes" }
   },
+  "impostor": {
+    "you": "Tú",
+    "seat": "Asiento {{n}}",
+    "roundOf": "Ronda {{round}} de {{total}}",
+    "youAreImpostor": "Eres el impostor",
+    "impostorHint": "No tienes palabra — escucha con atención e intenta que no te descubran.",
+    "secretWordLabel": "Tu palabra secreta",
+    "spectatorHint": "Estás viendo esta ronda como espectador — no sabrás quién es el impostor ni la palabra hasta que se resuelva la votación.",
+    "tieNote": "Empate en la votación — repetid todos el voto.",
+    "chooseVote": "Vota a quien creas que es el impostor",
+    "voteCast": "Voto emitido — esperando al resto",
+    "votesProgress": "{{voted}}/{{total}} han votado",
+    "caughtTitle": "¡Impostor descubierto!",
+    "escapedTitle": "El impostor se libra",
+    "revealSubtitle": "El impostor era {{impostor}} — la palabra era «{{word}}»",
+    "matchSummary": {
+      "title": "Puntuación",
+      "lastRoundTitle": "Última ronda",
+      "impostorWas": "El impostor era",
+      "wordWas": "La palabra era"
+    }
+  },
   "partida": {
     "yourTurn": "Te toca a ti",
     "opponentTurn": "Turno del rival",

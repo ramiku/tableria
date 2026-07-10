@@ -9,6 +9,7 @@ import { BriscaBoard } from '../games/BriscaBoard';
 import { ConnectFourBoard } from '../games/ConnectFourBoard';
 import { CronolitoBoard } from '../games/CronolitoBoard';
 import { EscobaBoard } from '../games/EscobaBoard';
+import { ImpostorBoard } from '../games/ImpostorBoard';
 import { PistaUnicaBoard } from '../games/PistaUnicaBoard';
 import { ReversiBoard } from '../games/ReversiBoard';
 import { TicTacToeBoard } from '../games/TicTacToeBoard';
@@ -33,6 +34,7 @@ const BOARD_COMPONENTS = {
   tute: TuteBoard,
   'tute-cabron': TuteBoard,
   cronolito: CronolitoBoard,
+  impostor: ImpostorBoard,
 } as const;
 
 // Preferencia personal de zoom del tablero — una sola vez por usuario (no por partida ni por
@@ -313,10 +315,10 @@ function MatchPage() {
                 reacciona al nuevo tamaño en vez de que el tablero quede flotando por encima. */}
             <div className="relative" style={{ zoom }}>
               {isSpectator && !ended && <p className="mb-3 text-center text-xs text-tb-muted">{t('partida.spectating')}</p>}
-              {/* Pista Única es cooperativo entre 3-8 jugadores y su propio tablero ya explica de
-                  quién es el turno con más matiz ("eres quien adivina" / pistas pendientes, etc.) —
-                  el genérico "turno del rival" no encaja y sobra aquí. */}
-              {!isSpectator && !ended && matchInfo?.gameId !== 'pista-unica' && (
+              {/* Pista Única e Impostor tienen turnos simultáneos (varios asientos activos a la
+                  vez: dar pista/votar) — su propio tablero ya explica el estado con más matiz que
+                  el genérico "turno del rival", pensado para turnos de uno en uno. */}
+              {!isSpectator && !ended && matchInfo?.gameId !== 'pista-unica' && matchInfo?.gameId !== 'impostor' && (
                 <div
                   className={`mb-3 flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold sm:text-base ${
                     myTurn ? 'tb-gradient-cta text-white shadow-md shadow-tb-accent/25' : 'border border-tb-border bg-tb-surface-2 text-tb-muted'

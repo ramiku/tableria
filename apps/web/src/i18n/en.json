@@ -228,6 +228,28 @@
     "resultEliminated": "You're out of stabilizers — humanity has ceased to exist (for you, at least).",
     "matchSummary": { "title": "Match summary", "correct": "Correct", "livesLeft": "Lives left" }
   },
+  "impostor": {
+    "you": "You",
+    "seat": "Seat {{n}}",
+    "roundOf": "Round {{round}} of {{total}}",
+    "youAreImpostor": "You are the impostor",
+    "impostorHint": "You have no word — listen closely and try not to get caught.",
+    "secretWordLabel": "Your secret word",
+    "spectatorHint": "You're watching this round as a spectator — you won't know who the impostor is or the word until the vote resolves.",
+    "tieNote": "Tied vote — everyone votes again.",
+    "chooseVote": "Vote for who you think the impostor is",
+    "voteCast": "Vote cast — waiting for the rest",
+    "votesProgress": "{{voted}}/{{total}} have voted",
+    "caughtTitle": "Impostor caught!",
+    "escapedTitle": "The impostor gets away",
+    "revealSubtitle": "The impostor was {{impostor}} — the word was \"{{word}}\"",
+    "matchSummary": {
+      "title": "Score",
+      "lastRoundTitle": "Last round",
+      "impostorWas": "The impostor was",
+      "wordWas": "The word was"
+    }
+  },
   "partida": {
     "yourTurn": "Your turn",
     "opponentTurn": "Opponent's turn",

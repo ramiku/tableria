@@ -4,6 +4,7 @@ import type {
   BriscaPlayerView,
   CronolitoPlayerView,
   EscobaPlayerView,
+  ImpostorPlayerView,
   PistaUnicaView,
   ReversiView,
   TimbiricheView,
@@ -183,6 +184,30 @@ function CronolitoSummary({ view: rawView, players, mySeat }: MatchSummaryProps)
   );
 }
 
+function ImpostorSummary({ view: rawView, players, mySeat }: MatchSummaryProps) {
+  const { t } = useTranslation();
+  const seatLabel = useSeatLabel(players, mySeat);
+  const view = rawView as ImpostorPlayerView;
+  const topScore = Math.max(...view.scores);
+  const last = view.lastRoundSummary;
+
+  return (
+    <>
+      <SummarySection title={t('impostor.matchSummary.title')}>
+        {view.scores.map((score, seat) => (
+          <SummaryRow key={seat} label={seatLabel(seat)} value={score} highlight={score === topScore} />
+        ))}
+      </SummarySection>
+      {last && (
+        <SummarySection title={t('impostor.matchSummary.lastRoundTitle')}>
+          <SummaryRow label={t('impostor.matchSummary.impostorWas')} value={seatLabel(last.impostor)} />
+          <SummaryRow label={t('impostor.matchSummary.wordWas')} value={last.secretWord} />
+        </SummarySection>
+      )}
+    </>
+  );
+}
+
 /** Componente opcional por juego, montado en el hueco de resumen de `MatchEndPanel` — igual que
  * `BOARD_COMPONENTS`, sin entrada aquí significa que ese juego no pinta nada extra (fallback
  * seguro para juegos futuros). */
@@ -194,5 +219,6 @@ export const SUMMARY_COMPONENTS: Partial<Record<string, (props: MatchSummaryProp
   reversi: ReversiSummary,
   timbiriche: TimbiricheSummary,
   'pista-unica': PistaUnicaSummary,
+  impostor: ImpostorSummary,
   cronolito: CronolitoSummary,
 };

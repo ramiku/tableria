@@ -164,6 +164,20 @@ const catalog = [
     isActive: true,
     options: { defaultTurnSeconds: 30 },
   },
+  {
+    id: 'impostor',
+    name: 'Impostor',
+    categorySlug: 'party',
+    minPlayers: 3,
+    maxPlayers: 10,
+    durationMin: 20,
+    badge: 'Con chat de voz',
+    coverBg: '#3a1a1a',
+    coverFg: '#ffb4a8',
+    description: 'Todos reciben la misma palabra secreta menos un impostor al azar, que no recibe ninguna. Discutid por voz y votad quién creéis que es — si acertáis, todos menos el impostor suman un punto; si se libra, el impostor suma dos.',
+    isActive: true,
+    options: { defaultTurnSeconds: 90 },
+  },
 ];
 
 const content = [
@@ -216,6 +230,11 @@ const content = [
     gameId: 'cronolito',
     sectionKey: 'rules',
     body: 'De 1 a 6 Arquitectos del Tiempo. Empieza una carta al azar en el centro de la Línea del Tiempo con su año a la vista. En cada turno se muestra el título de la siguiente carta (el año permanece oculto) y hay que elegir dónde encaja cronológicamente: al principio, al final, o entre dos cartas ya colocadas. Al soltarla se revela el año: si la posición era correcta, la carta se queda para siempre y la Línea del Tiempo crece; si no, es una Paradoja — pierdes uno de tus 3 estabilizadores temporales y la carta se descarta. En solitario, agotar tus estabilizadores es un Bucle Temporal (derrota) y completar el mazo entero (más de 500 hitos) es salvar el Universo (victoria). Jugando en grupo, quedarte sin estabilizadores te elimina de la partida — en cuanto solo queda un Arquitecto en pie, la partida termina ahí mismo y ese es el ganador, sin necesidad de completar el resto del mazo en solitario.',
+  },
+  {
+    gameId: 'impostor',
+    sectionKey: 'rules',
+    body: 'De 3 a 10 jugadores, con el chat de voz de la mesa abierto durante toda la ronda. Al empezar cada ronda se sortea un impostor al azar; todos los demás reciben la misma palabra secreta, y el impostor no recibe ninguna — tiene que disimular sin saber de qué habláis. Discutid en voz alta y, cuando queráis, votad quién creéis que es el impostor (no puedes votarte a ti mismo). En cuanto todos han votado se cuenta: si un asiento tiene más votos que el resto, la ronda se resuelve con ese acusado; si hay empate en el más votado, se repite la votación entera hasta que alguien se lleve la mayoría en solitario. Si el acusado es el impostor, todos los demás jugadores suman 1 punto (el impostor, ninguno); si el impostor se libra, se lleva 2 puntos él solo. La partida dura 5, 9 o 15 rondas (elegido en el lobby), con un impostor y una palabra nuevos cada ronda — gana quien más puntos acumule al final.',
   },
 ];
 

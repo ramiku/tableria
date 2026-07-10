@@ -2,6 +2,7 @@ import { briscaDefinition } from './brisca/definition.js';
 import { connectFourDefinition } from './conecta-cuatro/definition.js';
 import { cronolitoDefinition } from './cronolito/definition.js';
 import { escobaDefinition } from './escoba/definition.js';
+import { impostorDefinition } from './impostor/definition.js';
 import { pistaUnicaDefinition } from './pista-unica/definition.js';
 import { reversiDefinition } from './reversi/definition.js';
 import { timbiricheDefinition } from './timbiriche/definition.js';
@@ -20,6 +21,7 @@ export const gameDefinitions = {
   tute: tuteDefinition,
   'tute-cabron': tuteCabronDefinition,
   cronolito: cronolitoDefinition,
+  impostor: impostorDefinition,
 } as const;
 
 export type GameId = keyof typeof gameDefinitions;
@@ -66,3 +68,6 @@ export { tuteCabronDefinition };
 
 export type { CronolitoEvent, CronolitoMove, CronolitoPlayerView, CronolitoState } from './cronolito/types.js';
 export { cronolitoDefinition };
+
+export type { ImpostorMove, ImpostorPlayerView, ImpostorRoundSummary, ImpostorState } from './impostor/types.js';
+export { impostorDefinition };
