@@ -227,6 +227,28 @@ describe('playerView', () => {
     expect(guesserView.clueValid).toEqual([null, true, true]);
   });
 
+  it('una pista repetida se oculta al adivinador y a los espectadores, pero no a quienes la escribieron', () => {
+    let state = setupState(4);
+    // asientos 1,2,3 dan pista; guesser=0. 1 y 2 coinciden (con distinto caso/acento), 3 es única.
+    state = applyMove(state, { type: 'clue', word: 'Camaleón' }, ctx(1));
+    state = applyMove(state, { type: 'clue', word: 'camaleon' }, ctx(2));
+    state = applyMove(state, { type: 'clue', word: 'reptil' }, ctx(3));
+
+    // El adivinador no debe poder leer qué palabra se repitió — es justo lo que la anulación
+    // pretende evitarle — pero sí sabe que hubo dos pistas anuladas (clueValid en false).
+    const guesserView = playerView(state, 0);
+    expect(guesserView.clues).toEqual([null, null, null, 'reptil']);
+    expect(guesserView.clueValid).toEqual([null, false, false, true]);
+
+    // Un espectador podría estar compartiendo pantalla con el adivinador — se le oculta igual.
+    expect(playerView(state, null).clues).toEqual([null, null, null, 'reptil']);
+
+    // Quienes escribieron las pistas sí ven el texto real, tachado — necesitan saber por qué
+    // se anuló la suya.
+    expect(playerView(state, 1).clues).toEqual([null, 'Camaleón', 'camaleon', 'reptil']);
+    expect(playerView(state, 3).clues).toEqual([null, 'Camaleón', 'camaleon', 'reptil']);
+  });
+
   it('revela la palabra secreta a todos, incluido el propio adivinador, una vez la partida ha terminado', () => {
     let state = setupState(3);
     for (let round = 0; round < 3; round++) {

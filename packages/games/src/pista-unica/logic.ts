@@ -135,8 +135,15 @@ export function playerView(state: PistaUnicaState, playerIndex: number | null): 
   const secretWord = finished || (playerIndex !== null && !isGuesser) ? state.secretWord : null;
   const submitted = state.clues.map((c, seat) => (seat === state.guesser ? false : c !== null));
 
+  // Una pista repetida se anula y NUNCA debe llegar a quien adivina (ni a espectadores, que
+  // podrían estar compartiendo pantalla con él): el propio motivo de anularla es que revelaría
+  // la palabra secreta demasiado fácil. El resto de compañeros de pista sí las ve tal cual — son
+  // quienes las escribieron y necesitan saber por qué se anularon. Una vez terminada la partida
+  // ya no hay nada que proteger, así que el historial siempre queda íntegro.
+  const hideInvalidClues = !finished && state.phase === 'guess' && (isGuesser || playerIndex === null);
+
   const clues = revealed
-    ? state.clues
+    ? state.clues.map((c, seat) => (hideInvalidClues && state.clueValid[seat] === false ? null : c))
     : state.clues.map((c, seat) => (playerIndex !== null && seat === playerIndex ? c : null));
   const clueValid = revealed ? state.clueValid : state.clues.map(() => null);
 

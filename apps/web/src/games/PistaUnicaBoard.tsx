@@ -92,7 +92,7 @@ export function PistaUnicaBoard({ matchId, seq, mySeat, myTurn, view: rawView }:
                       : 'bg-tb-surface-2 text-tb-muted line-through'
                   }`}
                 >
-                  {clue}
+                  {clue ?? t('partida.pistaUnica.clueHidden')}
                 </li>
               ),
             )}

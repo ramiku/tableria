@@ -298,6 +298,7 @@
       "submitClue": "Enviar pista",
       "clueSubmitted": "Pista enviada: \"{{clue}}\"",
       "cluesLabel": "Pistas del resto (tachadas = anuladas por coincidir con otra)",
+      "clueHidden": "Pista repetida",
       "guessInputLabel": "Escribe tu adivinanza",
       "submitGuess": "Adivinar",
       "waitingForGuess": "Esperando a que adivine…",

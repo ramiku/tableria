@@ -298,6 +298,7 @@
       "submitClue": "Send clue",
       "clueSubmitted": "Clue sent: \"{{clue}}\"",
       "cluesLabel": "Clues from the others (struck through = cancelled, matched another one)",
+      "clueHidden": "Repeated clue",
       "guessInputLabel": "Write your guess",
       "submitGuess": "Guess",
       "waitingForGuess": "Waiting for the guess…",
